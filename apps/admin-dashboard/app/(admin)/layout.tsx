@@ -46,8 +46,9 @@ export default function AdminLayout({
 
       if (currentUser) {
         const primary = getPrimaryRole(currentUser.roles);
-        if (primary === "client") {
-          router.replace("/client/dashboard");
+        const adminRoles = ['super_admin', 'admin'];
+        if (!adminRoles.includes(primary)) {
+          router.replace(getRoleHomeRoute(primary));
           return;
         }
       }

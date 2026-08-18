@@ -5,8 +5,8 @@ import { useAuthStore } from "@/lib/auth-store";
 export function useAuth() {
   const { user, accessToken, isAuthenticated } = useAuthStore();
 
-  const isAdmin = user?.roles?.includes("admin") || false;
-  const isEmployee = user?.roles?.includes("employee") || isAdmin;
+  const isAdmin = user?.roles?.some(role => ['admin', 'superadmin', 'super_admin'].includes(role)) || false;
+  const isEmployee = user?.roles?.some(role => ['employee', 'agent', 'sales_agent', 'support_agent', 'hr_agent'].includes(role)) || isAdmin;
 
   const hasPermission = (action: string) => {
     if (!user) return false;

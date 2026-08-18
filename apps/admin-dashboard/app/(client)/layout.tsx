@@ -47,7 +47,14 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           router.replace("/login");
           return;
         } finally {
-          setIsInitializing(false);
+      if (currentUser) {
+        const primary = getPrimaryRole(currentUser.roles);
+        if (primary !== "client") {
+          router.replace(getRoleHomeRoute(primary));
+          return;
+        }
+      }
+      setIsInitializing(false);
         }
       }
       setIsInitializing(false);

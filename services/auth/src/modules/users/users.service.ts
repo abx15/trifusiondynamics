@@ -157,4 +157,96 @@ export class UsersService {
       },
     });
   }
+
+  async updateUser(id: string, orgId: string, dto: any) {
+    const user = await this.prisma.user.findFirst({
+      where: { id, organizationId: orgId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found in your organization');
+    }
+
+    const updateData: any = {};
+    if (dto.name !== undefined) updateData.name = dto.name;
+    if (dto.email !== undefined) updateData.email = dto.email.toLowerCase().trim();
+    if (dto.phone !== undefined) updateData.phone = dto.phone?.trim() || null;
+    if (dto.isActive !== undefined) updateData.isActive = dto.isActive;
+    if (dto.mustChangePassword !== undefined) updateData.mustChangePassword = dto.mustChangePassword;
+    if (dto.linkedClientId !== undefined) updateData.linkedClientId = dto.linkedClientId || null;
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id },
+      data: updateData,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        phone: true,
+        isActive: true,
+        mustChangePassword: true,
+        linkedClientId: true,
+        organizationId: true,
+        roles: {
+          include: {
+            role: {
+              include: {
+                permissions: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (dto.roles !== undefined && Array.isArray(dto.roles)) {
+      await this.prisma.userRole.deleteMany({
+        where: { userId: id },
+      });
+
+      for (const roleName of dto.roles) {
+        const role = await this.prisma.role.findUnique({
+          where: { name: roleName },
+        });
+
+        if (role) {
+          await this.prisma.userRole.create({
+            data: { userId: id, roleId: role.id },
+          });
+        }
+      }
+    }
+
+    return updatedUser;
+  }
+
+  async deleteUser(id: string, orgId: string) {
+    const user = await this.prisma.user.findFirst({
+      where: { id, organizationId: orgId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found in your organization');
+    }
+
+    await this.prisma.userRole.deleteMany({
+      where: { userId: id },
+    });
+
+    await this.prisma.refreshToken.deleteMany({
+      where: { userId: id },
+    });
+
+    await this.prisma.user.delete({
+      where: { id },
+    });
+
+    return { success: true, message: 'User deleted successfully' };
+  }
 }

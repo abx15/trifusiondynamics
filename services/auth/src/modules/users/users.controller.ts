@@ -1,6 +1,7 @@
-import { Controller, Post, Get, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Delete, Body, UseGuards, Param } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -13,7 +14,7 @@ export class UsersController {
 
   @Post()
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @RequirePermission('hr:write') // Only users with hr:write can create users
+  @RequirePermission('hr:write')
   async createUser(
     @Body() dto: CreateUserDto,
     @CurrentUser() user: JwtPayload,
@@ -23,8 +24,29 @@ export class UsersController {
 
   @Get()
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @RequirePermission('hr:read') // Only users with hr:read can list users
-  async listUsers(@CurrentUser() user: JwtPayload) {
-    return this.usersService.listUsers(user.orgId);
+  @RequirePermission('hr:read')
+  async listUsers(@CurrentUser('orgId') orgId: string) {
+    return this.usersService.listUsers(orgId);
+  }
+
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermission('hr:write')
+  async updateUser(
+    @Param('id') id: string,
+    @Body() dto: UpdateUserDto,
+    @CurrentUser('orgId') orgId: string,
+  ) {
+    return this.usersService.updateUser(id, orgId, dto);
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermission('hr:write')
+  async deleteUser(
+    @Param('id') id: string,
+    @CurrentUser('orgId') orgId: string,
+  ) {
+    return this.usersService.deleteUser(id, orgId);
   }
 }

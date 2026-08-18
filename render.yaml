@@ -18,7 +18,7 @@ services:
     name: agency-os-backend
     # Native Node runtime (monorepo build from root)
     rootDir: .
-    buildCommand: pnpm install && pnpm --filter database db:generate && pnpm --filter auth build
+    buildCommand: pnpm install && pnpm --filter database db:generate && pnpm --filter database db:seed && pnpm --filter auth build
     startCommand: node services/auth/dist/main.js
     envVars:
       # ── Database ──────────────────────────────────────────────

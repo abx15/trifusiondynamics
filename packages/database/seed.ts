@@ -198,6 +198,46 @@ async function main() {
   );
   console.log(`[SEED] Superadmin Account: trifusiondynamics@gmail.com | Password: trifusiondynamicsA3web`);
 
+  // Account 1b: Configured Admin from env
+  const configuredAdminEmail = process.env.ADMIN_EMAIL || 'admin@trifusiondynamics.com';
+  const configuredAdminPassword = process.env.ADMIN_PASSWORD || 'ChangeThisPassword123!';
+  const configuredAdminPassHash = await bcrypt.hash(configuredAdminPassword, 12);
+  const configuredAdminUser = await safeRun('Upsert Configured Admin User', () =>
+    prisma.user.upsert({
+      where: { email: configuredAdminEmail },
+      update: {
+        password: configuredAdminPassHash,
+        name: 'Administrator',
+        isActive: true,
+        mustChangePassword: false,
+        organizationId: org.id,
+      },
+      create: {
+        email: configuredAdminEmail,
+        password: configuredAdminPassHash,
+        name: 'Administrator',
+        isActive: true,
+        mustChangePassword: false,
+        organizationId: org.id,
+      },
+    })
+  );
+  await safeRun('Assign admin role to Configured Admin', () =>
+    prisma.userRole.upsert({
+      where: { userId_roleId: { userId: configuredAdminUser.id, roleId: dbRoles.admin.id } },
+      update: {},
+      create: { userId: configuredAdminUser.id, roleId: dbRoles.admin.id },
+    })
+  );
+  await safeRun('Assign superadmin role to Configured Admin', () =>
+    prisma.userRole.upsert({
+      where: { userId_roleId: { userId: configuredAdminUser.id, roleId: dbRoles.superadmin.id } },
+      update: {},
+      create: { userId: configuredAdminUser.id, roleId: dbRoles.superadmin.id },
+    })
+  );
+  console.log(`[SEED] Admin Account: ${configuredAdminEmail} | Password: ${configuredAdminPassword}`);
+
   // Get shared default password for all new accounts
   const defaultTempPassword = process.env.DEFAULT_TEMP_PASSWORD || 'Welcome@123';
 

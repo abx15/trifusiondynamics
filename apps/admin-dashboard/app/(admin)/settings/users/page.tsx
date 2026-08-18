@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/lib/toast";
-import { UserCheck, ShieldAlert, BadgeCheck, CircleAlert, Crown, Users, Briefcase, User, ChevronDown, ChevronRight } from "lucide-react";
+import { UserCheck, ShieldAlert, BadgeCheck, CircleAlert, Crown, Users, Briefcase, User, ChevronDown, ChevronRight, UserPlus, Edit3 } from "lucide-react";
 import apiClient from "@/lib/api-client";
+import { UserFormSheet } from "@/components/UserFormSheet";
 
 interface Role {
   id: string;
@@ -31,7 +32,6 @@ interface Member {
   updatedAt: string;
 }
 
-// Role hierarchy configuration
 const ROLE_HIERARCHY: Record<string, { level: number; icon: any; color: string; bgColor: string; borderColor: string; department?: string }> = {
   superadmin: { level: 1, icon: Crown, color: "text-purple-500", bgColor: "bg-purple-500/10", borderColor: "border-purple-500/30" },
   super_admin: { level: 1, icon: Crown, color: "text-purple-500", bgColor: "bg-purple-500/10", borderColor: "border-purple-500/30" },
@@ -54,22 +54,22 @@ export default function UsersSettingsPage() {
     agents: true,
     clients: true,
   });
+  const [sheetOpen, setSheetOpen] = React.useState(false);
+  const [editingUser, setEditingUser] = React.useState<Member | null>(null);
 
-  // Fetch real users from API
+  const fetchUsers = async () => {
+    try {
+      const response = await apiClient.get("/users");
+      setMembers(response.data);
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
+      toast.error("Failed to load users. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   React.useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
-        const response = await apiClient.get("/users");
-        setMembers(response.data);
-      } catch (error) {
-        console.error("Failed to fetch users:", error);
-        toast.error("Failed to load users. Please try again.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     if (hasPermission('hr:read')) {
       fetchUsers();
     } else {
@@ -77,12 +77,20 @@ export default function UsersSettingsPage() {
     }
   }, [hasPermission]);
 
+  const handleSuccess = () => {
+    fetchUsers();
+  };
+
+  const handleEdit = (member: Member) => {
+    setEditingUser(member);
+    setSheetOpen(true);
+  };
+
   const handleDeactivate = (id: string, name: string) => {
     if (!isAdmin) {
       toast.error("Access denied: Admin permissions required");
       return;
     }
-
     setMembers((prev) =>
       prev.map((m) => (m.id === id ? { ...m, isActive: false } : m))
     );
@@ -94,7 +102,6 @@ export default function UsersSettingsPage() {
       toast.error("Access denied: Admin permissions required");
       return;
     }
-
     setMembers((prev) =>
       prev.map((m) => (m.id === id ? { ...m, isActive: true } : m))
     );
@@ -108,7 +115,6 @@ export default function UsersSettingsPage() {
     }));
   };
 
-  // Group users by role hierarchy
   const groupedUsers = React.useMemo(() => {
     const groups: Record<string, Member[]> = {
       executives: [],
@@ -157,13 +163,8 @@ export default function UsersSettingsPage() {
     );
   };
 
-  // User row component for grouped display
-  const UserRow = ({ member, isAdmin, onDeactivate, onActivate, getRoleBadge }: {
+  const UserRow = ({ member }: {
     member: Member;
-    isAdmin: boolean;
-    onDeactivate: (id: string, name: string) => void;
-    onActivate: (id: string, name: string) => void;
-    getRoleBadge: (member: Member) => React.ReactNode;
   }) => (
     <div className="p-4 hover:bg-slate-50 dark:hover:bg-zinc-800/10 transition-colors">
       <div className="flex items-center justify-between">
@@ -174,6 +175,9 @@ export default function UsersSettingsPage() {
           <div>
             <div className="font-medium text-slate-900 dark:text-slate-100">{member.name}</div>
             <div className="text-xs text-slate-500 dark:text-slate-400 font-mono">{member.email}</div>
+            {member.phone && (
+              <div className="text-xs text-slate-400 dark:text-slate-500">{member.phone}</div>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-4">
@@ -192,12 +196,21 @@ export default function UsersSettingsPage() {
             )}
             {isAdmin && (
               <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => handleEdit(member)}
+                >
+                  <Edit3 className="h-3.5 w-3.5 mr-1" />
+                  Edit
+                </Button>
                 {member.isActive ? (
                   <Button
                     variant="ghost"
                     size="sm"
                     className="h-7 px-2 text-xs"
-                    onClick={() => onDeactivate(member.id, member.name)}
+                    onClick={() => handleDeactivate(member.id, member.name)}
                   >
                     Deactivate
                   </Button>
@@ -206,7 +219,7 @@ export default function UsersSettingsPage() {
                     variant="ghost"
                     size="sm"
                     className="h-7 px-2 text-xs"
-                    onClick={() => onActivate(member.id, member.name)}
+                    onClick={() => handleActivate(member.id, member.name)}
                   >
                     Activate
                   </Button>
@@ -224,6 +237,14 @@ export default function UsersSettingsPage() {
       <PageHeader
         title="Team Members"
         breadcrumbs={[{ label: "Settings", href: "/settings" }, { label: "Users" }]}
+        actionSlot={
+          isAdmin ? (
+            <Button size="sm" onClick={() => { setEditingUser(null); setSheetOpen(true); }}>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Invite Member
+            </Button>
+          ) : undefined
+        }
       />
 
       <Card className="bg-white dark:bg-zinc-900 border border-border shadow-xs">
@@ -234,13 +255,8 @@ export default function UsersSettingsPage() {
               Manage security access, roles, and session states for members within your organization.
             </CardDescription>
           </div>
-          {isAdmin && (
-            <Button size="sm" onClick={() => toast.info("Add user flow coming in Phase F3.")}>
-              Invite Member
-            </Button>
-          )}
         </CardHeader>
-        
+
         <CardContent>
           {!hasPermission('hr:read') ? (
             <div className="text-center py-12">
@@ -252,17 +268,14 @@ export default function UsersSettingsPage() {
             <div className="space-y-4">
               {Array.from({ length: 3 }).map((_, idx) => (
                 <div key={idx} className="border border-border rounded-lg p-4">
-                  <Skeleton className="h-5 w-32 mb-3" />
                   <div className="space-y-2">
-                    {Array.from({ length: 2 }).map((_, i) => (
-                      <div key={i} className="flex items-center gap-4">
-                        <Skeleton className="h-10 w-10 rounded-full" />
-                        <div className="flex-1 space-y-1">
-                          <Skeleton className="h-4 w-48" />
-                          <Skeleton className="h-3 w-32" />
-                        </div>
+                    <div className="flex items-center gap-4">
+                      <Skeleton className="h-10 w-10 rounded-full" />
+                      <div className="flex-1 space-y-1">
+                        <Skeleton className="h-4 w-48" />
+                        <Skeleton className="h-3 w-32" />
                       </div>
-                    ))}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -295,7 +308,7 @@ export default function UsersSettingsPage() {
                       <div className="p-4 text-center text-sm text-slate-500">No executives found</div>
                     ) : (
                       groupedUsers.executives.map((member) => (
-                        <UserRow key={member.id} member={member} isAdmin={isAdmin} onDeactivate={handleDeactivate} onActivate={handleActivate} getRoleBadge={getRoleBadge} />
+                        <UserRow key={member.id} member={member} />
                       ))
                     )}
                   </div>
@@ -328,7 +341,7 @@ export default function UsersSettingsPage() {
                       <div className="p-4 text-center text-sm text-slate-500">No agents found</div>
                     ) : (
                       groupedUsers.agents.map((member) => (
-                        <UserRow key={member.id} member={member} isAdmin={isAdmin} onDeactivate={handleDeactivate} onActivate={handleActivate} getRoleBadge={getRoleBadge} />
+                        <UserRow key={member.id} member={member} />
                       ))
                     )}
                   </div>
@@ -361,7 +374,7 @@ export default function UsersSettingsPage() {
                       <div className="p-4 text-center text-sm text-slate-500">No clients found</div>
                     ) : (
                       groupedUsers.clients.map((member) => (
-                        <UserRow key={member.id} member={member} isAdmin={isAdmin} onDeactivate={handleDeactivate} onActivate={handleActivate} getRoleBadge={getRoleBadge} />
+                        <UserRow key={member.id} member={member} />
                       ))
                     )}
                   </div>
@@ -371,6 +384,13 @@ export default function UsersSettingsPage() {
           )}
         </CardContent>
       </Card>
+
+      <UserFormSheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        user={editingUser}
+        onSuccess={handleSuccess}
+      />
     </div>
   );
 }

@@ -52,8 +52,9 @@ export default function EmployeeLayout({ children }: { children: React.ReactNode
 
       if (currentUser) {
         const primary = getPrimaryRole(currentUser.roles);
-        if (primary === "client") {
-          router.replace("/client/dashboard");
+        const allowedRoles = ['employee', 'agent', 'sales_agent', 'support_agent', 'hr_agent'];
+        if (!allowedRoles.includes(primary)) {
+          router.replace(getRoleHomeRoute(primary));
           return;
         }
       }

@@ -28,8 +28,9 @@ export class PermissionsGuard implements CanActivate {
       throw new ForbiddenException('User session not found');
     }
 
-    // Admin role has full access
-    if (user.roles && user.roles.includes('admin')) {
+    // Admin/Superadmin roles have full access
+    const adminRoles = ['admin', 'superadmin', 'super_admin'];
+    if (user.roles && adminRoles.some(role => user.roles.includes(role))) {
       return true;
     }
 

@@ -27,7 +27,8 @@ export class RolesGuard implements CanActivate {
       throw new ForbiddenException('User session not found');
     }
 
-    if (user.roles && user.roles.includes('admin')) {
+    const adminRoles = ['admin', 'superadmin', 'super_admin'];
+    if (user.roles && adminRoles.some(role => user.roles.includes(role))) {
       return true;
     }
 
