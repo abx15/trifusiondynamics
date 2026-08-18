@@ -19,14 +19,25 @@ export function useLogout() {
       undefined;
 
     try {
-      await apiClient.post("/auth/logout", refreshToken ? { refreshToken } : {});
+      if (refreshToken) {
+        await apiClient.post("/auth/logout", { refreshToken });
+      } else {
+        await apiClient.post("/auth/logout");
+      }
     } catch (err) {
       console.warn("Backend token revocation on logout:", err);
     } finally {
       clearAuth();
-      toast.success("Successfully logged out");
+
       if (typeof window !== "undefined") {
-        window.location.href = "/login";
+        Cookies.remove("access_token", { path: "/", sameSite: "lax" });
+        Cookies.remove("refresh_token", { path: "/", sameSite: "lax" });
+        sessionStorage.removeItem("refreshToken");
+        localStorage.removeItem("refreshToken");
+
+        setTimeout(() => {
+          window.location.href = "/login";
+        }, 100);
       } else {
         router.replace("/login");
       }

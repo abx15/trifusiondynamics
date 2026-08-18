@@ -119,8 +119,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       localStorage.removeItem("user");
       localStorage.removeItem("accessToken");
       try {
-        Cookies.remove("access_token", { path: "/" });
-        Cookies.remove("refresh_token", { path: "/" });
+        Cookies.remove("access_token", { path: "/", sameSite: "lax" });
+        Cookies.remove("refresh_token", { path: "/", sameSite: "lax" });
       } catch {
         // ignore cookie remove errors
       }
