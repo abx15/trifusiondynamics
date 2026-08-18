@@ -6,7 +6,7 @@ RUN apt-get update -y && apt-get install -y openssl ca-certificates && rm -rf /v
 WORKDIR /app
 # Copy root workspace configurations
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY turbo.json tsconfig.json* ./
+COPY turbo.json ./
 
 # Copy packages and services
 COPY packages/ ./packages/
