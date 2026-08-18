@@ -1,0 +1,11 @@
+{
+  "buildCommand": "pnpm build",
+  "outputDirectory": ".next",
+  "framework": "nextjs",
+  "installCommand": "pnpm install",
+  "env": {
+    "NEXT_PUBLIC_API_URL": "@api-url",
+    "NEXT_PUBLIC_ADMIN_DASHBOARD_URL": "@admin-dashboard-url",
+    "NEXT_PUBLIC_SITE_URL": "@site-url"
+  }
+}

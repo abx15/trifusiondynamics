@@ -1,0 +1,160 @@
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
+import { PrismaService } from '../database/prisma.service';
+import { CreateUserDto } from './dto/create-user.dto';
+import * as bcrypt from 'bcryptjs';
+import * as crypto from 'crypto';
+
+@Injectable()
+export class UsersService {
+  constructor(private prisma: PrismaService) {}
+
+  async createUserByAdmin(dto: CreateUserDto, currentOrgId?: string) {
+    // 1. Check if user already exists
+    const existing = await this.prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: dto.email.toLowerCase().trim() },
+          ...(dto.phone ? [{ phone: dto.phone.trim() }] : []),
+        ],
+      },
+    });
+
+    if (existing) {
+      throw new ConflictException(
+        'User with this email or phone already exists',
+      );
+    }
+
+    // 2. Determine Organization ID
+    let orgId = dto.organizationId || currentOrgId;
+    if (!orgId) {
+      const defaultOrg = await this.prisma.organization.findFirst();
+      if (!defaultOrg) {
+        throw new NotFoundException('No default organization found');
+      }
+      orgId = defaultOrg.id;
+    }
+
+    // 3. Use shared default temporary password from environment
+    const defaultTempPassword =
+      process.env.DEFAULT_TEMP_PASSWORD || 'Welcome@123';
+    const tempPassword = defaultTempPassword;
+    const hashedPassword = await bcrypt.hash(tempPassword, 12);
+
+    // 4. Create User Record
+    const user = await this.prisma.user.create({
+      data: {
+        email: dto.email.toLowerCase().trim(),
+        phone: dto.phone?.trim() || null,
+        name: dto.name,
+        password: hashedPassword,
+        mustChangePassword: true,
+        organizationId: orgId,
+        linkedClientId: dto.linkedClientId || null,
+      },
+    });
+
+    // 5. Role Assignment
+    let role = await this.prisma.role.findUnique({
+      where: { name: dto.role },
+    });
+
+    // Fallback mapping if custom role string passed
+    if (!role) {
+      role =
+        (await this.prisma.role.findUnique({
+          where: { name: 'agent' },
+        })) || (await this.prisma.role.findFirst());
+    }
+
+    if (role) {
+      await this.prisma.userRole.create({
+        data: {
+          userId: user.id,
+          roleId: role.id,
+        },
+      });
+    }
+
+    // 6. Custom Permissions Assignment (if permissions array provided)
+    if (dto.permissions && dto.permissions.length > 0 && role) {
+      for (const permAction of dto.permissions) {
+        const perm = await this.prisma.permission.upsert({
+          where: { action: permAction },
+          update: {},
+          create: { action: permAction },
+        });
+
+        await this.prisma.rolePermission.upsert({
+          where: {
+            roleId_permissionId: {
+              roleId: role.id,
+              permissionId: perm.id,
+            },
+          },
+          update: {},
+          create: {
+            roleId: role.id,
+            permissionId: perm.id,
+          },
+        });
+      }
+    }
+
+    // Log user creation (no individual password - uses shared default)
+    console.log(
+      `[USER PROVISIONED] Email: ${user.email} | Role: ${dto.role} | All new accounts use default password: ${tempPassword} (must change on first login)`,
+    );
+
+    // Return created user WITHOUT password
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      phone: user.phone,
+      role: dto.role,
+      mustChangePassword: user.mustChangePassword,
+      linkedClientId: user.linkedClientId,
+      organizationId: user.organizationId,
+      createdAt: user.createdAt,
+    };
+  }
+
+  async listUsers(orgId?: string) {
+    return this.prisma.user.findMany({
+      where: orgId ? { organizationId: orgId } : {},
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        phone: true,
+        isActive: true,
+        mustChangePassword: true,
+        linkedClientId: true,
+        organizationId: true,
+        roles: {
+          include: {
+            role: {
+              include: {
+                permissions: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+}

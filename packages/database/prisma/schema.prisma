@@ -1,0 +1,905 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+  schemas   = ["auth", "cms", "clients", "crm", "projects", "billing", "hr", "payroll", "ai", "analytics", "automation", "developer"]
+}
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  users     User[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@schema("auth")
+}
+
+model User {
+  id                 String        @id @default(uuid())
+  email              String        @unique
+  phone              String?       @unique
+  password           String
+  name               String
+  isActive           Boolean       @default(true)
+  mustChangePassword Boolean       @default(false)
+  organizationId     String
+  organization       Organization  @relation(fields: [organizationId], references: [id])
+  roles              UserRole[]
+  refreshTokens      RefreshToken[]
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  linkedClientId     String?       // for CLIENT role users only, references clients.Client.id
+
+  @@index([organizationId])
+  @@schema("auth")
+}
+
+model Role {
+  id          String           @id @default(uuid())
+  name        String           @unique
+  description String?
+  permissions RolePermission[]
+  users       UserRole[]
+
+  @@schema("auth")
+}
+
+model Permission {
+  id     String           @id @default(uuid())
+  action String           @unique
+  roles  RolePermission[]
+
+  @@schema("auth")
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id])
+  permission   Permission @relation(fields: [permissionId], references: [id])
+
+  @@id([roleId, permissionId])
+  @@schema("auth")
+}
+
+model UserRole {
+  userId String
+  roleId String
+  user   User   @relation(fields: [userId], references: [id])
+  role   Role   @relation(fields: [roleId], references: [id])
+
+  @@id([userId, roleId])
+  @@schema("auth")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@schema("auth")
+}
+
+// --- schema: "cms" ---
+
+model ContactSubmission {
+  id        String           @id @default(uuid())
+  name      String
+  email     String
+  phone     String?
+  company   String?
+  subject   String?
+  message   String           @db.Text
+  source    String           @default("contact-form")
+  status    SubmissionStatus @default(NEW)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@index([status])
+  @@schema("cms")
+}
+
+enum SubmissionStatus {
+  NEW
+  CONTACTED
+  ARCHIVED
+
+  @@schema("cms")
+}
+
+// --- schema: "clients" ---
+
+model Client {
+  id             String    @id @default(uuid())
+  name           String
+  companyName    String?
+  email          String
+  phone          String?
+  address        String?
+  gstNumber      String?
+  status         ClientStatus @default(ACTIVE)
+  organizationId String
+  contacts       ClientContact[]
+  leadId         String?   @unique
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([organizationId])
+  @@schema("clients")
+}
+
+enum ClientStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+
+  @@schema("clients")
+}
+
+model ClientContact {
+  id        String   @id @default(uuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id])
+  name      String
+  role      String?
+  email     String?
+  phone     String?
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@schema("clients")
+}
+
+// --- schema: "crm" ---
+
+model Lead {
+  id             String     @id @default(uuid())
+  name           String
+  email          String
+  phone          String?
+  companyName    String?
+  source         LeadSource @default(WEBSITE)
+  stage          PipelineStage @default(NEW)
+  estimatedValue Decimal?   @db.Decimal(12, 2)
+  notes          String?    @db.Text
+  assignedToId   String?    // references auth.User.id
+  organizationId String
+  followUps      FollowUp[]
+  convertedToClientId String? @unique
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@index([organizationId])
+  @@index([stage])
+  @@index([assignedToId])
+  @@schema("crm")
+}
+
+enum LeadSource {
+  WEBSITE
+  REFERRAL
+  FIVERR
+  UPWORD
+  LINKEDIN
+  COLD_OUTREACH
+  OTHER
+
+  @@schema("crm")
+}
+
+enum PipelineStage {
+  NEW
+  CONTACTED
+  QUALIFIED
+  PROPOSAL_SENT
+  NEGOTIATION
+  WON
+  LOST
+
+  @@schema("crm")
+}
+
+model FollowUp {
+  id        String   @id @default(uuid())
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id])
+  note      String   @db.Text
+  scheduledAt DateTime?
+  completedAt DateTime?
+  createdById String  // references auth.User.id
+  createdAt DateTime @default(now())
+
+  @@schema("crm")
+}
+
+model Quote {
+  id             String   @id @default(uuid())
+  leadId         String?
+  clientId       String?
+  title          String
+  items          Json      // array of { description, quantity, unitPrice, total }
+  totalAmount    Decimal   @db.Decimal(12, 2)
+  status         QuoteStatus @default(DRAFT)
+  validUntil     DateTime?
+  organizationId String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([organizationId])
+  @@schema("crm")
+}
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  EXPIRED
+
+  @@schema("crm")
+}
+
+// --- schema: "projects" ---
+
+model Project {
+  id             String        @id @default(uuid())
+  name           String
+  description    String?       @db.Text
+  clientId       String        // references clients.Client.id
+  status         ProjectStatus @default(PLANNING)
+  startDate      DateTime?
+  endDate        DateTime?
+  budget         Decimal?      @db.Decimal(12, 2)
+  organizationId String
+  tasks          Task[]
+  milestones     Milestone[]
+  members        ProjectMember[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([organizationId])
+  @@schema("projects")
+}
+
+enum ProjectStatus {
+  PLANNING
+  IN_PROGRESS
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+
+  @@schema("projects")
+}
+
+model ProjectMember {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id])
+  userId    String   // references auth.User.id
+  role      String   @default("member")   // "lead", "member", "viewer"
+  addedAt   DateTime @default(now())
+
+  @@unique([projectId, userId])
+  @@schema("projects")
+}
+
+model Milestone {
+  id          String    @id @default(uuid())
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id])
+  title       String
+  dueDate     DateTime?
+  isCompleted Boolean   @default(false)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@schema("projects")
+}
+
+model Task {
+  id             String     @id @default(uuid())
+  projectId      String
+  project        Project    @relation(fields: [projectId], references: [id])
+  title          String
+  description    String?    @db.Text
+  status         TaskStatus @default(TODO)
+  priority       TaskPriority @default(MEDIUM)
+  assignedToId   String?    // references auth.User.id
+  dueDate        DateTime?
+  sprintId       String?
+  sprint         Sprint?    @relation(fields: [sprintId], references: [id])
+  timeLogs       TimeLog[]
+  order          Int        @default(0)   // for kanban column ordering
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@index([status])
+  @@index([projectId])
+  @@index([assignedToId])
+  @@index([sprintId])
+  @@schema("projects")
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+
+  @@schema("projects")
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+
+  @@schema("projects")
+}
+
+model Sprint {
+  id        String   @id @default(uuid())
+  projectId String
+  name      String
+  startDate DateTime?
+  endDate   DateTime?
+  isActive  Boolean  @default(false)
+  tasks     Task[]
+  createdAt DateTime @default(now())
+
+  @@schema("projects")
+}
+
+model TimeLog {
+  id        String   @id @default(uuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id])
+  userId    String   // references auth.User.id
+  minutes   Int
+  note      String?
+  loggedAt  DateTime @default(now())
+
+  @@schema("projects")
+}
+
+// --- schema: "billing" ---
+
+model Invoice {
+  id             String        @id @default(uuid())
+  invoiceNumber  String        @unique
+  clientId       String
+  projectId      String?
+  quoteId        String?
+  items          Json
+  subtotal       Decimal       @db.Decimal(12, 2)
+  gstPercentage  Decimal       @default(18) @db.Decimal(5, 2)
+  gstAmount      Decimal       @db.Decimal(12, 2)
+  totalAmount    Decimal       @db.Decimal(12, 2)
+  status         InvoiceStatus @default(DRAFT)
+  issueDate      DateTime      @default(now())
+  dueDate        DateTime
+  paidAt         DateTime?
+  notes          String?       @db.Text
+  organizationId String
+  payments       Payment[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([clientId])
+  @@index([dueDate])
+  @@schema("billing")
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  CANCELLED
+
+  @@schema("billing")
+}
+
+model Payment {
+  id            String        @id @default(uuid())
+  invoiceId     String
+  invoice       Invoice       @relation(fields: [invoiceId], references: [id])
+  amount        Decimal       @db.Decimal(12, 2)
+  method        PaymentMethod
+  transactionRef String?
+  paidAt        DateTime      @default(now())
+  notes         String?
+  createdAt     DateTime      @default(now())
+
+  @@schema("billing")
+}
+
+enum PaymentMethod {
+  BANK_TRANSFER
+  UPI
+  RAZORPAY
+  CASH
+  CHEQUE
+  OTHER
+
+  @@schema("billing")
+}
+
+model Estimate {
+  id             String         @id @default(uuid())
+  estimateNumber String         @unique
+  clientId       String?
+  leadId         String?
+  items          Json
+  subtotal       Decimal        @db.Decimal(12, 2)
+  totalAmount    Decimal        @db.Decimal(12, 2)
+  status         EstimateStatus @default(DRAFT)
+  validUntil     DateTime?
+  organizationId String
+  convertedToInvoiceId String?  @unique
+  createdAt      DateTime       @default(now())
+
+  @@index([organizationId])
+  @@schema("billing")
+}
+
+enum EstimateStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  EXPIRED
+
+  @@schema("billing")
+}
+
+model Subscription {
+  id             String   @id @default(uuid())
+  clientId       String
+  planName       String
+  amount         Decimal  @db.Decimal(12, 2)
+  billingCycle   BillingCycle @default(MONTHLY)
+  status         SubscriptionStatus @default(ACTIVE)
+  nextBillingDate DateTime
+  startedAt      DateTime @default(now())
+  cancelledAt    DateTime?
+  organizationId String
+
+  @@index([organizationId])
+  @@schema("billing")
+}
+
+enum BillingCycle {
+  MONTHLY
+  QUARTERLY
+  YEARLY
+
+  @@schema("billing")
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAUSED
+  CANCELLED
+
+  @@schema("billing")
+}
+
+model ExpenseRecord {
+  id             String   @id @default(uuid())
+  title          String
+  category       String
+  amount         Decimal  @db.Decimal(12, 2)
+  spentAt        DateTime @default(now())
+  notes          String?
+  organizationId String
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId])
+  @@schema("billing")
+}
+
+// --- schema: "hr" ---
+
+model Employee {
+  id             String    @id @default(uuid())
+  userId         String    @unique
+  employeeCode   String    @unique
+  department     String?
+  designation    String?
+  joiningDate    DateTime
+  employmentType EmploymentType @default(FULL_TIME)
+  status         EmployeeStatus @default(ACTIVE)
+  reportingToId  String?
+  organizationId String
+  leaves         Leave[]
+  documents      EmployeeDocument[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([department])
+  @@schema("hr")
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERN
+
+  @@schema("hr")
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  ON_LEAVE
+  RESIGNED
+  TERMINATED
+
+  @@schema("hr")
+}
+
+model Leave {
+  id          String      @id @default(uuid())
+  employeeId  String
+  employee    Employee    @relation(fields: [employeeId], references: [id])
+  type        LeaveType
+  startDate   DateTime
+  endDate     DateTime
+  reason      String?     @db.Text
+  status      LeaveStatus @default(PENDING)
+  approvedById String?
+  createdAt   DateTime    @default(now())
+
+  @@schema("hr")
+}
+
+enum LeaveType {
+  SICK
+  CASUAL
+  EARNED
+  UNPAID
+
+  @@schema("hr")
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+
+  @@schema("hr")
+}
+
+model EmployeeDocument {
+  id         String   @id @default(uuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  type       String
+  fileUrl    String
+  uploadedAt DateTime @default(now())
+
+  @@schema("hr")
+}
+
+model Recruitment {
+  id             String   @id @default(uuid())
+  position       String
+  department     String?
+  candidateName  String
+  candidateEmail String
+  resumeUrl      String?
+  stage          RecruitmentStage @default(APPLIED)
+  notes          String?  @db.Text
+  organizationId String
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId])
+  @@schema("hr")
+}
+
+enum RecruitmentStage {
+  APPLIED
+  SCREENING
+  INTERVIEW
+  OFFERED
+  HIRED
+  REJECTED
+
+  @@schema("hr")
+}
+
+// --- schema: "payroll" ---
+
+model SalaryStructure {
+  id           String   @id @default(uuid())
+  employeeId   String   @unique
+  basicSalary  Decimal  @db.Decimal(12, 2)
+  hra          Decimal  @default(0) @db.Decimal(12, 2)
+  allowances   Decimal  @default(0) @db.Decimal(12, 2)
+  deductions   Decimal  @default(0) @db.Decimal(12, 2)
+  effectiveFrom DateTime @default(now())
+
+  @@schema("payroll")
+}
+
+model Payslip {
+  id           String   @id @default(uuid())
+  employeeId   String
+  month        Int
+  year         Int
+  grossAmount  Decimal  @db.Decimal(12, 2)
+  deductions   Decimal  @db.Decimal(12, 2)
+  netAmount    Decimal  @db.Decimal(12, 2)
+  tax          Decimal  @default(0) @db.Decimal(12, 2)
+  status       PayslipStatus @default(GENERATED)
+  paidAt       DateTime?
+  pdfUrl       String?
+  createdAt    DateTime @default(now())
+
+  @@unique([employeeId, month, year])
+  @@schema("payroll")
+}
+
+enum PayslipStatus {
+  GENERATED
+  PAID
+
+  @@schema("payroll")
+}
+
+model BankDetail {
+  id            String @id @default(uuid())
+  employeeId    String @unique
+  accountHolder String
+  accountNumber String
+  ifscCode      String
+  bankName      String
+
+  @@schema("payroll")
+}
+
+// --- schema: "ai" ---
+
+model AiProposalRequest {
+  id             String   @id @default(uuid())
+  leadId         String?
+  clientId       String?
+  requirements   String   @db.Text
+  generatedContent String @db.Text
+  status         String   @default("completed")
+  createdById    String
+  organizationId String
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId])
+  @@schema("ai")
+}
+
+model AiSeoAudit {
+  id             String   @id @default(uuid())
+  websiteUrl     String
+  score          Int?
+  findings       Json      // structured audit results
+  recommendations Json
+  organizationId String
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId])
+  @@schema("ai")
+}
+
+model AiEmailDraft {
+  id             String   @id @default(uuid())
+  context        String   @db.Text
+  tone           String   @default("professional")
+  generatedSubject String?
+  generatedBody  String   @db.Text
+  createdById    String
+  organizationId String
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId])
+  @@schema("ai")
+}
+
+model AiMeetingSummary {
+  id             String   @id @default(uuid())
+  meetingTitle   String?
+  transcript     String   @db.Text
+  summary        String   @db.Text
+  actionItems    Json      // array of { task, assignee?, dueDate? }
+  createdById    String
+  organizationId String
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId])
+  @@schema("ai")
+}
+
+model AiKnowledgeEmbedding {
+  id             String                 @id @default(uuid())
+  sourceType     String                 // "faq", "proposal_template", "blog"
+  sourceId       String
+  content        String                 @db.Text
+  embedding      Unsupported("vector(1536)")   // pgvector column
+  organizationId String
+  createdAt      DateTime               @default(now())
+
+  @@index([organizationId])
+  @@schema("ai")
+}
+
+// --- schema: "analytics" ---
+
+model RevenueRollup {
+  id             String   @id @default(uuid())
+  organizationId String
+  periodType     String   // "daily", "monthly"
+  periodDate     DateTime // first day of the period
+  totalRevenue   Decimal  @db.Decimal(12, 2)
+  totalExpense   Decimal  @db.Decimal(12, 2)
+  netProfit      Decimal  @db.Decimal(12, 2)
+  createdAt      DateTime @default(now())
+
+  @@unique([organizationId, periodType, periodDate])
+  @@index([organizationId])
+  @@schema("analytics")
+}
+
+model ClientRollup {
+  id             String   @id @default(uuid())
+  organizationId String
+  periodDate     DateTime
+  totalClients   Int
+  newClients     Int
+  churnedClients Int
+  createdAt      DateTime @default(now())
+
+  @@unique([organizationId, periodDate])
+  @@index([organizationId])
+  @@schema("analytics")
+}
+
+model TeamPerformanceRollup {
+  id             String   @id @default(uuid())
+  employeeId     String
+  organizationId String
+  periodDate     DateTime  // month
+  tasksCompleted Int
+  hoursLogged    Decimal   @db.Decimal(8, 2)
+  ticketsResolved Int
+  createdAt      DateTime  @default(now())
+
+  @@unique([employeeId, periodDate])
+  @@index([organizationId])
+  @@schema("analytics")
+}
+
+// --- schema: "automation" ---
+
+model Workflow {
+  id             String    @id @default(uuid())
+  name           String
+  triggerType    TriggerType
+  triggerConfig  Json       // e.g. { event: "lead.created" } or { cron: "0 9 * * *" }
+  actions        Json       // ordered array of { type: "send_notification" | "create_task" | "update_status", config: {...} }
+  isActive       Boolean   @default(true)
+  organizationId String
+  runs           WorkflowRun[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([organizationId])
+  @@schema("automation")
+}
+
+enum TriggerType {
+  EVENT
+  SCHEDULED
+  MANUAL
+
+  @@schema("automation")
+}
+
+model WorkflowRun {
+  id         String   @id @default(uuid())
+  workflowId String
+  workflow   Workflow @relation(fields: [workflowId], references: [id])
+  status     RunStatus @default(SUCCESS)
+  input      Json?
+  output     Json?
+  errorMessage String?
+  startedAt  DateTime @default(now())
+  finishedAt DateTime?
+
+  @@index([workflowId, startedAt])
+  @@schema("automation")
+}
+
+enum RunStatus {
+  SUCCESS
+  FAILED
+  RUNNING
+
+  @@schema("automation")
+}
+
+// --- schema: "developer" ---
+
+model ApiKey {
+  id             String   @id @default(uuid())
+  name           String
+  keyPrefix      String   // first 8 chars shown to user, e.g. "tfx_live_"
+  hashedKey      String   @unique   // full key is bcrypt hashed, never stored plain
+  scopes         String[] // e.g. ["crm:read", "billing:read"]
+  isActive       Boolean  @default(true)
+  organizationId String
+  createdById    String
+  lastUsedAt     DateTime?
+  expiresAt      DateTime?
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId])
+  @@schema("developer")
+}
+
+model ApiRequestLog {
+  id           String   @id @default(uuid())
+  apiKeyId     String?
+  method       String
+  path         String
+  statusCode   Int
+  responseTimeMs Int
+  ipAddress    String?
+  organizationId String
+  createdAt    DateTime @default(now())
+
+  @@index([organizationId, createdAt])
+  @@schema("developer")
+}
+
+model Webhook {
+  id             String   @id @default(uuid())
+  url            String
+  events         String[]  // e.g. ["invoice.paid", "lead.created"]
+  secret         String    // for HMAC signing
+  isActive       Boolean  @default(true)
+  organizationId String
+  deliveries     WebhookDelivery[]
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId])
+  @@schema("developer")
+}
+
+model WebhookDelivery {
+  id         String   @id @default(uuid())
+  webhookId  String
+  webhook    Webhook  @relation(fields: [webhookId], references: [id])
+  event      String
+  payload    Json
+  statusCode Int?
+  success    Boolean  @default(false)
+  attempt    Int      @default(1)
+  createdAt  DateTime @default(now())
+
+  @@schema("developer")
+}
