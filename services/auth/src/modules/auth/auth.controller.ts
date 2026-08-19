@@ -72,8 +72,14 @@ export class AuthController {
       ...(cookieDomain ? { domain: cookieDomain } : {}),
     };
 
+    // Clear cookies with multiple path and sameSite options to ensure complete removal
     res.clearCookie('access_token', clearOptions);
+    res.clearCookie('access_token', { ...clearOptions, sameSite: 'strict' as const });
+    res.clearCookie('access_token', { ...clearOptions, path: '/' });
+    
     res.clearCookie('refresh_token', clearOptions);
+    res.clearCookie('refresh_token', { ...clearOptions, sameSite: 'strict' as const });
+    res.clearCookie('refresh_token', { ...clearOptions, path: '/' });
   }
 
   @Post('login')

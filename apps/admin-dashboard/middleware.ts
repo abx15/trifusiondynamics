@@ -68,6 +68,16 @@ export function middleware(request: NextRequest) {
   const token = accessToken || refreshToken;
 
   const isAuthPage = pathname.startsWith("/login") || pathname.startsWith("/register") || pathname.startsWith("/auth/callback");
+  const isLogoutPage = pathname === "/logout";
+
+  // Handle explicit logout URL
+  if (isLogoutPage) {
+    const response = NextResponse.redirect(new URL("/login", request.url));
+    // Clear all auth cookies
+    response.cookies.delete("access_token");
+    response.cookies.delete("refresh_token");
+    return response;
+  }
 
   // Route groupings
   const isSuperAdminRoute = pathname.startsWith("/super-admin");

@@ -59,7 +59,7 @@ export default function UsersSettingsPage() {
 
   const fetchUsers = async () => {
     try {
-      const response = await apiClient.get("/users");
+      const response = await apiClient.get("/api/users");
       setMembers(response.data);
     } catch (error) {
       console.error("Failed to fetch users:", error);

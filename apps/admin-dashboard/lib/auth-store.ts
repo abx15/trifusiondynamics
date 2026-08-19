@@ -114,13 +114,24 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
   clearAuth: () => {
     if (typeof window !== "undefined") {
+      // Clear all session storage
       sessionStorage.removeItem("user");
       sessionStorage.removeItem("accessToken");
+      sessionStorage.removeItem("refreshToken");
+      
+      // Clear all local storage
       localStorage.removeItem("user");
       localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      
+      // Clear all cookies with different path options to ensure complete removal
       try {
         Cookies.remove("access_token", { path: "/", sameSite: "lax" });
+        Cookies.remove("access_token", { path: "/", sameSite: "strict" });
+        Cookies.remove("access_token", { path: "/" });
         Cookies.remove("refresh_token", { path: "/", sameSite: "lax" });
+        Cookies.remove("refresh_token", { path: "/", sameSite: "strict" });
+        Cookies.remove("refresh_token", { path: "/" });
       } catch {
         // ignore cookie remove errors
       }

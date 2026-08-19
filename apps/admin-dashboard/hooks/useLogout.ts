@@ -26,21 +26,28 @@ export function useLogout() {
       }
     } catch (err) {
       console.warn("Backend token revocation on logout:", err);
-    } finally {
-      clearAuth();
+    }
 
-      if (typeof window !== "undefined") {
-        Cookies.remove("access_token", { path: "/", sameSite: "lax" });
-        Cookies.remove("refresh_token", { path: "/", sameSite: "lax" });
-        sessionStorage.removeItem("refreshToken");
-        localStorage.removeItem("refreshToken");
+    // Clear all auth state immediately
+    clearAuth();
 
-        setTimeout(() => {
-          window.location.href = "/login";
-        }, 100);
-      } else {
-        router.replace("/login");
-      }
+    if (typeof window !== "undefined") {
+      // Clear all cookies with different path options to ensure complete removal
+      Cookies.remove("access_token", { path: "/", sameSite: "lax" });
+      Cookies.remove("access_token", { path: "/", sameSite: "strict" });
+      Cookies.remove("access_token", { path: "/" });
+      Cookies.remove("refresh_token", { path: "/", sameSite: "lax" });
+      Cookies.remove("refresh_token", { path: "/", sameSite: "strict" });
+      Cookies.remove("refresh_token", { path: "/" });
+
+      // Clear all storage
+      sessionStorage.clear();
+      localStorage.clear();
+
+      // Force redirect to login page immediately
+      window.location.href = "/login";
+    } else {
+      router.replace("/login");
     }
   };
 

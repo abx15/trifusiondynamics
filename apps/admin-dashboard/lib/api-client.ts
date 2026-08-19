@@ -72,14 +72,28 @@ apiClient.interceptors.response.use(
         return apiClient(originalRequest);
       } catch (refreshErr: any) {
         const errMessage = refreshErr?.response?.data?.message || "";
+        
+        // Clear all auth state completely
         useAuthStore.getState().clearAuth();
         
         if (typeof window !== "undefined") {
+          // Clear cookies explicitly
+          Cookies.remove("access_token", { path: "/", sameSite: "lax" });
+          Cookies.remove("access_token", { path: "/", sameSite: "strict" });
+          Cookies.remove("access_token", { path: "/" });
+          Cookies.remove("refresh_token", { path: "/", sameSite: "lax" });
+          Cookies.remove("refresh_token", { path: "/", sameSite: "strict" });
+          Cookies.remove("refresh_token", { path: "/" });
+          
+          // Clear storage
+          sessionStorage.clear();
+          localStorage.clear();
+          
           if (errMessage === "SESSION_SUPERSEDED") {
             // Single active session enforcement — user logged in elsewhere
             alert("You've been logged out because your account was signed in from another location.");
           }
-          // Redirect to login page within admin-dashboard (same app)
+          // Force redirect to login page
           window.location.href = "/login";
         }
         return Promise.reject(refreshErr);

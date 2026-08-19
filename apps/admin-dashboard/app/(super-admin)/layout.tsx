@@ -38,13 +38,23 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
             currentUser = res.data.user;
           } else {
             useAuthStore.getState().clearAuth();
-            router.replace("/login");
+            // Force hard redirect to ensure clean session state
+            if (typeof window !== "undefined") {
+              window.location.href = "/login";
+            } else {
+              router.replace("/login");
+            }
             return;
           }
         } catch (err) {
           console.warn("Super Admin session restore error:", err);
           useAuthStore.getState().clearAuth();
-          router.replace("/login");
+          // Force hard redirect to ensure clean session state
+          if (typeof window !== "undefined") {
+            window.location.href = "/login";
+          } else {
+            router.replace("/login");
+          }
           return;
         } finally {
           setIsInitializing(false);

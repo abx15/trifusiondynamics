@@ -13,11 +13,18 @@ export class PrismaService
           url: process.env.DATABASE_URL,
         },
       },
+      log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
     });
   }
 
   async onModuleInit() {
-    await this.$connect();
+    try {
+      await this.$connect();
+      console.log('✅ Database connected successfully');
+    } catch (error) {
+      console.error('❌ Database connection failed:', error);
+      throw error;
+    }
   }
 
   async onModuleDestroy() {

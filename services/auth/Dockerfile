@@ -8,7 +8,11 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY turbo.json ./
 COPY packages/ ./packages/
-COPY services/auth/ ./services/auth/
+COPY services/auth/package.json ./services/auth/
+COPY services/auth/tsconfig.json ./services/auth/
+COPY services/auth/tsconfig.build.json ./services/auth/
+COPY services/auth/nest-cli.json ./services/auth/
+COPY services/auth/src ./services/auth/src
 
 RUN npm install -g pnpm
 RUN pnpm install --frozen-lockfile
