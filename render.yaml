@@ -55,6 +55,12 @@ services:
       - key: COOKIE_DOMAIN
         value: ""
 
+      # ── AI Service ─────────────────────────────────────────────
+      - key: AI_SERVICE_URL
+        value: https://trifusiondynamics-ai-api.onrender.com
+      - key: AI_SERVICE_SECRET
+        value: "change-me-in-production"
+
       # ── AI API Keys (used by auth service AI proxy endpoints) ──
       - key: ANTHROPIC_API_KEY
         sync: false # Set in Render dashboard

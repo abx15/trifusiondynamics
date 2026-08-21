@@ -63,10 +63,10 @@ export function UserFormSheet({ open, onOpenChange, user, onSuccess }: UserFormS
     setIsSubmitting(true);
     try {
       if (isEditing && user) {
-        await apiClient.patch(`/api/users/${user.id}`, data);
+        await apiClient.patch(`/users/${user.id}`, data);
         toast.success("User updated successfully");
       } else {
-        await apiClient.post("/api/users", data);
+        await apiClient.post("/users", data);
         toast.success("User invited successfully");
       }
       onSuccess();
@@ -86,7 +86,7 @@ export function UserFormSheet({ open, onOpenChange, user, onSuccess }: UserFormS
     }
     setIsSubmitting(true);
     try {
-      await apiClient.delete(`/api/users/${user.id}`);
+      await apiClient.delete(`/users/${user.id}`);
       toast.success("User deleted successfully");
       onSuccess();
       onOpenChange(false);

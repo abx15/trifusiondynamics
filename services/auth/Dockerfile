@@ -8,11 +8,7 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY turbo.json ./
 COPY packages/ ./packages/
-COPY services/auth/package.json ./services/auth/
-COPY services/auth/tsconfig.json ./services/auth/
-COPY services/auth/tsconfig.build.json ./services/auth/
-COPY services/auth/nest-cli.json ./services/auth/
-COPY services/auth/src ./services/auth/src
+COPY services/auth/ ./services/auth/
 
 RUN npm install -g pnpm
 RUN pnpm install --frozen-lockfile
@@ -23,5 +19,5 @@ ENV NODE_ENV=production
 ENV PORT=8000
 
 EXPOSE 8000
-CMD ["node", "services/auth/dist/main.js"]
 
+CMD ["node", "services/auth/dist/main.js"]

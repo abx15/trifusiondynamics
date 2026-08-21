@@ -416,6 +416,44 @@ async function main() {
   console.log(`Agent User upserted: ${agentUser.email}`);
   const employeeUser = agentUser;
 
+  // 5c.2 Create Employee User (separate from agent)
+  const employeePasswordHash = await bcrypt.hash('Welcome@123', 12);
+  const employeeUserSeed = await safeRun('Upsert Employee User', () =>
+    prisma.user.upsert({
+      where: { email: 'bob.dev@trifusiondynamics.com' },
+      update: {
+        password: employeePasswordHash,
+        name: 'Bob Developer',
+        isActive: true,
+        mustChangePassword: true,
+        organizationId: org.id,
+      },
+      create: {
+        email: 'bob.dev@trifusiondynamics.com',
+        password: employeePasswordHash,
+        name: 'Bob Developer',
+        isActive: true,
+        mustChangePassword: true,
+        organizationId: org.id,
+      },
+    })
+  );
+  await safeRun('Assign employee role to Employee User', () =>
+    prisma.userRole.upsert({
+      where: { userId_roleId: { userId: employeeUserSeed.id, roleId: dbRoles.employee.id } },
+      update: {},
+      create: { userId: employeeUserSeed.id, roleId: dbRoles.employee.id },
+    })
+  );
+  await safeRun('Assign agent role to Employee User', () =>
+    prisma.userRole.upsert({
+      where: { userId_roleId: { userId: employeeUserSeed.id, roleId: dbRoles.agent.id } },
+      update: {},
+      create: { userId: employeeUserSeed.id, roleId: dbRoles.agent.id },
+    })
+  );
+  console.log(`Employee User upserted: ${employeeUserSeed.email}`);
+
 
   // 5d. Create Client User
   const clientPasswordHash = await bcrypt.hash('Client@123', 12);

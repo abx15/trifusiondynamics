@@ -147,6 +147,11 @@ export function middleware(request: NextRequest) {
     if (primaryRole === "client" && !isClientRoute && !isAuthPage) {
       return NextResponse.redirect(new URL("/client/dashboard", request.url));
     }
+
+    // Non-admin user trying to access admin dashboard routes
+    if (isAdminDashboardRoute && primaryRole !== "admin" && primaryRole !== "super_admin") {
+      return NextResponse.redirect(new URL(getRoleHomeRoute(primaryRole), request.url));
+    }
   } else {
     // Unauthenticated user at root / -> redirect to /login
     if (pathname === "/") {
