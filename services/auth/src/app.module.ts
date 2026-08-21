@@ -45,8 +45,10 @@ import { randomUUID } from 'crypto';
     CacheModule.register({
       isGlobal: true,
       store: redisStore,
-      host: process.env.REDIS_HOST || 'localhost',
-      port: process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT) : 6379,
+      // Support both REDIS_URL and individual REDIS_HOST/PORT for compatibility
+      url: process.env.REDIS_URL || undefined,
+      host: process.env.REDIS_URL ? undefined : (process.env.REDIS_HOST || 'localhost'),
+      port: process.env.REDIS_URL ? undefined : (process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT) : 6379),
     }),
     DatabaseModule,
     AuthModule,

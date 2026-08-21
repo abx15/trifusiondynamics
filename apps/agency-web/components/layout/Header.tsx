@@ -73,7 +73,7 @@ export default function Header() {
         {/* Desktop Call to Action — visible lg+ only */}
         <div className="hidden lg:flex items-center gap-5">
           <a
-            href={process.env.NEXT_PUBLIC_ADMIN_DASHBOARD_URL || "http://localhost:3001/login"}
+            href={`${process.env.NEXT_PUBLIC_ADMIN_DASHBOARD_URL || "http://localhost:3001"}/login`}
             className="text-xs font-semibold text-slate-300 hover:text-white transition-colors"
           >
             Login
@@ -122,7 +122,7 @@ export default function Header() {
               </Link>
             ))}
             <a
-              href={process.env.NEXT_PUBLIC_ADMIN_DASHBOARD_URL || "http://localhost:3001/login"}
+              href={`${process.env.NEXT_PUBLIC_ADMIN_DASHBOARD_URL || "http://localhost:3001"}/login`}
               onClick={() => setIsOpen(false)}
               className="flex items-center text-lg font-medium text-slate-400 hover:text-white transition-colors border-b border-white/5 py-4 min-h-[56px]"
             >

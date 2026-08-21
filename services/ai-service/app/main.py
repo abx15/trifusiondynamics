@@ -23,9 +23,22 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# CORS Configuration - Read from environment variable or use development defaults
+cors_origins = os.getenv("CORS_ALLOWED_ORIGINS", "")
+if cors_origins:
+    allowed_origins = [origin.strip() for origin in cors_origins.split(",")]
+else:
+    # Development defaults
+    allowed_origins = [
+        "http://localhost:3000",
+        "http://localhost:3001", 
+        "http://localhost:8000",
+        "http://localhost:8001"
+    ]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -42,4 +55,5 @@ def health_check():
     return {"status": "ok", "environment": settings.environment}
 
 if __name__ == "__main__":
-    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run("app.main:app", host="0.0.0.0", port=port, reload=True)

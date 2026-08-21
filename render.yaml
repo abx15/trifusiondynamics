@@ -16,9 +16,10 @@ services:
   # ─── NestJS Auth + API Service ────────────────────────────────
   - type: web
     name: agency-os-backend
+    runtime: node
     # Native Node runtime (monorepo build from root)
     rootDir: .
-    buildCommand: pnpm install && pnpm --filter database db:generate && pnpm --filter database db:seed && pnpm --filter auth build
+    buildCommand: pnpm install && pnpm --filter @agency-os/database db:generate && cd services/auth && npm run build
     startCommand: node services/auth/dist/main.js
     envVars:
       # ── Database ──────────────────────────────────────────────
@@ -45,10 +46,9 @@ services:
       - key: DEFAULT_TEMP_PASSWORD
         value: Welcome@123
 
-      # ── CORS — Update with actual Vercel URLs after deployment ─
-      # agency-web Vercel URL + admin-dashboard Vercel URL
+      # ── CORS — Production Vercel domains ─
       - key: CORS_ALLOWED_ORIGINS
-        value: https://trifusiondynamics.com,https://ops.trifusiondynamics.com,https://trifusiondynamics.vercel.app,https://trifusiondynamicsadmin.vercel.app
+        value: https://trifusiondynamics.vercel.app,https://trifusiondynamicsadmin.vercel.app
 
       # ── Cookie ────────────────────────────────────────────────
       # Empty string = host-only cookies (no cross-subdomain)
@@ -83,12 +83,23 @@ services:
     dockerContext: ./services/ai-service
     dockerfilePath: ./services/ai-service/Dockerfile
     envVars:
+      # AI API Keys
       - key: ANTHROPIC_API_KEY
         sync: false # Set in Render dashboard
       - key: OPENAI_API_KEY
         sync: false # Set in Render dashboard
       - key: GEMINI_API_KEY
         sync: false # Set in Render dashboard
+      
+      # CORS Configuration
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://trifusiondynamics-api.onrender.com,https://trifusiondynamics.vercel.app,https://trifusiondynamicsadmin.vercel.app
+      
+      # Internal Secret
+      - key: AI_SERVICE_SECRET
+        value: "change-me-in-production"
+      
+      # Optional
       - key: DATABASE_URL
         sync: false # Set if AI service needs direct DB access
       - key: SENTRY_DSN
