@@ -16,11 +16,11 @@ services:
   # ─── NestJS Auth + API Service ────────────────────────────────
   - type: web
     name: agency-os-backend
-    runtime: node
-    # Native Node runtime (monorepo build from root)
-    rootDir: .
-    buildCommand: pnpm install && pnpm --filter @agency-os/database db:generate && cd services/auth && npm run build
-    startCommand: node services/auth/dist/main.js
+    runtime: docker
+    plan: free # Upgrade to paid for production workloads
+    # Docker build from monorepo root
+    dockerContext: .
+    dockerfilePath: ./services/auth/Dockerfile
     envVars:
       # ── Database ──────────────────────────────────────────────
       - key: DATABASE_URL
@@ -72,8 +72,6 @@ services:
       # ── Runtime ───────────────────────────────────────────────
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 8000
 
   # ─── FastAPI AI Microservice ───────────────────────────────────
   - type: web

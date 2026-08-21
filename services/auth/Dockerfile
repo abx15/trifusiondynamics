@@ -4,20 +4,26 @@ RUN apt-get update -y && apt-get install -y openssl ca-certificates && rm -rf /v
 
 WORKDIR /app
 
-# Copy package files and monorepo configs from build context
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY turbo.json ./
-COPY packages/ ./packages/
+# Copy monorepo root files
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
+
+# Copy database package for Prisma generation
+COPY packages/database/ ./packages/database/
+
+# Copy auth service
 COPY services/auth/ ./services/auth/
 
+# Install pnpm and dependencies
 RUN npm install -g pnpm
 RUN pnpm install --frozen-lockfile
-RUN pnpm --filter database db:generate
-RUN pnpm --filter auth build
+
+# Generate Prisma client and build auth service
+RUN pnpm --filter @agency-os/database db:generate
+RUN cd services/auth && npm run build
 
 ENV NODE_ENV=production
-ENV PORT=8000
 
+# Render will inject PORT environment variable
 EXPOSE 8000
 
 CMD ["node", "services/auth/dist/main.js"]
