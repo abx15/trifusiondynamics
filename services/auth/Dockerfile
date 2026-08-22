@@ -19,7 +19,7 @@ RUN pnpm install --frozen-lockfile
 
 # Generate Prisma client and build auth service
 RUN pnpm --filter @agency-os/database db:generate
-RUN cd services/auth && npm run build
+RUN cd services/auth && pnpm run build
 
 ENV NODE_ENV=production
 

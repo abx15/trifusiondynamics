@@ -40,14 +40,14 @@ services:
       dockerfile: services/auth/Dockerfile
     container_name: tfx-auth-api
     ports:
-      - "4000:3000"
+      - "8000:8000"
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://user:password@postgres:5432/agency_db
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - MONGODB_URL=${MONGODB_URL}
-      - PORT=3000
+      - PORT=8000
       - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
     depends_on:
@@ -57,7 +57,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "node -e 'require(\"http\").get(\"http://localhost:3000/api\", (res) => process.exit(res.statusCode === 200 ? 0 : 1))'"]
+      test: ["CMD-SHELL", "node -e 'require(\"http\").get(\"http://localhost:8000/api\", (res) => process.exit(res.statusCode === 200 ? 0 : 1))'"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -94,7 +94,7 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=http://auth-api:3000/api
+      - NEXT_PUBLIC_API_URL=http://auth-api:8000/api
     depends_on:
       auth-api:
         condition: service_healthy
@@ -114,7 +114,7 @@ services:
       - "3001:3000"
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=http://auth-api:3000/api
+      - NEXT_PUBLIC_API_URL=http://auth-api:8000/api
     depends_on:
       auth-api:
         condition: service_healthy
