@@ -86,7 +86,7 @@ async function bootstrap() {
     SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, documentFactory);
 
-  const port = parseInt(process.env.PORT || '4000', 10);
+  const port = parseInt(process.env.PORT || '8000', 10);
   await app.listen(port);
   console.log(`🚀 Auth API running on port ${port}`);
 }

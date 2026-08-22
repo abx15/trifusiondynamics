@@ -11,3 +11,6 @@ CREATE SCHEMA IF NOT EXISTS ai;
 CREATE SCHEMA IF NOT EXISTS analytics;
 CREATE SCHEMA IF NOT EXISTS automation;
 CREATE SCHEMA IF NOT EXISTS developer;
+
+-- Enable pgvector extension for AI features
+CREATE EXTENSION IF NOT EXISTS vector;

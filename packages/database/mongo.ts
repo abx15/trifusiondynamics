@@ -15,20 +15,22 @@ declare global {
 
 const uri = process.env.MONGODB_URL;
 if (!uri) {
-  throw new Error('MONGODB_URL is not defined in environment variables');
+  console.warn('MONGODB_URL is not defined in environment variables — MongoDB features will be disabled');
 }
 
-let clientPromise: Promise<MongoClient>;
+let clientPromise: Promise<MongoClient> | undefined;
 
-if (process.env.NODE_ENV === 'development') {
-  if (!global._mongoClientPromise) {
+if (uri) {
+  if (process.env.NODE_ENV === 'development') {
+    if (!global._mongoClientPromise) {
+      const client = new MongoClient(uri);
+      global._mongoClientPromise = client.connect();
+    }
+    clientPromise = global._mongoClientPromise;
+  } else {
     const client = new MongoClient(uri);
-    global._mongoClientPromise = client.connect();
+    clientPromise = client.connect();
   }
-  clientPromise = global._mongoClientPromise;
-} else {
-  const client = new MongoClient(uri);
-  clientPromise = client.connect();
 }
 
 export default clientPromise;

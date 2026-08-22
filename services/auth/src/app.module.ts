@@ -17,7 +17,6 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD, APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
 import { CacheModule } from '@nestjs/cache-manager';
-import * as redisStore from 'cache-manager-redis-store';
 import { ApiLoggingInterceptor } from './gateway/interceptors/api-logging.interceptor';
 import { AllExceptionsFilter } from './gateway/filters/http-exception.filter';
 import { LoggerModule } from 'nestjs-pino';
@@ -42,14 +41,7 @@ import { randomUUID } from 'crypto';
         limit: 100, // Default 100 req / minute
       },
     ]),
-    CacheModule.register({
-      isGlobal: true,
-      store: redisStore,
-      // Support both REDIS_URL and individual REDIS_HOST/PORT for compatibility
-      url: process.env.REDIS_URL || undefined,
-      host: process.env.REDIS_URL ? undefined : (process.env.REDIS_HOST || 'localhost'),
-      port: process.env.REDIS_URL ? undefined : (process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT) : 6379),
-    }),
+    CacheModule.register({ isGlobal: true, store: 'memory', ttl: 300 }),
     DatabaseModule,
     AuthModule,
     UsersModule,

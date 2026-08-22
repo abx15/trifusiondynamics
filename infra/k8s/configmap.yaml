@@ -5,7 +5,9 @@ metadata:
   namespace: default
 data:
   NODE_ENV: "production"
-  PORT: "3000"
+  PORT: "8000"
   REDIS_HOST: "redis-service"
   REDIS_PORT: "6379"
   ENVIRONMENT: "production"
+  CORS_ALLOWED_ORIGINS: "https://trifusiondynamicsadmin.vercel.app,https://trifusiondynamics.vercel.app"
+  COOKIE_DOMAIN: ""

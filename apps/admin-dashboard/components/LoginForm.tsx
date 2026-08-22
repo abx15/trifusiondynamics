@@ -205,6 +205,9 @@ export function LoginForm() {
       const serverMsg = err?.response?.data?.message || err?.message || "Login failed";
       if (err?.response?.status === 429 || serverMsg.includes("Too many failed attempts")) {
         setError("Too many failed attempts. Please wait 15 minutes before trying again.");
+      } else if (err?.response?.status === 403 && serverMsg.includes("change your password")) {
+        setError("You must change your password before continuing. Redirecting...");
+        setTimeout(() => router.push("/settings"), 1500);
       } else if (err?.response?.status === 401) {
         setError("Invalid email or password. Please check your credentials.");
       } else {

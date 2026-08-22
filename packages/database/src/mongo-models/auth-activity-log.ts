@@ -8,10 +8,14 @@ export interface AuthActivityLog {
   event: 'login' | 'logout' | 'refresh' | 'failed_login';
   ipAddress?: string;
   userAgent?: string;
+  metadata?: Record<string, any>;
   createdAt: Date;
 }
 
 async function getCollection() {
+  if (!clientPromise) {
+    throw new Error('MongoDB is not configured — set MONGODB_URL to enable auth activity logging');
+  }
   const client = await clientPromise;
   return client.db().collection<AuthActivityLog>('auth_activity_logs');
 }

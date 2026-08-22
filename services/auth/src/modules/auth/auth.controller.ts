@@ -7,6 +7,7 @@ import {
   Req,
   Res,
   UseGuards,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
@@ -21,6 +22,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { type JwtPayload } from '@agency-os/types';
 import { type Request, type Response } from 'express';
+import * as jwt from 'jsonwebtoken';
 
 @Controller('auth')
 export class AuthController {
@@ -159,8 +161,10 @@ export class AuthController {
       this.setAuthCookies(res, tokens.accessToken, tokens.refreshToken);
 
       // Also fetch updated user profile
-      const jwt = require('jsonwebtoken');
-      const decoded = jwt.decode(tokens.accessToken);
+      const decoded = jwt.decode(tokens.accessToken) as { sub: string } | null;
+      if (!decoded?.sub) {
+        throw new UnauthorizedException('Invalid token payload');
+      }
       const userProfile = await this.authService.getUserProfile(decoded.sub);
 
       return {

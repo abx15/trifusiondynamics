@@ -7,9 +7,6 @@ import {
 import * as jwt from 'jsonwebtoken';
 import { JwtPayload } from '@agency-os/types';
 
-export const DEFAULT_JWT_ACCESS_SECRET =
-  'd5f8b9e67c8a49c2a12a7f5a3b9d0e1c4b7a8d9e0f1a2b3c4d5e6f7a8b9c0d1e';
-
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
@@ -34,8 +31,10 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     try {
-      const secret =
-        process.env.JWT_ACCESS_SECRET || DEFAULT_JWT_ACCESS_SECRET;
+      const secret = process.env.JWT_ACCESS_SECRET;
+      if (!secret) {
+        throw new UnauthorizedException('Server misconfigured: JWT_ACCESS_SECRET not set');
+      }
       const decoded = jwt.verify(token, secret) as JwtPayload;
       request.user = decoded;
       return true;

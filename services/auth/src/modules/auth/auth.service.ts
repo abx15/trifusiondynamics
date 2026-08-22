@@ -16,11 +16,6 @@ import { Inject } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 
-export const DEFAULT_JWT_ACCESS_SECRET =
-  'd5f8b9e67c8a49c2a12a7f5a3b9d0e1c4b7a8d9e0f1a2b3c4d5e6f7a8b9c0d1e';
-export const DEFAULT_JWT_REFRESH_SECRET =
-  'a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9';
-
 @Injectable()
 export class AuthService {
   constructor(
@@ -28,16 +23,29 @@ export class AuthService {
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
+  private getJwtSecret(): string {
+    const secret = process.env.JWT_ACCESS_SECRET;
+    if (!secret) {
+      throw new Error('JWT_ACCESS_SECRET environment variable is not set');
+    }
+    return secret;
+  }
+
+  private getJwtRefreshSecret(): string {
+    const secret = process.env.JWT_REFRESH_SECRET;
+    if (!secret) {
+      throw new Error('JWT_REFRESH_SECRET environment variable is not set');
+    }
+    return secret;
+  }
+
   private generateAccessToken(payload: JwtPayload): string {
-    const secret = process.env.JWT_ACCESS_SECRET || DEFAULT_JWT_ACCESS_SECRET;
-    return jwt.sign(payload, secret, { expiresIn: '1h' });
+    return jwt.sign(payload, this.getJwtSecret(), { expiresIn: '1h' });
   }
 
   private generateRefreshToken(payload: JwtPayload): string {
-    const secret = process.env.JWT_REFRESH_SECRET || DEFAULT_JWT_REFRESH_SECRET;
-    return jwt.sign({ sub: payload.sub }, secret, { expiresIn: '7d' });
+    return jwt.sign({ sub: payload.sub }, this.getJwtRefreshSecret(), { expiresIn: '7d' });
   }
-
 
   async login(
     dto: LoginDto,
@@ -46,10 +54,13 @@ export class AuthService {
   ): Promise<AuthResponse> {
     try {
       const inputIdentifier = dto.email.trim().toLowerCase();
-      // 1. Find user by email or phone with roles and permissions
+      // 1. Find user by email or phone
       const user = await this.prisma.user.findFirst({
         where: {
-          OR: [{ email: inputIdentifier }, { phone: dto.email.trim() }],
+          OR: [
+            { email: inputIdentifier },
+            { phone: inputIdentifier },
+          ],
         },
         include: {
           roles: {
@@ -72,51 +83,55 @@ export class AuthService {
         throw new UnauthorizedException('Invalid credentials');
       }
 
+      if (!user.isActive) {
+        throw new UnauthorizedException('Your account has been deactivated');
+      }
+
       // 2. Check brute force block (5+ failed logins in the last 15 minutes)
-      // Temporarily disabled - authActivityLogRepository not implemented
-      // const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
-      // const failedAttempts = await authActivityLogRepository.getFailedLoginsSince(user.id, fifteenMinutesAgo);
-      //
-      // if (failedAttempts >= 5) {
-      //   throw new HttpException(
-      //     'Too many failed login attempts. Please try again after 15 minutes.',
-      //     HttpStatus.TOO_MANY_REQUESTS,
-      //   );
-      // }
+      try {
+        const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+        const failedAttempts = await authActivityLogRepository.getFailedLoginsSince(user.id, fifteenMinutesAgo);
+
+        if (failedAttempts >= 5) {
+          throw new HttpException(
+            'Too many failed login attempts. Please try again after 15 minutes.',
+            HttpStatus.TOO_MANY_REQUESTS,
+          );
+        }
+      } catch (err) {
+        console.warn('Could not check brute force protection:', err);
+      }
 
       // 3. Verify password
       const isPasswordValid = await bcrypt.compare(dto.password, user.password);
       if (!isPasswordValid) {
-        // Log failed login event in MongoDB - temporarily disabled
-        // await authActivityLogRepository.logEvent({
-        //   userId: user.id,
-        //   organizationId: user.organizationId,
-        //   event: 'failed_login',
-        //   ipAddress,
-        //   userAgent,
-        //   metadata: { reason: 'invalid_password' },
-        // });
-
-        // Re-check failure count for immediate blocking response - temporarily disabled
-        // const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
-        // const updatedFailedAttempts = await authActivityLogRepository.getFailedLoginsSince(user.id, fifteenMinutesAgo);
-        // if (updatedFailedAttempts >= 5) {
-        //   throw new HttpException(
-        //     'Too many failed login attempts. Please try again after 15 minutes.',
-        //     HttpStatus.TOO_MANY_REQUESTS,
-        //   );
-        // }
+        await authActivityLogRepository.logEvent({
+          userId: user.id,
+          organizationId: user.organizationId,
+          event: 'failed_login',
+          ipAddress,
+          userAgent,
+          metadata: { reason: 'invalid_password' },
+        });
 
         throw new UnauthorizedException('Invalid credentials');
       }
 
-      // Single Active Session Enforcement: Revoke ALL existing active refresh tokens for this user
+      // 4. Enforce password change if required
+      if (user.mustChangePassword) {
+        throw new HttpException(
+          'You must change your password before continuing',
+          HttpStatus.FORBIDDEN,
+        );
+      }
+
+      // 5. Single Active Session Enforcement: Revoke ALL existing active refresh tokens
       await this.prisma.refreshToken.updateMany({
         where: { userId: user.id, revoked: false },
         data: { revoked: true },
       });
 
-      // 4. Construct JWT Payload
+      // 6. Construct JWT Payload
       const permissionsList = Array.from(
         new Set(
           user.roles.flatMap((ur) =>
@@ -135,21 +150,21 @@ export class AuthService {
         permissions: permissionsList,
       };
 
-      // 5. Generate Tokens
+      // 7. Generate Tokens
       const accessToken = this.generateAccessToken(jwtPayload);
       const refreshToken = this.generateRefreshToken(jwtPayload);
 
-      // Save refresh token to Postgres
+      // 8. Save refresh token to Postgres
       await this.prisma.refreshToken.create({
         data: {
           token: refreshToken,
           userId: user.id,
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
           revoked: false,
         },
       });
 
-      // 6. Log successful login to MongoDB (optional/safe)
+      // 9. Log successful login (best-effort, won't crash auth)
       try {
         await authActivityLogRepository.logEvent({
           userId: user.id,
@@ -514,7 +529,7 @@ export class AuthService {
   ): Promise<string> {
     const code = jwt.sign(
       { sub: userId, orgId: organizationId },
-      process.env.JWT_ACCESS_SECRET || DEFAULT_JWT_ACCESS_SECRET,
+      this.getJwtSecret(),
       { expiresIn: '120s' },
     );
 
@@ -554,8 +569,7 @@ export class AuthService {
         console.warn(
           '[Auth] Exchange code not in cache, falling back to JWT verification',
         );
-        const secret = process.env.JWT_ACCESS_SECRET || DEFAULT_JWT_ACCESS_SECRET;
-        const payload = jwt.verify(code, secret) as any;
+        const payload = jwt.verify(code, this.getJwtSecret()) as any;
         userId = payload.sub;
         organizationId = payload.orgId;
       }
@@ -565,12 +579,11 @@ export class AuthService {
         '[Auth] Cache error, falling back to JWT verification:',
         cacheErr?.message,
       );
-      try {
-        const secret = process.env.JWT_ACCESS_SECRET || DEFAULT_JWT_ACCESS_SECRET;
-        const payload = jwt.verify(code, secret) as any;
-        userId = payload.sub;
-        organizationId = payload.orgId;
-      } catch (jwtErr) {
+       try {
+         const payload = jwt.verify(code, this.getJwtSecret()) as any;
+         userId = payload.sub;
+         organizationId = payload.orgId;
+       } catch (jwtErr) {
         throw new UnauthorizedException('Invalid or expired exchange code');
       }
     }

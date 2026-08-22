@@ -11,6 +11,9 @@ export interface AttendancePunch {
 }
 
 async function getCollection() {
+  if (!clientPromise) {
+    throw new Error('MongoDB is not configured — set MONGODB_URL to enable attendance tracking');
+  }
   const client = await clientPromise;
   return client.db().collection<AttendancePunch>('attendance_punches');
 }

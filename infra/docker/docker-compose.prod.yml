@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   postgres:
-    image: postgres:15-alpine
+    image: pgvector/pgvector:pg15
     container_name: agencyos-postgres-prod
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-admin}
@@ -10,6 +10,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-trifusion}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./postgres-init.sql:/docker-entrypoint-initdb.d/init.sql
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U admin -d trifusion"]
@@ -59,6 +60,8 @@ services:
       dockerfile: services/auth/Dockerfile
     container_name: agencyos-auth-prod
     restart: unless-stopped
+    ports:
+      - "8000:8000"
     env_file:
       - ../../.env
     depends_on:
@@ -69,7 +72,7 @@ services:
       mongodb:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api"]
+      test: ["CMD-SHELL", "node -e 'require(\"http\").get(\"http://localhost:8000/api\", (res) => process.exit(res.statusCode === 200 ? 0 : 1))'"]
       interval: 30s
       timeout: 10s
       retries: 3

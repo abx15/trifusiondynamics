@@ -14,6 +14,9 @@ export interface TicketMessage {
 }
 
 async function getCollection() {
+  if (!clientPromise) {
+    throw new Error('MongoDB is not configured — set MONGODB_URL to enable ticket messaging');
+  }
   const client = await clientPromise;
   return client.db().collection<TicketMessage>('ticket_messages');
 }
