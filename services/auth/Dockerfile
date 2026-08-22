@@ -7,6 +7,7 @@ COPY apps/ ./apps/
 COPY services/ ./services/
 RUN npm install -g pnpm
 RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @agency-os/types run build
 RUN pnpm --filter @agency-os/database db:generate
 RUN pnpm --filter auth run build
 ENV NODE_ENV=production
