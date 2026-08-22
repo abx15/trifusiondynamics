@@ -1,0 +1,38 @@
+services:
+  - type: web
+    name: trifusion-auth
+    env: docker
+    dockerfilePath: services/auth/Dockerfile
+    rootDir: .
+    dockerContext: .
+    plan: starter
+    region: oregon
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: trifusion-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: trifusion-redis
+          type: redis
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PORT
+        value: 8000
+
+databases:
+  - name: trifusion-db
+    plan: starter
+    region: oregon
+    databaseName: trifusion_auth
+    user: trifusion
+
+  - name: trifusion-redis
+    plan: starter
+    region: oregon
+    maxmemoryPolicy: allkeys-lru

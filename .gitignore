@@ -1,41 +1,37 @@
-# dependency directories
+# Dependencies
 node_modules
-/node_modules
-*/node_modules
-**/node_modules
+.pnpm-store
+pnpm-debug.log
 
-# Next.js build output and cache
+# Build outputs
 .next
-out
-
-# NestJS build output
 dist
 build
-
-# Prisma
-/packages/database/prisma/dev.db
-/packages/database/prisma/dev.db-journal
+out
 
 # Environment files
 .env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
-.env.production
+.env.*.local
 
-# IDE configurations
-.idea
+# IDE
 .vscode
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+.idea
+*.swp
+*.swo
+*~
 
-# OS metadata
+# OS
 .DS_Store
 Thumbs.db
 
 # Turborepo
 .turbo
+
+# Tests
+coverage
+.nyc_output
+
+# Misc
+*.log
+.cache
