@@ -3,8 +3,6 @@ services:
     name: trifusion-auth
     env: docker
     dockerfilePath: services/auth/Dockerfile
-    rootDir: .
-    dockerContext: .
     plan: starter
     region: oregon
     healthCheckPath: /health

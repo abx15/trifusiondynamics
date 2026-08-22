@@ -8,7 +8,7 @@ COPY services/ ./services/
 RUN npm install -g pnpm
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @agency-os/database db:generate
-RUN cd services/auth && pnpm run build
+RUN pnpm --filter auth run build
 ENV NODE_ENV=production
 EXPOSE 8000
 CMD ["node", "services/auth/dist/main.js"]
