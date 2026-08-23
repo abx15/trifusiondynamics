@@ -7,6 +7,9 @@ COPY apps/ ./apps/
 COPY services/ ./services/
 RUN npm install -g pnpm
 RUN pnpm install --frozen-lockfile
+ARG DATABASE_URL
+ENV DATABASE_URL=${DATABASE_URL}
+RUN pnpm --filter @agency-os/database db:generate
 RUN pnpm --filter @agency-os/types run build
 RUN pnpm --filter auth run build
 ENV NODE_ENV=production

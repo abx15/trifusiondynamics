@@ -116,7 +116,7 @@ export class AuthService {
             ur.role.permissions.map((rp) => rp.permission.action),
           ),
         ),
-      );
+      ) as string[];
 
       const rolesList = user.roles.map((ur) => ur.role.name);
 
@@ -213,7 +213,7 @@ export class AuthService {
       });
     }
 
-    const permissionsList = allPermissions.map((p) => p.action);
+    const permissionsList = allPermissions.map((p) => p.action) as string[];
     const jwtPayload: JwtPayload = {
       sub: user.id,
       email: user.email,
