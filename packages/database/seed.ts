@@ -1,7 +1,5 @@
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
-import * as dotenv from 'dotenv';
-import * as path from 'path';
 import dns from 'dns';
 
 // Configure DNS programmatically to Google Public DNS
@@ -10,9 +8,6 @@ try {
 } catch (err) {
   console.warn('Could not set DNS servers programmatically in seed.ts:', err);
 }
-
-// Load env from root
-dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const prisma = new PrismaClient({
   datasources: {
