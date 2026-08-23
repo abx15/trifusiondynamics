@@ -6,7 +6,6 @@ services:
     plan: starter
     region: oregon
     healthCheckPath: /health
-    preDeployCommand: pnpm --filter @agency-os/database db:push && pnpm --filter @agency-os/database db:seed
     envVars:
       - key: NODE_ENV
         value: production
@@ -23,8 +22,6 @@ services:
           name: trifusion-redis
           type: redis
           property: connectionString
-      - key: JWT_SECRET
-        generateValue: true
       - key: JWT_ACCESS_SECRET
         generateValue: true
       - key: JWT_REFRESH_SECRET
@@ -37,6 +34,14 @@ services:
         generateValue: true
       - key: PORT
         value: 8000
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://trifusiondynamicsadmin.vercel.app,https://trifusiondynamics.vercel.app
+      - key: COOKIE_DOMAIN
+        value: .vercel.app
+      - key: NEXT_PUBLIC_ADMIN_DASHBOARD_URL
+        value: https://trifusiondynamicsadmin.vercel.app
+      - key: NEXT_PUBLIC_AGENCY_WEB_URL
+        value: https://trifusiondynamics.vercel.app
 
 databases:
   - name: trifusion-db

@@ -7,6 +7,10 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
+import dns from 'dns';
+
+// Configure DNS to Google Public DNS for better connectivity
+dns.setServers(['8.8.8.8', '8.8.4.4']);
 
 async function bootstrap() {
   if (

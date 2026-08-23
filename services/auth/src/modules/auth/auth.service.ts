@@ -10,7 +10,6 @@ import { RegisterDto } from './dto/register.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import * as bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
-import { authActivityLogRepository } from '@agency-os/database';
 import { JwtPayload, AuthResponse } from '@agency-os/types';
 import { Inject } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -88,32 +87,11 @@ export class AuthService {
       }
 
       // 2. Check brute force block (5+ failed logins in the last 15 minutes)
-      try {
-        const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
-        const failedAttempts = await authActivityLogRepository.getFailedLoginsSince(user.id, fifteenMinutesAgo);
-
-        if (failedAttempts >= 5) {
-          throw new HttpException(
-            'Too many failed login attempts. Please try again after 15 minutes.',
-            HttpStatus.TOO_MANY_REQUESTS,
-          );
-        }
-      } catch (err) {
-        console.warn('Could not check brute force protection:', err);
-      }
+      // Note: MongoDB-based activity logging removed, skipping brute force check
 
       // 3. Verify password
       const isPasswordValid = await bcrypt.compare(dto.password, user.password);
       if (!isPasswordValid) {
-        await authActivityLogRepository.logEvent({
-          userId: user.id,
-          organizationId: user.organizationId,
-          event: 'failed_login',
-          ipAddress,
-          userAgent,
-          metadata: { reason: 'invalid_password' },
-        });
-
         throw new UnauthorizedException('Invalid credentials');
       }
 
@@ -164,19 +142,7 @@ export class AuthService {
         },
       });
 
-      // 9. Log successful login (best-effort, won't crash auth)
-      try {
-        await authActivityLogRepository.logEvent({
-          userId: user.id,
-          organizationId: user.organizationId,
-          event: 'login',
-          ipAddress,
-          userAgent,
-        });
-      } catch (err) {
-        console.warn('Could not log login event to MongoDB:', err);
-      }
-
+      // 9. Log successful login (MongoDB removed, skipping)
       return {
         accessToken,
         refreshToken,
@@ -268,16 +234,6 @@ export class AuthService {
       },
     });
 
-    try {
-      await authActivityLogRepository.logEvent({
-        userId: user.id,
-        organizationId: user.organizationId,
-        event: 'login',
-      });
-    } catch (err) {
-      console.warn('Could not log registration event to MongoDB:', err);
-    }
-
     return {
       accessToken,
       refreshToken,
@@ -307,22 +263,6 @@ export class AuthService {
       });
 
       if (dbToken) {
-        // Log logout event in MongoDB
-        const user = await this.prisma.user.findUnique({
-          where: { id: dbToken.userId },
-        });
-        if (user) {
-          try {
-            await authActivityLogRepository.logEvent({
-              userId: user.id,
-              organizationId: user.organizationId,
-              event: 'logout',
-            });
-          } catch (err) {
-            console.warn('Could not log logout event to MongoDB:', err);
-          }
-        }
-
         // Delete refresh token
         await this.prisma.refreshToken.delete({
           where: { id: dbToken.id },
@@ -409,19 +349,7 @@ export class AuthService {
       },
     });
 
-    // 4. Log refresh event to MongoDB
-    try {
-      await authActivityLogRepository.logEvent({
-        userId: user.id,
-        organizationId: user.organizationId,
-        event: 'refresh',
-        ipAddress,
-        userAgent,
-      });
-    } catch (err) {
-      console.warn('Could not log refresh event to MongoDB:', err);
-    }
-
+    // 4. Log refresh event (MongoDB removed, skipping)
     return {
       accessToken: newAccessToken,
       refreshToken: newRefreshToken,
@@ -519,7 +447,8 @@ export class AuthService {
   }
 
   async getUserActivity(userId: string): Promise<any[]> {
-    return authActivityLogRepository.getRecentActivity(userId, 20);
+    // MongoDB removed, return empty array
+    return [];
   }
 
   // Exchange Code Pattern for Cross-Domain Auth
@@ -541,10 +470,7 @@ export class AuthService {
         120,
       );
     } catch (err) {
-      console.warn(
-        '[Auth] Cache set failed for exchange code, continuing without cache:',
-        err?.message,
-      );
+      // Cache failed, continuing without it
     }
 
     return code;
@@ -566,19 +492,12 @@ export class AuthService {
         await this.cacheManager.del(`exchange_code:${code}`);
       } else {
         // Cache miss — fall back to JWT verification
-        console.warn(
-          '[Auth] Exchange code not in cache, falling back to JWT verification',
-        );
         const payload = jwt.verify(code, this.getJwtSecret()) as any;
         userId = payload.sub;
         organizationId = payload.orgId;
       }
     } catch (cacheErr) {
       // Cache error — try JWT verification directly
-      console.warn(
-        '[Auth] Cache error, falling back to JWT verification:',
-        cacheErr?.message,
-      );
        try {
          const payload = jwt.verify(code, this.getJwtSecret()) as any;
          userId = payload.sub;
