@@ -30,7 +30,7 @@ export class PermissionsGuard implements CanActivate {
 
     // Admin/Superadmin roles have full access
     const adminRoles = ['admin', 'superadmin', 'super_admin'];
-    if (user.roles && adminRoles.some(role => user.roles.includes(role))) {
+    if (user.roles && adminRoles.some((role) => user.roles.includes(role))) {
       return true;
     }
 

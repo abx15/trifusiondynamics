@@ -28,7 +28,7 @@ export class RolesGuard implements CanActivate {
     }
 
     const adminRoles = ['admin', 'superadmin', 'super_admin'];
-    if (user.roles && adminRoles.some(role => user.roles.includes(role))) {
+    if (user.roles && adminRoles.some((role) => user.roles.includes(role))) {
       return true;
     }
 

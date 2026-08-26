@@ -82,9 +82,7 @@ describe('Comprehensive Backend Services Test', () => {
       });
 
       it('should logout without token (graceful)', async () => {
-        return request(app.getHttpServer())
-          .post('/auth/logout')
-          .expect(201);
+        return request(app.getHttpServer()).post('/auth/logout').expect(201);
       });
     });
 
@@ -130,9 +128,7 @@ describe('Comprehensive Backend Services Test', () => {
       });
 
       it('should fail to get profile without token', async () => {
-        return request(app.getHttpServer())
-          .get('/auth/me')
-          .expect(401);
+        return request(app.getHttpServer()).get('/auth/me').expect(401);
       });
     });
   });
@@ -208,9 +204,7 @@ describe('Comprehensive Backend Services Test', () => {
 
     describe('Unauthenticated Access', () => {
       it('should reject unauthenticated requests to protected routes', async () => {
-        return request(app.getHttpServer())
-          .get('/auth/me')
-          .expect(401);
+        return request(app.getHttpServer()).get('/auth/me').expect(401);
       });
 
       it('should reject unauthenticated POST requests', async () => {

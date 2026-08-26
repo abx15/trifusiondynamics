@@ -39,8 +39,9 @@ export const metadata: Metadata = {
     title: "Trifusion-Dynamics",
   },
   icons: {
-    icon: "/favicon.ico",
+    icon: "/favicon.png",
     apple: "/icons/icon-192.png",
+    shortcut: "/favicon.png",
   },
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL || "https://trifusiondynamics.com"

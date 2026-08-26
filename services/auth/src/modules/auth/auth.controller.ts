@@ -46,7 +46,7 @@ export class AuthController {
     const cookieOptions = {
       httpOnly: true,
       secure: isProd,
-      sameSite: (isProd && !cookieDomain ? 'none' : 'lax') as 'none' | 'lax',
+      sameSite: isProd && !cookieDomain ? 'none' : 'lax',
       path: '/',
       ...(cookieDomain ? { domain: cookieDomain } : {}),
     };
@@ -69,18 +69,24 @@ export class AuthController {
     const clearOptions = {
       httpOnly: true,
       secure: isProd,
-      sameSite: (isProd && !cookieDomain ? 'none' : 'lax') as 'none' | 'lax',
+      sameSite: isProd && !cookieDomain ? 'none' : 'lax',
       path: '/',
       ...(cookieDomain ? { domain: cookieDomain } : {}),
     };
 
     // Clear cookies with multiple path and sameSite options to ensure complete removal
     res.clearCookie('access_token', clearOptions);
-    res.clearCookie('access_token', { ...clearOptions, sameSite: 'strict' as const });
+    res.clearCookie('access_token', {
+      ...clearOptions,
+      sameSite: 'strict' as const,
+    });
     res.clearCookie('access_token', { ...clearOptions, path: '/' });
-    
+
     res.clearCookie('refresh_token', clearOptions);
-    res.clearCookie('refresh_token', { ...clearOptions, sameSite: 'strict' as const });
+    res.clearCookie('refresh_token', {
+      ...clearOptions,
+      sameSite: 'strict' as const,
+    });
     res.clearCookie('refresh_token', { ...clearOptions, path: '/' });
   }
 
@@ -177,7 +183,6 @@ export class AuthController {
       throw err;
     }
   }
-
 
   @Patch('change-password')
   @UseGuards(JwtAuthGuard)

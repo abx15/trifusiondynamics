@@ -2,7 +2,7 @@ const CACHE_NAME = 'tfx-shell-v1';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
-  '/favicon.ico',
+  '/favicon.png',
   '/icons/icon-192.png',
   '/icons/icon-512.png'
 ];

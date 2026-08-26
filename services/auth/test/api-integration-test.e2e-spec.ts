@@ -89,9 +89,7 @@ describe('API Integration Tests (Live Service)', () => {
     });
 
     it('should fail to get profile without token', async () => {
-      await request(app.getHttpServer())
-        .get('/api/auth/me')
-        .expect(401);
+      await request(app.getHttpServer()).get('/api/auth/me').expect(401);
     });
 
     it('should logout successfully', async () => {
@@ -162,17 +160,11 @@ describe('API Integration Tests (Live Service)', () => {
     });
 
     it('should restrict unauthenticated access to protected routes', async () => {
-      await request(app.getHttpServer())
-        .get('/projects/projects')
-        .expect(401);
+      await request(app.getHttpServer()).get('/projects/projects').expect(401);
 
-      await request(app.getHttpServer())
-        .get('/hr/employees')
-        .expect(401);
+      await request(app.getHttpServer()).get('/hr/employees').expect(401);
 
-      await request(app.getHttpServer())
-        .get('/stubs/leads')
-        .expect(401);
+      await request(app.getHttpServer()).get('/stubs/leads').expect(401);
     });
   });
 

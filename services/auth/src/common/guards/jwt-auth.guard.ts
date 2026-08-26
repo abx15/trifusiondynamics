@@ -33,7 +33,9 @@ export class JwtAuthGuard implements CanActivate {
     try {
       const secret = process.env.JWT_ACCESS_SECRET;
       if (!secret) {
-        throw new UnauthorizedException('Server misconfigured: JWT_ACCESS_SECRET not set');
+        throw new UnauthorizedException(
+          'Server misconfigured: JWT_ACCESS_SECRET not set',
+        );
       }
       const decoded = jwt.verify(token, secret) as JwtPayload;
       request.user = decoded;
@@ -45,4 +47,3 @@ export class JwtAuthGuard implements CanActivate {
     }
   }
 }
-

@@ -22,7 +22,9 @@ beforeAll(async () => {
   // Reset database schema and run migrations
   console.log('Resetting test database...');
   try {
-    execSync('npx prisma migrate reset --force --skip-seed', { stdio: 'ignore' });
+    execSync('npx prisma migrate reset --force --skip-seed', {
+      stdio: 'ignore',
+    });
   } catch (error) {
     console.log('Migration reset failed, continuing...');
   }
@@ -91,7 +93,15 @@ beforeAll(async () => {
 
   // Assign limited permissions to employee role
   const employeePermissions = permissions.filter((p) =>
-    ['crm:read', 'projects:read', 'projects:write', 'hr:read', 'ai:read', 'ai:write', 'analytics:read'].includes(p.action),
+    [
+      'crm:read',
+      'projects:read',
+      'projects:write',
+      'hr:read',
+      'ai:read',
+      'ai:write',
+      'analytics:read',
+    ].includes(p.action),
   );
   await Promise.all(
     employeePermissions.map((permission) =>

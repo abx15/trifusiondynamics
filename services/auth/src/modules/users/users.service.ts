@@ -126,7 +126,7 @@ export class UsersService {
 
   async listUsers(orgId?: string, isSuperAdmin = false) {
     return this.prisma.user.findMany({
-      where: isSuperAdmin ? {} : (orgId ? { organizationId: orgId } : {}),
+      where: isSuperAdmin ? {} : orgId ? { organizationId: orgId } : {},
       select: {
         id: true,
         email: true,
@@ -176,11 +176,14 @@ export class UsersService {
 
     const updateData: any = {};
     if (dto.name !== undefined) updateData.name = dto.name;
-    if (dto.email !== undefined) updateData.email = dto.email.toLowerCase().trim();
+    if (dto.email !== undefined)
+      updateData.email = dto.email.toLowerCase().trim();
     if (dto.phone !== undefined) updateData.phone = dto.phone?.trim() || null;
     if (dto.isActive !== undefined) updateData.isActive = dto.isActive;
-    if (dto.mustChangePassword !== undefined) updateData.mustChangePassword = dto.mustChangePassword;
-    if (dto.linkedClientId !== undefined) updateData.linkedClientId = dto.linkedClientId || null;
+    if (dto.mustChangePassword !== undefined)
+      updateData.mustChangePassword = dto.mustChangePassword;
+    if (dto.linkedClientId !== undefined)
+      updateData.linkedClientId = dto.linkedClientId || null;
     if (dto.password) {
       updateData.password = await bcrypt.hash(dto.password, 12);
     }
@@ -274,7 +277,10 @@ export class UsersService {
   }
 
   async createOrganization(data: { name: string; slug: string }) {
-    const slug = data.slug.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-');
+    const slug = data.slug
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-');
     return this.prisma.organization.create({
       data: {
         name: data.name,

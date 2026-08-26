@@ -43,7 +43,9 @@ export class AuthService {
   }
 
   private generateRefreshToken(payload: JwtPayload): string {
-    return jwt.sign({ sub: payload.sub }, this.getJwtRefreshSecret(), { expiresIn: '7d' });
+    return jwt.sign({ sub: payload.sub }, this.getJwtRefreshSecret(), {
+      expiresIn: '7d',
+    });
   }
 
   async login(
@@ -56,10 +58,7 @@ export class AuthService {
       // 1. Find user by email or phone
       const user = await this.prisma.user.findFirst({
         where: {
-          OR: [
-            { email: inputIdentifier },
-            { phone: inputIdentifier },
-          ],
+          OR: [{ email: inputIdentifier }, { phone: inputIdentifier }],
         },
         include: {
           roles: {
@@ -116,7 +115,7 @@ export class AuthService {
             ur.role.permissions.map((rp) => rp.permission.action),
           ),
         ),
-      ) as string[];
+      );
 
       const rolesList = user.roles.map((ur) => ur.role.name);
 
@@ -213,7 +212,7 @@ export class AuthService {
       });
     }
 
-    const permissionsList = allPermissions.map((p) => p.action) as string[];
+    const permissionsList = allPermissions.map((p) => p.action);
     const jwtPayload: JwtPayload = {
       sub: user.id,
       email: user.email,
@@ -274,7 +273,6 @@ export class AuthService {
 
     return { success: true };
   }
-
 
   async refresh(
     dto: RefreshDto,
@@ -498,11 +496,11 @@ export class AuthService {
       }
     } catch (cacheErr) {
       // Cache error — try JWT verification directly
-       try {
-         const payload = jwt.verify(code, this.getJwtSecret()) as any;
-         userId = payload.sub;
-         organizationId = payload.orgId;
-       } catch (jwtErr) {
+      try {
+        const payload = jwt.verify(code, this.getJwtSecret()) as any;
+        userId = payload.sub;
+        organizationId = payload.orgId;
+      } catch (jwtErr) {
         throw new UnauthorizedException('Invalid or expired exchange code');
       }
     }

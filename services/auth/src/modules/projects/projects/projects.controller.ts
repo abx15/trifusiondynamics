@@ -66,7 +66,7 @@ export class ProjectsController {
   @RequirePermission('projects:write')
   remove(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     const adminRoles = ['admin', 'superadmin', 'super_admin'];
-    if (!adminRoles.some(role => user.roles.includes(role))) {
+    if (!adminRoles.some((role) => user.roles.includes(role))) {
       throw new ForbiddenException('Admin only action');
     }
     return this.projectsService.remove(id, user.orgId);

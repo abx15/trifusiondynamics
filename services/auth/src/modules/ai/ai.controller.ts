@@ -22,11 +22,7 @@ export class AiController {
     @CurrentUser() user: JwtPayload,
     @Body() dto: GenerateProposalDto,
   ) {
-    return this.aiService.generateProposal(
-      user.sub,
-      user.orgId,
-      dto,
-    );
+    return this.aiService.generateProposal(user.sub, user.orgId, dto);
   }
 
   @Get('proposal-generator/history')
@@ -41,11 +37,7 @@ export class AiController {
     @CurrentUser() user: JwtPayload,
     @Body() dto: AuditWebsiteDto,
   ) {
-    return this.aiService.auditWebsite(
-      user.sub,
-      user.orgId,
-      dto,
-    );
+    return this.aiService.auditWebsite(user.sub, user.orgId, dto);
   }
 
   @Get('seo-audit/history')
@@ -69,11 +61,7 @@ export class AiController {
     @CurrentUser() user: JwtPayload,
     @Body() dto: SummarizeMeetingDto,
   ) {
-    return this.aiService.summarizeMeeting(
-      user.sub,
-      user.orgId,
-      dto,
-    );
+    return this.aiService.summarizeMeeting(user.sub, user.orgId, dto);
   }
 
   @Post('chat')

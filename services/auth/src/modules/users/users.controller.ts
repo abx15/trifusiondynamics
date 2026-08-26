@@ -1,4 +1,13 @@
-import { Controller, Post, Get, Patch, Delete, Body, UseGuards, Param } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Patch,
+  Delete,
+  Body,
+  UseGuards,
+  Param,
+} from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -10,7 +19,9 @@ import { type JwtPayload } from '@agency-os/types';
 
 function isSuperAdminUser(user: JwtPayload): boolean {
   const roles = user?.roles || [];
-  return roles.some((r) => ['superadmin', 'super_admin'].includes(r.toLowerCase()));
+  return roles.some((r) =>
+    ['superadmin', 'super_admin'].includes(r.toLowerCase()),
+  );
 }
 
 @Controller('users')
@@ -71,12 +82,8 @@ export class UsersController {
   @Delete(':id')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @RequirePermission('hr:write')
-  async deleteUser(
-    @Param('id') id: string,
-    @CurrentUser() user: JwtPayload,
-  ) {
+  async deleteUser(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     const isSuper = isSuperAdminUser(user);
     return this.usersService.deleteUser(id, user.orgId, isSuper);
   }
 }
-

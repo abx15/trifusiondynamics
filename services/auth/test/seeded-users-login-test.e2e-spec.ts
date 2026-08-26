@@ -24,44 +24,44 @@ describe('Seeded Users Login Test', () => {
       email: 'trifusiondynamics@gmail.com',
       password: 'trifusiondynamicsA3web',
       role: 'superadmin',
-      name: 'Trifusion-Dynamics Admin'
+      name: 'Trifusion-Dynamics Admin',
     },
     {
       email: 'admin@trifusiondynamics.com',
       password: 'ChangeThisPassword123!',
       role: 'admin',
-      name: 'Administrator'
+      name: 'Administrator',
     },
     {
       email: 'sales.trifusion@gmail.com',
       password: 'Welcome@123',
       role: 'sales_agent',
-      name: 'Sales & Partnerships'
+      name: 'Sales & Partnerships',
     },
     {
       email: 'support.trifusion@gmail.com',
       password: 'Welcome@123',
       role: 'support_agent',
-      name: 'Support Team'
+      name: 'Support Team',
     },
     {
       email: 'hr.trifusion@gmail.com',
       password: 'Welcome@123',
       role: 'hr_agent',
-      name: 'HR & Careers'
+      name: 'HR & Careers',
     },
     {
       email: 'agent@trifusiondynamics.com',
       password: 'Agent@123',
       role: 'agent',
-      name: 'Jane Agent'
+      name: 'Jane Agent',
     },
     {
       email: 'client@apexretail.com',
       password: 'Client@123',
       role: 'client',
-      name: 'Sanjay Singhania'
-    }
+      name: 'Sanjay Singhania',
+    },
   ];
 
   describe('Login all seeded users', () => {
@@ -80,8 +80,10 @@ describe('Seeded Users Login Test', () => {
         expect(response.body).toHaveProperty('user');
         expect(response.body.user.email).toBe(user.email);
         expect(response.body.user.roles).toContain(user.role);
-        
-        console.log(`✅ ${user.name} (${user.email}) login successful - Role: ${user.role}`);
+
+        console.log(
+          `✅ ${user.name} (${user.email}) login successful - Role: ${user.role}`,
+        );
       });
     });
   });
@@ -108,8 +110,10 @@ describe('Seeded Users Login Test', () => {
         expect(profileRes.body.user.email).toBe(user.email);
         expect(profileRes.body.user.name).toBe(user.name);
         expect(profileRes.body.user.roles).toContain(user.role);
-        
-        console.log(`✅ ${user.name} profile verified - Email: ${user.email}, Roles: ${profileRes.body.user.roles.join(', ')}`);
+
+        console.log(
+          `✅ ${user.name} profile verified - Email: ${user.email}, Roles: ${profileRes.body.user.roles.join(', ')}`,
+        );
       });
     });
   });
@@ -134,7 +138,7 @@ describe('Seeded Users Login Test', () => {
           .expect(201);
 
         expect(logoutRes.body.success).toBe(true);
-        
+
         console.log(`✅ ${user.name} logout successful`);
       });
     });
@@ -164,7 +168,7 @@ describe('Seeded Users Login Test', () => {
           .get('/api/auth/me')
           .set('Authorization', `Bearer ${token}`)
           .expect(401);
-        
+
         console.log(`✅ ${user.name} token properly invalidated after logout`);
       });
     });
