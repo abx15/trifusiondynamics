@@ -75,47 +75,67 @@ export default function SuperAdminDashboard() {
         </div>
       </div>
 
-      {/* Role Access Matrix */}
-      <div className="p-6 rounded-2xl bg-zinc-900/60 border border-zinc-800 space-y-4">
+      {/* Quick Action Navigation Grid */}
+      <div className="space-y-4">
         <h2 className="text-lg font-bold text-white flex items-center gap-2">
-          <Activity className="w-5 h-5 text-amber-400" /> Enterprise Role-Based Access Control (RBAC) Mapping
+          <Activity className="w-5 h-5 text-amber-400" /> Super Admin Executive Management Modules
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-2">
-          <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-2">
-            <div className="flex items-center gap-2">
-              <Crown className="w-4 h-4 text-amber-400" />
-              <span className="font-bold text-amber-400 text-sm">SUPER_ADMIN</span>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <a
+            href="/super-admin/organizations"
+            className="p-5 rounded-2xl bg-zinc-900/80 border border-zinc-800 hover:border-amber-500/50 transition-all block group"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="h-10 w-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <Users className="w-5 h-5" />
+              </div>
+              <span className="text-zinc-500 group-hover:text-amber-400 text-xs font-bold">Manage &rarr;</span>
             </div>
-            <p className="text-xs text-zinc-300">Route: <code className="text-amber-300 font-mono">/super-admin</code></p>
-            <p className="text-[11px] text-zinc-400">Complete cross-tenant control, user management, system configs.</p>
-          </div>
+            <h3 className="font-bold text-base text-white group-hover:text-amber-300 transition-colors">Organizations</h3>
+            <p className="text-xs text-zinc-400 mt-1">Multi-tenant instances, tenant creation & quotas.</p>
+          </a>
 
-          <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/30 space-y-2">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-purple-400" />
-              <span className="font-bold text-purple-400 text-sm">ADMIN</span>
+          <a
+            href="/super-admin/rbac"
+            className="p-5 rounded-2xl bg-zinc-900/80 border border-zinc-800 hover:border-purple-500/50 transition-all block group"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="h-10 w-10 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <span className="text-zinc-500 group-hover:text-purple-400 text-xs font-bold">Manage &rarr;</span>
             </div>
-            <p className="text-xs text-zinc-300">Route: <code className="text-purple-300 font-mono">/admin</code></p>
-            <p className="text-[11px] text-zinc-400">Organization level administration, CRM, Billing, HR, Projects.</p>
-          </div>
+            <h3 className="font-bold text-base text-white group-hover:text-purple-300 transition-colors">Universal RBAC</h3>
+            <p className="text-xs text-zinc-400 mt-1">Roles assignment, permissions matrix, password reset.</p>
+          </a>
 
-          <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 space-y-2">
-            <div className="flex items-center gap-2">
-              <Server className="w-4 h-4 text-blue-400" />
-              <span className="font-bold text-blue-400 text-sm">AGENT</span>
+          <a
+            href="/super-admin/system"
+            className="p-5 rounded-2xl bg-zinc-900/80 border border-zinc-800 hover:border-blue-500/50 transition-all block group"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="h-10 w-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <Server className="w-5 h-5" />
+              </div>
+              <span className="text-zinc-500 group-hover:text-blue-400 text-xs font-bold">Manage &rarr;</span>
             </div>
-            <p className="text-xs text-zinc-300">Route: <code className="text-blue-300 font-mono">/agent</code></p>
-            <p className="text-[11px] text-zinc-400">Assigned support tickets, operational queue, task updates.</p>
-          </div>
+            <h3 className="font-bold text-base text-white group-hover:text-blue-300 transition-colors">Infrastructure</h3>
+            <p className="text-xs text-zinc-400 mt-1">Live service health, database latency, cluster metrics.</p>
+          </a>
 
-          <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-2">
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-emerald-400" />
-              <span className="font-bold text-emerald-400 text-sm">CLIENT</span>
+          <a
+            href="/super-admin/settings"
+            className="p-5 rounded-2xl bg-zinc-900/80 border border-zinc-800 hover:border-emerald-500/50 transition-all block group"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <Key className="w-5 h-5" />
+              </div>
+              <span className="text-zinc-500 group-hover:text-emerald-400 text-xs font-bold">Manage &rarr;</span>
             </div>
-            <p className="text-xs text-zinc-300">Route: <code className="text-emerald-300 font-mono">/client</code></p>
-            <p className="text-[11px] text-zinc-400">Client portal for viewing projects, invoices, raising tickets.</p>
-          </div>
+            <h3 className="font-bold text-base text-white group-hover:text-emerald-300 transition-colors">Global Settings</h3>
+            <p className="text-xs text-zinc-400 mt-1">AI models, token expiration, master platform policies.</p>
+          </a>
         </div>
       </div>
     </div>

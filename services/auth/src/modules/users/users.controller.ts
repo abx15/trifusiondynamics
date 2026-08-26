@@ -8,6 +8,11 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
 import { type JwtPayload } from '@agency-os/types';
 
+function isSuperAdminUser(user: JwtPayload): boolean {
+  const roles = user?.roles || [];
+  return roles.some((r) => ['superadmin', 'super_admin'].includes(r.toLowerCase()));
+}
+
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
@@ -25,8 +30,30 @@ export class UsersController {
   @Get()
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @RequirePermission('hr:read')
-  async listUsers(@CurrentUser('orgId') orgId: string) {
-    return this.usersService.listUsers(orgId);
+  async listUsers(@CurrentUser() user: JwtPayload) {
+    const isSuper = isSuperAdminUser(user);
+    return this.usersService.listUsers(user.orgId, isSuper);
+  }
+
+  @Get('organizations')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermission('hr:read')
+  async listOrganizations() {
+    return this.usersService.listOrganizations();
+  }
+
+  @Post('organizations')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermission('hr:write')
+  async createOrganization(@Body() body: { name: string; slug: string }) {
+    return this.usersService.createOrganization(body);
+  }
+
+  @Get('roles')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermission('hr:read')
+  async listRoles() {
+    return this.usersService.listRoles();
   }
 
   @Patch(':id')
@@ -35,9 +62,10 @@ export class UsersController {
   async updateUser(
     @Param('id') id: string,
     @Body() dto: UpdateUserDto,
-    @CurrentUser('orgId') orgId: string,
+    @CurrentUser() user: JwtPayload,
   ) {
-    return this.usersService.updateUser(id, orgId, dto);
+    const isSuper = isSuperAdminUser(user);
+    return this.usersService.updateUser(id, user.orgId, dto, isSuper);
   }
 
   @Delete(':id')
@@ -45,8 +73,10 @@ export class UsersController {
   @RequirePermission('hr:write')
   async deleteUser(
     @Param('id') id: string,
-    @CurrentUser('orgId') orgId: string,
+    @CurrentUser() user: JwtPayload,
   ) {
-    return this.usersService.deleteUser(id, orgId);
+    const isSuper = isSuperAdminUser(user);
+    return this.usersService.deleteUser(id, user.orgId, isSuper);
   }
 }
+

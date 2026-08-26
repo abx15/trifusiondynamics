@@ -25,7 +25,7 @@ function AuthCallbackContent() {
 
     const exchangeCodeForToken = async () => {
       try {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === "production" ? "https://trifusiondynamics-api.onrender.com/api" : "http://localhost:8000/api");
 
         const response = await fetch(`${API_URL}/auth/exchange`, {
           method: "POST",

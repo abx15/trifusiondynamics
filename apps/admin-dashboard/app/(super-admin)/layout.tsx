@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+
 import {
   Crown,
   LayoutDashboard,
@@ -14,6 +15,7 @@ import {
   Loader2,
   KeyRound,
 } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuthStore, getPrimaryRole, getRoleHomeRoute } from "@/lib/auth-store";
 import { apiClient } from "@/lib/api-client";
 import { useLogout } from "@/hooks/useLogout";
@@ -101,8 +103,8 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
         <div>
           {/* Logo & Super Admin Crown Badge */}
           <div className="flex items-center gap-3 px-3 py-4 mb-6 border-b border-amber-500/20">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center font-bold text-lg text-black shadow-lg shadow-amber-500/30">
-              <Crown className="w-5 h-5 text-black" />
+            <div className="h-10 w-10 rounded-xl bg-white flex items-center justify-center shadow-lg shadow-amber-500/30 ring-2 ring-amber-400/40 overflow-hidden shrink-0">
+              <Image src="/logo.png" alt="Trifusion Dynamics" width={36} height={36} className="object-contain" />
             </div>
             <div>
               <h1 className="font-bold text-sm tracking-tight text-white">Trifusion OS</h1>
@@ -111,6 +113,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
               </div>
             </div>
           </div>
+
 
           {/* Navigation Links */}
           <nav className="space-y-1.5">

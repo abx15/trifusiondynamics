@@ -24,7 +24,7 @@ export function useWebSocket(url: string): WebSocketHookReturn {
 
   useEffect(() => {
     const connect = () => {
-      const wsUrl = url || `${process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000"}/ws`;
+      const wsUrl = url || `${process.env.NEXT_PUBLIC_WS_URL || (process.env.NODE_ENV === "production" ? "wss://trifusiondynamics-api.onrender.com" : "ws://localhost:8000")}/ws`;
       
       try {
         const ws = new WebSocket(wsUrl);

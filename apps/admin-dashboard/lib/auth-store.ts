@@ -109,6 +109,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   setUser: (user) => {
     if (typeof window !== "undefined") {
       sessionStorage.setItem("user", JSON.stringify(user));
+      localStorage.setItem("user", JSON.stringify(user));
     }
     set({ user, isAuthenticated: true });
   },
@@ -126,11 +127,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       
       // Clear all cookies with different path options to ensure complete removal
       try {
-        Cookies.remove("access_token", { path: "/", sameSite: "lax" });
-        Cookies.remove("access_token", { path: "/", sameSite: "strict" });
         Cookies.remove("access_token", { path: "/" });
-        Cookies.remove("refresh_token", { path: "/", sameSite: "lax" });
-        Cookies.remove("refresh_token", { path: "/", sameSite: "strict" });
         Cookies.remove("refresh_token", { path: "/" });
       } catch {
         // ignore cookie remove errors
@@ -141,13 +138,25 @@ export const useAuthStore = create<AuthState>((set) => ({
   setAuth: (accessToken, user) => {
     if (typeof window !== "undefined") {
       sessionStorage.setItem("user", JSON.stringify(user));
-      if (accessToken) sessionStorage.setItem("accessToken", accessToken);
+      localStorage.setItem("user", JSON.stringify(user));
+      if (accessToken) {
+        sessionStorage.setItem("accessToken", accessToken);
+        localStorage.setItem("accessToken", accessToken);
+        Cookies.set("access_token", accessToken, { path: "/", expires: 1 });
+      }
     }
     set({ user, isAuthenticated: true, accessToken });
   },
   hydrateFromStorage: () => {
+    // Idempotency guard: if already hydrated, skip to prevent re-render loops
+    const currentState = useAuthStore.getState();
+    if (currentState.user) return;
+
     const user = getStoredUser();
-    const accessToken = getStoredAccessToken();
+    let accessToken = getStoredAccessToken();
+    if (!accessToken && typeof window !== "undefined") {
+      accessToken = Cookies.get("access_token") || null;
+    }
     if (user) {
       set({ user, isAuthenticated: true, accessToken });
     }
@@ -155,5 +164,6 @@ export const useAuthStore = create<AuthState>((set) => ({
 }));
 
 export default useAuthStore;
+
 
 

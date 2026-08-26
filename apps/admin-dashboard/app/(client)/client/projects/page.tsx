@@ -26,7 +26,7 @@ export default function ClientProjectsPage() {
               <p className="text-xs text-zinc-400 mt-1">Lead Architect: Arun Kumar | Tech Stack: Next.js 15, NestJS, Prisma</p>
             </div>
             <a
-              href="http://localhost:3000"
+              href={process.env.NEXT_PUBLIC_AGENCY_WEB_URL || (process.env.NODE_ENV === "production" ? "https://trifusiondynamics.vercel.app" : "http://localhost:3000")}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold text-white transition-colors"

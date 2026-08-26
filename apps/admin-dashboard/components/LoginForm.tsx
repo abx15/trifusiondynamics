@@ -146,16 +146,19 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Auto-redirect if already authenticated
+  // Auto-redirect if already authenticated — run only once on mount
   useEffect(() => {
-    hydrateFromStorage();
+    // Use getState() directly to avoid Zustand subscription re-renders
+    const state = useAuthStore.getState();
+    state.hydrateFromStorage();
     const storedUser = useAuthStore.getState().user;
     if (storedUser) {
       const primaryRole = getPrimaryRole(storedUser.roles);
       const homeRoute = callbackUrl || getRoleHomeRoute(primaryRole);
       router.replace(homeRoute);
     }
-  }, [router, callbackUrl, hydrateFromStorage]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps: run only once on mount — prevents infinite re-render loop
 
   const handleSelectPreset = (preset: typeof DEMO_PRESETS[0]) => {
     setSelectedPreset(preset.key);

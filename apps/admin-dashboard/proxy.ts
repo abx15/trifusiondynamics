@@ -73,7 +73,6 @@ export function proxy(request: NextRequest) {
   // Handle explicit logout URL
   if (isLogoutPage) {
     const response = NextResponse.redirect(new URL("/login", request.url));
-    // Clear all auth cookies
     response.cookies.delete("access_token");
     response.cookies.delete("refresh_token");
     return response;
@@ -134,12 +133,17 @@ export function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL(homeRoute, request.url));
     }
 
-    // Role-based Route Protection
-    if (isSuperAdminRoute && primaryRole !== "super_admin") {
+    // SuperAdmin has universal master access to everything
+    if (primaryRole === "super_admin") {
+      return NextResponse.next();
+    }
+
+    // Non-SuperAdmin trying to access /super-admin -> redirect
+    if (isSuperAdminRoute) {
       return NextResponse.redirect(new URL(homeRoute, request.url));
     }
 
-    if (isClientRoute && primaryRole !== "client" && primaryRole !== "admin" && primaryRole !== "super_admin") {
+    if (isClientRoute && primaryRole !== "client" && primaryRole !== "admin") {
       return NextResponse.redirect(new URL(homeRoute, request.url));
     }
 
@@ -149,7 +153,7 @@ export function proxy(request: NextRequest) {
     }
 
     // Non-admin user trying to access admin dashboard routes
-    if (isAdminDashboardRoute && primaryRole !== "admin" && primaryRole !== "super_admin") {
+    if (isAdminDashboardRoute && primaryRole !== "admin") {
       return NextResponse.redirect(new URL(getRoleHomeRoute(primaryRole), request.url));
     }
   } else {

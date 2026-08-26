@@ -124,9 +124,9 @@ export class UsersService {
     };
   }
 
-  async listUsers(orgId?: string) {
+  async listUsers(orgId?: string, isSuperAdmin = false) {
     return this.prisma.user.findMany({
-      where: orgId ? { organizationId: orgId } : {},
+      where: isSuperAdmin ? {} : (orgId ? { organizationId: orgId } : {}),
       select: {
         id: true,
         email: true,
@@ -136,6 +136,13 @@ export class UsersService {
         mustChangePassword: true,
         linkedClientId: true,
         organizationId: true,
+        organization: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
         roles: {
           include: {
             role: {
@@ -158,13 +165,13 @@ export class UsersService {
     });
   }
 
-  async updateUser(id: string, orgId: string, dto: any) {
+  async updateUser(id: string, orgId: string, dto: any, isSuperAdmin = false) {
     const user = await this.prisma.user.findFirst({
-      where: { id, organizationId: orgId },
+      where: isSuperAdmin ? { id } : { id, organizationId: orgId },
     });
 
     if (!user) {
-      throw new NotFoundException('User not found in your organization');
+      throw new NotFoundException('User not found');
     }
 
     const updateData: any = {};
@@ -174,6 +181,9 @@ export class UsersService {
     if (dto.isActive !== undefined) updateData.isActive = dto.isActive;
     if (dto.mustChangePassword !== undefined) updateData.mustChangePassword = dto.mustChangePassword;
     if (dto.linkedClientId !== undefined) updateData.linkedClientId = dto.linkedClientId || null;
+    if (dto.password) {
+      updateData.password = await bcrypt.hash(dto.password, 12);
+    }
 
     const updatedUser = await this.prisma.user.update({
       where: { id },
@@ -226,13 +236,13 @@ export class UsersService {
     return updatedUser;
   }
 
-  async deleteUser(id: string, orgId: string) {
+  async deleteUser(id: string, orgId: string, isSuperAdmin = false) {
     const user = await this.prisma.user.findFirst({
-      where: { id, organizationId: orgId },
+      where: isSuperAdmin ? { id } : { id, organizationId: orgId },
     });
 
     if (!user) {
-      throw new NotFoundException('User not found in your organization');
+      throw new NotFoundException('User not found');
     }
 
     await this.prisma.userRole.deleteMany({
@@ -248,5 +258,45 @@ export class UsersService {
     });
 
     return { success: true, message: 'User deleted successfully' };
+  }
+
+  async listOrganizations() {
+    return this.prisma.organization.findMany({
+      include: {
+        _count: {
+          select: {
+            users: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async createOrganization(data: { name: string; slug: string }) {
+    const slug = data.slug.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-');
+    return this.prisma.organization.create({
+      data: {
+        name: data.name,
+        slug: `${slug}-${Date.now()}`,
+      },
+    });
+  }
+
+  async listRoles() {
+    return this.prisma.role.findMany({
+      include: {
+        permissions: {
+          include: {
+            permission: true,
+          },
+        },
+        _count: {
+          select: {
+            users: true,
+          },
+        },
+      },
+    });
   }
 }

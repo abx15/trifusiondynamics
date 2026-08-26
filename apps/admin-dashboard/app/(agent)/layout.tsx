@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -98,8 +99,8 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
         <div>
           {/* Logo & Portal Badge */}
           <div className="flex items-center gap-3 px-3 py-4 mb-6 border-b border-zinc-800">
-            <div className="h-10 w-10 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-lg text-white shadow-lg shadow-blue-600/30">
-              A
+            <div className="h-10 w-10 rounded-xl bg-white flex items-center justify-center shadow-lg shadow-blue-600/20 ring-2 ring-blue-500/30 overflow-hidden shrink-0">
+              <Image src="/logo.png" alt="Trifusion Dynamics" width={36} height={36} className="object-contain" />
             </div>
             <div>
               <h1 className="font-bold text-sm tracking-tight text-white">Agent Portal</h1>
