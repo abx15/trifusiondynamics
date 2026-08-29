@@ -96,7 +96,7 @@ export default function HrLayout({ children }: { children: React.ReactNode }) {
           {/* Logo & Portal Badge */}
           <div className="flex items-center gap-3 px-3 py-4 mb-6 border-b border-zinc-800">
             <div className="h-10 w-10 rounded-xl bg-white flex items-center justify-center shadow-lg shadow-emerald-600/20 ring-2 ring-emerald-500/30 overflow-hidden shrink-0">
-              <Image src="/logo.png" alt="Trifusion Dynamics" width={36} height={36} className="object-contain" />
+              <Image src="/logo.png" alt="Trifusion Dynamics" width={36} height={36} className="object-contain" priority />
             </div>
             <div>
               <h1 className="font-bold text-sm tracking-tight text-white">HR Portal</h1>

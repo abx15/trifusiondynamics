@@ -17,8 +17,12 @@ export const metadata: Metadata = {
   title: "Trifusion operations | Console Dashboard",
   description: "Administrative ops command center for Trifusion-Dynamics",
   icons: {
-    icon: "/favicon.png",
-    apple: "/logo.png",
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon.png", sizes: "512x512", type: "image/png" }
+    ],
+    apple: "/favicon.png",
+    shortcut: "/favicon.png",
   },
 };
 

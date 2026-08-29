@@ -21,7 +21,7 @@ import {
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { type JwtPayload } from '@agency-os/types';
-import { type Request, type Response } from 'express';
+import { type Request, type Response, type CookieOptions } from 'express';
 import * as jwt from 'jsonwebtoken';
 
 @Controller('auth')
@@ -43,7 +43,7 @@ export class AuthController {
     const isProd = process.env.NODE_ENV === 'production';
     const cookieDomain = process.env.COOKIE_DOMAIN || undefined;
 
-    const cookieOptions = {
+    const cookieOptions: CookieOptions = {
       httpOnly: true,
       secure: isProd,
       sameSite: isProd && !cookieDomain ? 'none' : 'lax',
@@ -66,7 +66,7 @@ export class AuthController {
     const isProd = process.env.NODE_ENV === 'production';
     const cookieDomain = process.env.COOKIE_DOMAIN || undefined;
 
-    const clearOptions = {
+    const clearOptions: CookieOptions = {
       httpOnly: true,
       secure: isProd,
       sameSite: isProd && !cookieDomain ? 'none' : 'lax',
@@ -78,14 +78,14 @@ export class AuthController {
     res.clearCookie('access_token', clearOptions);
     res.clearCookie('access_token', {
       ...clearOptions,
-      sameSite: 'strict' as const,
+      sameSite: 'strict',
     });
     res.clearCookie('access_token', { ...clearOptions, path: '/' });
 
     res.clearCookie('refresh_token', clearOptions);
     res.clearCookie('refresh_token', {
       ...clearOptions,
-      sameSite: 'strict' as const,
+      sameSite: 'strict',
     });
     res.clearCookie('refresh_token', { ...clearOptions, path: '/' });
   }

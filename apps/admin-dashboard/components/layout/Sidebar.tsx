@@ -360,6 +360,7 @@ export function Sidebar({ collapsed = false, setCollapsed, onItemClick }: Sideba
               width={32} 
               height={32}
               className="object-contain"
+              priority
             />
           </div>
           {!collapsed && (

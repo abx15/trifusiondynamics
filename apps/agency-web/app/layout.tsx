@@ -39,7 +39,10 @@ export const metadata: Metadata = {
     title: "Trifusion-Dynamics",
   },
   icons: {
-    icon: "/favicon.png",
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon.png", sizes: "512x512", type: "image/png" }
+    ],
     apple: "/icons/icon-192.png",
     shortcut: "/favicon.png",
   },

@@ -21,6 +21,7 @@ export default function Footer() {
                   width={36}
                   height={36}
                   className="object-contain"
+                  priority
                 />
               </div>
               <span className="font-display font-bold tracking-tight text-white text-lg">

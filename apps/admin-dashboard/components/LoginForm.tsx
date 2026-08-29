@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import {
@@ -137,7 +137,7 @@ export function LoginForm() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl");
 
-  const { user, isAuthenticated, setAuth, hydrateFromStorage } = useAuthStore();
+  const { setAuth } = useAuthStore();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -145,13 +145,20 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const hasCheckedAuth = useRef(false);
 
   // Auto-redirect if already authenticated — run only once on mount
   useEffect(() => {
+    if (hasCheckedAuth.current) return;
+    hasCheckedAuth.current = true;
+
     // Use getState() directly to avoid Zustand subscription re-renders
     const state = useAuthStore.getState();
     state.hydrateFromStorage();
     const storedUser = useAuthStore.getState().user;
+    setIsCheckingAuth(false);
+    
     if (storedUser) {
       const primaryRole = getPrimaryRole(storedUser.roles);
       const homeRoute = callbackUrl || getRoleHomeRoute(primaryRole);
@@ -221,6 +228,14 @@ export function LoginForm() {
     }
   };
 
+  if (isCheckingAuth) {
+    return (
+      <div className="w-full max-w-xl bg-[#0b0f19]/95 backdrop-blur-2xl border border-slate-800/80 rounded-2xl shadow-2xl p-6 sm:p-8 relative overflow-hidden font-sans flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="w-full max-w-xl bg-[#0b0f19]/95 backdrop-blur-2xl border border-slate-800/80 rounded-2xl shadow-2xl p-6 sm:p-8 relative overflow-hidden font-sans">
       {/* Decorative ambient lighting */}
@@ -237,6 +252,7 @@ export function LoginForm() {
               width={32}
               height={32}
               className="object-contain"
+              priority
             />
           </div>
         </div>

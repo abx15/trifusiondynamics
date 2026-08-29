@@ -48,6 +48,7 @@ export default function Header() {
               width={40} 
               height={40}
               className="object-contain"
+              priority
             />
           </div>
           <span className="font-display font-bold tracking-tight text-white text-lg sm:text-xl">

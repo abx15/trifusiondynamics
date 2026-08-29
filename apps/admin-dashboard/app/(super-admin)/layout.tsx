@@ -104,7 +104,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
           {/* Logo & Super Admin Crown Badge */}
           <div className="flex items-center gap-3 px-3 py-4 mb-6 border-b border-amber-500/20">
             <div className="h-10 w-10 rounded-xl bg-white flex items-center justify-center shadow-lg shadow-amber-500/30 ring-2 ring-amber-400/40 overflow-hidden shrink-0">
-              <Image src="/logo.png" alt="Trifusion Dynamics" width={36} height={36} className="object-contain" />
+              <Image src="/logo.png" alt="Trifusion Dynamics" width={36} height={36} className="object-contain" priority />
             </div>
             <div>
               <h1 className="font-bold text-sm tracking-tight text-white">Trifusion OS</h1>
