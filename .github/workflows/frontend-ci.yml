@@ -1,0 +1,175 @@
+name: Frontend CI/CD
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - 'turbo.json'
+      - 'package.json'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - 'turbo.json'
+      - 'package.json'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Frontend Apps CI
+  frontend:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [agency-web, admin-dashboard]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Lint ${{ matrix.app }}
+        run: pnpm --filter ${{ matrix.app }} lint
+
+      - name: Type Check ${{ matrix.app }}
+        run: pnpm --filter ${{ matrix.app }} build
+
+      - name: Build ${{ matrix.app }}
+        run: pnpm --filter ${{ matrix.app }} build
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.app }}-build
+          path: apps/${{ matrix.app }}/.next
+          retention-days: 1
+
+  # Shared Packages CI
+  shared-packages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Build Shared Packages
+        run: pnpm --filter @agency-os/database build --filter @agency-os/types build --filter @agency-os/ui build --filter @agency-os/config build
+
+      - name: Type Check Database Package
+        run: pnpm --filter @agency-os/database build
+
+      - name: Type Check Types Package
+        run: pnpm --filter @agency-os/types build
+
+  # Deployment to Vercel (Production)
+  deploy-production:
+    needs: [frontend, shared-packages]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Deploy Agency Web to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID_AGENCY_WEB }}
+          working-directory: ./apps/agency-web
+          vercel-args: '--prod'
+
+      - name: Deploy Admin Dashboard to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID_ADMIN_DASHBOARD }}
+          working-directory: ./apps/admin-dashboard
+          vercel-args: '--prod'
+
+  # Deployment to Vercel (Preview)
+  deploy-preview:
+    needs: [frontend, shared-packages]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    environment: preview
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Deploy Agency Web Preview to Vercel
+        uses: amondnet/vercel-action@v25
+        id: deploy-agency-web
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID_AGENCY_WEB }}
+          working-directory: ./apps/agency-web
+
+      - name: Deploy Admin Dashboard Preview to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID_ADMIN_DASHBOARD }}
+          working-directory: ./apps/admin-dashboard

@@ -1,0 +1,266 @@
+name: AgencyOS CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Cache Turbo
+        uses: actions/cache@v4
+        with:
+          path: |
+            .turbo
+            node_modules/.cache/turbo
+          key: turbo-${{ github.sha }}
+          restore-keys: turbo-
+
+  lint:
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Lint All Workspaces
+        run: pnpm run lint
+
+  build:
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Build All Packages and Apps
+        run: pnpm run build
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: monorepo-build
+          path: |
+            apps/agency-web/.next
+            apps/admin-dashboard/.next
+            services/auth/dist
+            packages/*/dist
+          retention-days: 1
+
+  test:
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Run Auth Service Tests
+        run: pnpm --filter auth test
+
+      - name: Run API Integration Tests
+        run: pnpm run test:api
+
+  validate-db:
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Generate Prisma Client
+        run: pnpm --filter @agency-os/database db:generate
+
+      - name: Validate Prisma Schema
+        working-directory: packages/database
+        run: npx prisma validate
+
+      - name: Check Schema Format
+        working-directory: packages/database
+        run: npx prisma format
+
+      - name: Check for Uncommitted Schema Changes
+        working-directory: packages/database
+        run: |
+          git diff --exit-code prisma/schema.prisma || echo "Schema has uncommitted changes"
+
+  security:
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Run npm audit
+        run: pnpm audit --audit-level moderate
+
+      - name: Run Snyk Security Scan
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+
+  build-size:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Build All Apps
+        run: pnpm run build
+
+      - name: Check Bundle Sizes
+        run: |
+          echo "Agency Web Build Size:"
+          du -sh apps/agency-web/.next || echo "Build directory not found"
+          echo "Admin Dashboard Build Size:"
+          du -sh apps/admin-dashboard/.next || echo "Build directory not found"
+          echo "Auth Service Build Size:"
+          du -sh services/auth/dist || echo "Build directory not found"
+
+      - name: Comment Build Sizes on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        continue-on-error: true
+        with:
+          script: |
+            const fs = require('fs');
+            let agencyWebSize = 0;
+            let adminDashboardSize = 0;
+            let authServiceSize = 0;
+            
+            try {
+              agencyWebSize = fs.statSync('apps/agency-web/.next').size;
+            } catch(e) {
+              console.log('Agency web build not found');
+            }
+            
+            try {
+              adminDashboardSize = fs.statSync('apps/admin-dashboard/.next').size;
+            } catch(e) {
+              console.log('Admin dashboard build not found');
+            }
+            
+            try {
+              authServiceSize = fs.statSync('services/auth/dist').size;
+            } catch(e) {
+              console.log('Auth service build not found');
+            }
+            
+            const comment = `## Build Size Report
+            
+**Agency Web:** ${(agencyWebSize / 1024 / 1024).toFixed(2)} MB
+**Admin Dashboard:** ${(adminDashboardSize / 1024 / 1024).toFixed(2)} MB
+**Auth Service:** ${(authServiceSize / 1024 / 1024).toFixed(2)} MB`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

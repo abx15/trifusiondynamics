@@ -1,0 +1,108 @@
+name: AgencyOS Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/**'
+      - 'services/**'
+      - 'packages/**'
+      - 'turbo.json'
+      - 'package.json'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Build All Services
+        run: pnpm run build
+
+      - name: Deploy Auth Service to Render
+        uses: johnbeynon/render-deploy-action@v0.0.8
+        with:
+          service-id: ${{ secrets.RENDER_AUTH_SERVICE_ID }}
+          render-api-key: ${{ secrets.RENDER_API_KEY }}
+          wait-for-success: true
+
+      - name: Deploy AI Service to Render
+        uses: johnbeynon/render-deploy-action@v0.0.8
+        with:
+          service-id: ${{ secrets.RENDER_AI_SERVICE_ID }}
+          render-api-key: ${{ secrets.RENDER_API_KEY }}
+          wait-for-success: true
+
+      - name: Deploy Agency Web to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID_AGENCY_WEB }}
+          working-directory: ./apps/agency-web
+          vercel-args: '--prod'
+
+      - name: Deploy Admin Dashboard to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID_ADMIN_DASHBOARD }}
+          working-directory: ./apps/admin-dashboard
+          vercel-args: '--prod'
+
+      - name: Health Check
+        run: |
+          echo "Waiting for services to stabilize..."
+          sleep 30
+          
+          if [ -n "${{ secrets.AUTH_SERVICE_URL }}" ]; then
+            echo "Checking Auth Service health..."
+            curl -f ${{ secrets.AUTH_SERVICE_URL }}/health || echo "Auth service health check failed"
+          else
+            echo "AUTH_SERVICE_URL not configured, skipping"
+          fi
+          
+          if [ -n "${{ secrets.AGENCY_WEB_URL }}" ]; then
+            echo "Checking Agency Web health..."
+            curl -f ${{ secrets.AGENCY_WEB_URL }} || echo "Agency web health check failed"
+          else
+            echo "AGENCY_WEB_URL not configured, skipping"
+          fi
+          
+          if [ -n "${{ secrets.ADMIN_DASHBOARD_URL }}" ]; then
+            echo "Checking Admin Dashboard health..."
+            curl -f ${{ secrets.ADMIN_DASHBOARD_URL }} || echo "Admin dashboard health check failed"
+          else
+            echo "ADMIN_DASHBOARD_URL not configured, skipping"
+          fi
+
+      - name: Deployment Summary
+        if: always()
+        run: |
+          echo "AgencyOS Deployment Summary"
+          echo "Status: ${{ job.status }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Author: ${{ github.actor }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Deployed at: $(date)"

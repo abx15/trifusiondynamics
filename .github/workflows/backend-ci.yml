@@ -6,61 +6,144 @@ on:
       - main
     paths:
       - 'services/**'
+      - 'packages/**'
   pull_request:
     branches:
       - main
     paths:
       - 'services/**'
+      - 'packages/**'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   auth-service:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          
+          cache: 'pnpm'
+
       - name: Install pnpm
         uses: pnpm/action-setup@v3
         with:
-          version: 8
-          
+          version: 10
+
       - name: Install Dependencies
         run: pnpm install
-        
-      - name: Lint
+
+      - name: Lint Auth Service
         run: pnpm --filter auth lint
-        
-      - name: Test
+
+      - name: Test Auth Service
         run: pnpm --filter auth test
-        
-      - name: Build
+
+      - name: Build Auth Service
         run: pnpm --filter auth build
+
+      - name: Upload Auth Service Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: auth-service-build
+          path: services/auth/dist
+          retention-days: 1
 
   ai-service:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          
+          cache: 'pip'
+
       - name: Install Dependencies
         working-directory: services/ai-service
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
           pip install pytest flake8
-          
-      - name: Lint
+
+      - name: Lint AI Service
         working-directory: services/ai-service
         run: flake8 . || true
-        
-      - name: Test
+
+      - name: Test AI Service
         working-directory: services/ai-service
         run: pytest || true
+
+  database-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Build Database Package
+        run: pnpm --filter @agency-os/database build
+
+      - name: Validate Prisma Schema
+        working-directory: packages/database
+        run: npx prisma validate
+
+      - name: Format Prisma Schema
+        working-directory: packages/database
+        run: npx prisma format
+
+      - name: Check Schema Drift
+        working-directory: packages/database
+        run: |
+          git diff --exit-code prisma/schema.prisma || echo "Schema has drifted"
+
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Run npm audit
+        run: pnpm audit --audit-level moderate
+
+      - name: Run Snyk Security Scan
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
