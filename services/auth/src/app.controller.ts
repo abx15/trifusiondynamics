@@ -1,12 +1,14 @@
 import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service';
 import { PrismaService } from './modules/database/prisma.service';
+import { RedisService } from './modules/database/redis.service';
 
 @Controller()
 export class AppController {
   constructor(
     private readonly appService: AppService,
     private readonly prisma: PrismaService,
+    private readonly redis: RedisService,
   ) {}
 
   @Get()
@@ -33,6 +35,9 @@ export class AppController {
   }
 
   // Readiness: the app can reach its critical dependencies.
+  // LIVE  = process alive (see /health/live)
+  // READY = critical dependency (Postgres) reachable
+  // DEGRADED = serving, but a non-critical dependency (Redis) is unavailable
   @Get('health/ready')
   async getReadiness() {
     const checks: Record<string, string> = {};
@@ -44,10 +49,16 @@ export class AppController {
       checks.postgres = 'unavailable';
     }
 
-    const ready = checks.postgres === 'ok';
-    return {
-      status: ready ? 'ok' : 'degraded',
-      checks,
-    };
+    // Redis is non-critical: cache/rate-limit degrade gracefully without it.
+    checks.redis = this.redis.isReady() ? 'ok' : 'degraded';
+
+    let status: 'ok' | 'degraded' | 'unavailable';
+    if (checks.postgres === 'ok') {
+      status = checks.redis === 'ok' ? 'ok' : 'degraded';
+    } else {
+      status = 'unavailable';
+    }
+
+    return { status, checks };
   }
 }

@@ -21,6 +21,8 @@ import { ApiLoggingInterceptor } from './gateway/interceptors/api-logging.interc
 import { AllExceptionsFilter } from './gateway/filters/http-exception.filter';
 import { LoggerModule } from 'nestjs-pino';
 import { randomUUID } from 'crypto';
+import { RedisModule } from './modules/database/redis.module';
+import { RedisThrottlerStorage } from './modules/database/redis-throttler.storage';
 
 @Module({
   imports: [
@@ -35,13 +37,19 @@ import { randomUUID } from 'crypto';
     }),
     EventEmitterModule.forRoot(),
     ScheduleModule.forRoot(),
-    ThrottlerModule.forRoot([
-      {
-        ttl: 60000,
-        limit: 100, // Default 100 req / minute
-      },
-    ]),
+    ThrottlerModule.forRoot({
+      throttlers: [
+        {
+          name: 'default',
+          ttl: 60000,
+          limit: 100, // Default 100 req / minute
+        },
+      ],
+      // Distributed, Redis-backed rate limiting with in-memory fallback.
+      storage: new RedisThrottlerStorage(),
+    }),
     CacheModule.register({ isGlobal: true, store: 'memory', ttl: 300 }),
+    RedisModule,
     DatabaseModule,
     AuthModule,
     UsersModule,

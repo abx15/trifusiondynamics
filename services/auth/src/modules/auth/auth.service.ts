@@ -14,12 +14,14 @@ import { JwtPayload, AuthResponse } from '@agency-os/types';
 import { Inject } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
+import { RedisService } from '../database/redis.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private prisma: PrismaService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private redis: RedisService,
   ) {}
 
   private getJwtSecret(): string {
@@ -460,13 +462,21 @@ export class AuthService {
       { expiresIn: '120s' },
     );
 
-    // Try to store in cache for single-use enforcement (best-effort)
+    // Store the code with a TTL in Redis (distributed + single-use).
+    // Fall back to the in-memory cache if Redis is unavailable.
     try {
-      await this.cacheManager.set(
+      const stored = await this.redis.set(
         `exchange_code:${code}`,
-        { userId, organizationId },
+        JSON.stringify({ userId, organizationId }),
         120,
       );
+      if (!stored) {
+        await this.cacheManager.set(
+          `exchange_code:${code}`,
+          { userId, organizationId },
+          120,
+        );
+      }
     } catch (err) {
       // Cache failed, continuing without it
     }
@@ -477,31 +487,48 @@ export class AuthService {
   async exchangeCode(
     code: string,
   ): Promise<{ accessToken: string; refreshToken: string; user: any }> {
-    let userId: string;
-    let organizationId: string;
+    let userId: string | null = null;
+    let organizationId: string | null = null;
 
-    // First try cache (for single-use enforcement)
-    try {
-      const cachedData = await this.cacheManager.get(`exchange_code:${code}`);
-      if (cachedData) {
-        userId = (cachedData as any).userId;
-        organizationId = (cachedData as any).organizationId;
-        // Delete from cache (single-use)
-        await this.cacheManager.del(`exchange_code:${code}`);
-      } else {
-        // Cache miss — fall back to JWT verification
-        const payload = jwt.verify(code, this.getJwtSecret()) as any;
-        userId = payload.sub;
-        organizationId = payload.orgId;
-      }
-    } catch (cacheErr) {
-      // Cache error — try JWT verification directly
+    // First try Redis (distributed, single-use), then in-memory cache, then JWT.
+    const redisCached = await this.redis.get(`exchange_code:${code}`);
+    if (redisCached) {
       try {
-        const payload = jwt.verify(code, this.getJwtSecret()) as any;
-        userId = payload.sub;
-        organizationId = payload.orgId;
-      } catch (jwtErr) {
-        throw new UnauthorizedException('Invalid or expired exchange code');
+        const parsed = JSON.parse(redisCached) as {
+          userId: string;
+          organizationId: string;
+        };
+        userId = parsed.userId;
+        organizationId = parsed.organizationId;
+        await this.redis.del(`exchange_code:${code}`);
+      } catch {
+        /* fall through to cache/JWT */
+      }
+    }
+
+    if (!userId) {
+      try {
+        const cachedData = await this.cacheManager.get(`exchange_code:${code}`);
+        if (cachedData) {
+          userId = (cachedData as any).userId;
+          organizationId = (cachedData as any).organizationId;
+          // Delete from cache (single-use)
+          await this.cacheManager.del(`exchange_code:${code}`);
+        } else {
+          // Cache miss — fall back to JWT verification
+          const payload = jwt.verify(code, this.getJwtSecret()) as any;
+          userId = payload.sub;
+          organizationId = payload.orgId;
+        }
+      } catch (cacheErr) {
+        // Cache error — try JWT verification directly
+        try {
+          const payload = jwt.verify(code, this.getJwtSecret()) as any;
+          userId = payload.sub;
+          organizationId = payload.orgId;
+        } catch (jwtErr) {
+          throw new UnauthorizedException('Invalid or expired exchange code');
+        }
       }
     }
 

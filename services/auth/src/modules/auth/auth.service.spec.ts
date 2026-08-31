@@ -5,6 +5,7 @@ import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
 import { UnauthorizedException } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import * as bcrypt from 'bcryptjs';
+import { RedisService } from '../database/redis.service';
 
 jest.mock('@agency-os/database', () => ({
   authActivityLogRepository: {
@@ -30,6 +31,15 @@ describe('AuthService', () => {
             get: jest.fn(),
             set: jest.fn(),
             del: jest.fn(),
+          },
+        },
+        {
+          provide: RedisService,
+          useValue: {
+            get: jest.fn().mockResolvedValue(null),
+            set: jest.fn().mockResolvedValue(false),
+            del: jest.fn().mockResolvedValue(undefined),
+            isReady: () => false,
           },
         },
       ],

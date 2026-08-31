@@ -7,8 +7,9 @@
   "scripts": {
     "build": "tsc",
     "db:generate": "prisma generate",
-    "db:push": "prisma db push",
-    "db:migrate": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:migrate:dev": "prisma migrate dev",
+    "db:push:unsafe": "prisma db push",
     "db:seed": "ts-node seed.ts"
   },
   "prisma": {

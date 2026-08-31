@@ -128,6 +128,8 @@ export class UsersService {
   async listUsers(orgId?: string, isSuperAdmin = false) {
     return this.prisma.user.findMany({
       where: isSuperAdmin ? {} : orgId ? { organizationId: orgId } : {},
+      // Safety cap to prevent unbounded result sets as the table grows.
+      take: 1000,
       select: {
         id: true,
         email: true,

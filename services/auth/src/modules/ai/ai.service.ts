@@ -17,7 +17,14 @@ export class AiService {
   constructor(
     private httpService: HttpService,
     private db: PrismaService,
-  ) {}
+  ) {
+    if (!this.internalSecret) {
+      // The AI service requires this secret in production; operators must set it.
+      console.warn(
+        'AI_SERVICE_SECRET is not set — internal AI requests will be unauthenticated',
+      );
+    }
+  }
 
   private getInternalHeaders() {
     const headers: Record<string, string> = {};

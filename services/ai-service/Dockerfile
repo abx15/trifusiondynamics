@@ -22,12 +22,17 @@ FROM python:3.11-slim
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PYTHONUNBUFFERED=1
+ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy python virtual environment
 COPY --from=builder /opt/venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
-
 COPY --from=builder /app .
+
+# Run as a non-root user for improved container security.
+RUN useradd --create-home --uid 1001 --shell /usr/sbin/nologin appuser \
+    && chown -R appuser:appuser /app /opt/venv
+
+USER appuser
 
 EXPOSE 8000
 
