@@ -22,6 +22,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { type JwtPayload } from '@agency-os/types';
 import { type Request, type Response, type CookieOptions } from 'express';
+import { Throttle } from '@nestjs/throttler';
 import * as jwt from 'jsonwebtoken';
 
 @Controller('auth')
@@ -91,6 +92,7 @@ export class AuthController {
   }
 
   @Post('login')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   async login(
     @Body() dto: LoginDto,
     @Req() req: Request,
@@ -109,6 +111,7 @@ export class AuthController {
   }
 
   @Post('register')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   async register(
     @Body() dto: RegisterDto,
     @Req() req: Request,
@@ -144,6 +147,7 @@ export class AuthController {
   }
 
   @Post('refresh')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   async refresh(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,

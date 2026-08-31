@@ -1,9 +1,12 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import List, Dict, Any
+import logging
 from ..services.llm_client import llm_client
 from ..services.website_scraper import scrape_website
 from ..dependencies import verify_internal_secret
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/internal/seo-audit", tags=["seo"], dependencies=[Depends(verify_internal_secret)])
 
@@ -25,5 +28,8 @@ async def audit_website(req: SeoAuditRequest):
             findings=result.get("findings", {}),
             recommendations=result.get("recommendations", [])
         )
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("SEO audit request failed")
+        raise HTTPException(status_code=500, detail="Internal server error")

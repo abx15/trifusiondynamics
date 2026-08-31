@@ -1,7 +1,10 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
+import logging
 from ..services.llm_client import llm_client
 from ..dependencies import verify_internal_secret
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/internal/email-writer", tags=["email"], dependencies=[Depends(verify_internal_secret)])
 
@@ -21,5 +24,8 @@ async def write_email(req: EmailRequest):
             subject=result.get("subject", ""),
             body=result.get("body", "")
         )
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Email writer request failed")
+        raise HTTPException(status_code=500, detail="Internal server error")

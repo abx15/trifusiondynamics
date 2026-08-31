@@ -8,9 +8,26 @@ import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import dns from 'dns';
+import { json, urlencoded } from 'express';
+import { randomUUID } from 'crypto';
 
 // Configure DNS to Google Public DNS for better connectivity
 dns.setServers(['8.8.8.8', '8.8.4.4']);
+
+const MAX_BODY_SIZE = '5mb';
+const MIN_SECRET_LENGTH = 32;
+
+function validateRequiredSecrets(): void {
+  const required: string[] = ['JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET'];
+  for (const key of required) {
+    const value = process.env[key];
+    if (!value || value.length < MIN_SECRET_LENGTH) {
+      throw new Error(
+        `${key} must be set and at least ${MIN_SECRET_LENGTH} characters long`,
+      );
+    }
+  }
+}
 
 async function bootstrap() {
   if (
@@ -29,9 +46,31 @@ async function bootstrap() {
     }
   }
 
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  validateRequiredSecrets();
+
+  const app = await NestFactory.create(AppModule, {
+    bufferLogs: true,
+    bodyParser: false,
+  });
   app.useLogger(app.get(Logger));
   app.setGlobalPrefix('api');
+
+  // Attach/inherit a request id and echo it back on the response for tracing.
+  app.use((req, res, next) => {
+    const incoming = req.headers['x-request-id'];
+    const requestId =
+      typeof incoming === 'string' && incoming.length > 0
+        ? incoming
+        : randomUUID();
+    (req as unknown as { id: string }).id = requestId;
+    res.setHeader('X-Request-ID', requestId);
+    next();
+  });
+
+  // Parse JSON / URL-encoded bodies with an explicit size limit to mitigate
+  // large-payload abuse. (Nest's default body parser is disabled above.)
+  app.use(json({ limit: MAX_BODY_SIZE }));
+  app.use(urlencoded({ extended: true, limit: MAX_BODY_SIZE }));
 
   // Security headers
   app.use(
@@ -90,8 +129,26 @@ async function bootstrap() {
     SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, documentFactory);
 
+  // Graceful shutdown: stop accepting new work, let in-flight requests finish,
+  // then close database connections and exit.
+  app.enableShutdownHooks();
+
   const port = parseInt(process.env.PORT || '8000', 10);
   await app.listen(port);
   console.log(`🚀 Auth API running on port ${port}`);
+
+  const shutdown = async (signal: string) => {
+    console.warn(`Received ${signal}, shutting down gracefully...`);
+    try {
+      await app.close();
+    } catch (err) {
+      console.error('Error during graceful shutdown:', err);
+    } finally {
+      process.exit(0);
+    }
+  };
+
+  process.on('SIGTERM', () => void shutdown('SIGTERM'));
+  process.on('SIGINT', () => void shutdown('SIGINT'));
 }
 bootstrap();

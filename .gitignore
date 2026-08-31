@@ -13,11 +13,11 @@ out
 .env
 .env.local
 .env.*.local
+.env.production
 **/.env
 **/.env.local
 **/.env.*.local
 !.env.example
-!.env.production
 !.env.*.example
 
 # IDE

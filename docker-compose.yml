@@ -61,8 +61,8 @@ services:
       - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET:-d5f8b9e67c8a49c2a12a7f5a3b9d0e1c4b7a8d9e0f1a2b3c4d5e6f7a8b9c0d1e}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9}
       - ADMIN_EMAIL=admin@trifusiondynamics.com
-      - ADMIN_PASSWORD=ChangeThisPassword123!
-      - DEFAULT_TEMP_PASSWORD=Welcome@123
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-ChangeThisPassword123!}
+      - DEFAULT_TEMP_PASSWORD=${DEFAULT_TEMP_PASSWORD:-set-a-strong-temp-password}
       # Allow both frontends
       - CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001,https://trifusiondynamics.com,https://ops.trifusiondynamics.com
       - COOKIE_DOMAIN=

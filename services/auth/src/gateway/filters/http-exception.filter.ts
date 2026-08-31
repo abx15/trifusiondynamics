@@ -13,6 +13,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const response = ctx.getResponse();
     const request = ctx.getRequest();
 
+    const requestId =
+      (request.headers && request.headers['x-request-id']) ||
+      request.id ||
+      'unknown';
+
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = 'Internal server error';
 
@@ -37,6 +42,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       statusCode: status,
       message,
       path: request.url,
+      requestId,
       timestamp: new Date().toISOString(),
     });
   }

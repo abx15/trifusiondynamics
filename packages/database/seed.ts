@@ -34,6 +34,11 @@ async function safeRun<T>(label: string, fn: () => Promise<T>, retries = 3): Pro
 async function main() {
   const adminEmail = process.env.ADMIN_EMAIL || 'admin@agencyos.com';
 
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  if (!adminPassword) {
+    throw new Error('ADMIN_PASSWORD environment variable must be set');
+  }
+
   console.log('Seeding database...');
   console.log(`Admin email configured: ${adminEmail}`);
 
@@ -163,7 +168,7 @@ async function main() {
   // 5. Create Seed Accounts
 
   // Account 1: Primary Superadmin
-  const tfxAdminPassHash = await bcrypt.hash('trifusiondynamicsA3web', 12);
+  const tfxAdminPassHash = await bcrypt.hash(adminPassword, 12);
   const tfxAdminUser = await safeRun('Upsert Trifusion Admin User', () =>
     prisma.user.upsert({
       where: { email: 'trifusiondynamics@gmail.com' },
@@ -195,11 +200,7 @@ async function main() {
 
   // Account 1b: Configured Admin from env
   const configuredAdminEmail = process.env.ADMIN_EMAIL || 'admin@trifusiondynamics.com';
-  const configuredAdminPassword = process.env.ADMIN_PASSWORD;
-  if (!configuredAdminPassword) {
-    throw new Error('ADMIN_PASSWORD environment variable must be set');
-  }
-  const configuredAdminPassHash = await bcrypt.hash(configuredAdminPassword, 12);
+  const configuredAdminPassHash = await bcrypt.hash(adminPassword, 12);
   const configuredAdminUser = await safeRun('Upsert Configured Admin User', () =>
     prisma.user.upsert({
       where: { email: configuredAdminEmail },
