@@ -25,7 +25,7 @@ beforeAll(async () => {
     execSync('npx prisma migrate reset --force --skip-seed', {
       stdio: 'ignore',
     });
-  } catch (error) {
+  } catch {
     console.log('Migration reset failed, continuing...');
   }
 

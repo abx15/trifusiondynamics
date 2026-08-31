@@ -19,7 +19,8 @@ export default function Header() {
 
   // Close drawer on route change
   useEffect(() => {
-    setIsOpen(false);
+    const id = requestAnimationFrame(() => setIsOpen(false));
+    return () => cancelAnimationFrame(id);
   }, [pathname]);
 
   // Prevent body scroll when mobile menu is open

@@ -3,6 +3,7 @@ import openai
 import google.generativeai as genai
 from ..config import settings
 
+
 class LLMClient:
     def __init__(self):
         # We'll use Gemini as primary if available
@@ -17,8 +18,10 @@ class LLMClient:
             openai.api_key = settings.openai_api_key
             self.provider = "openai"
         else:
-            # Fallback for testing when no keys are available
-            self.provider = "mock"
+            raise RuntimeError(
+                "No LLM provider API key configured. "
+                "Set at least one of: GEMINI_API_KEY, ANTHROPIC_API_KEY, or OPENAI_API_KEY."
+            )
 
     async def generate_proposal(self, requirements: str) -> str:
         prompt = f"Write a detailed business proposal based on the following requirements:\n\n{requirements}"
@@ -86,6 +89,6 @@ class LLMClient:
             )
             return response.choices[0].message['content']
         else:
-            return f"Mock response for prompt: {prompt[:50]}..."
+            raise RuntimeError(f"Unknown LLM provider: {self.provider}")
 
 llm_client = LLMClient()

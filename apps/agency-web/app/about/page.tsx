@@ -35,7 +35,7 @@ export default async function AboutPage() {
         {/* Dynamic CMS Copy */}
         {pageData.content && (
           <div className="glass-panel rounded-3xl p-8 border border-white/5 mb-16 text-slate-300 text-sm sm:text-base leading-relaxed max-w-4xl">
-            <p className="font-mono text-xs text-primary mb-3">// CMS BACKEND COPY</p>
+            <p className="font-mono text-xs text-primary mb-3">CMS Backend Copy</p>
             {pageData.content}
           </div>
         )}

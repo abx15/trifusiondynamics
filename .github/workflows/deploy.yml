@@ -3,12 +3,6 @@ name: AgencyOS Deploy
 on:
   push:
     branches: [main]
-    paths:
-      - 'apps/**'
-      - 'services/**'
-      - 'packages/**'
-      - 'turbo.json'
-      - 'package.json'
   workflow_dispatch:
 
 concurrency:
@@ -29,12 +23,12 @@ jobs:
           cache: 'pnpm'
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@v4
         with:
           version: 10
 
       - name: Install Dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Build All Services
         run: pnpm run build

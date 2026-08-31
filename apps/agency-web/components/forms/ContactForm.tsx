@@ -92,14 +92,14 @@ export default function ContactForm() {
         subject: "",
         message: "",
       });
-    } catch (err: any) {
+    } catch (err) {
       console.error("Submission failed:", err);
-      if (err.message === "RATE_LIMIT") {
+      if (err instanceof Error && err.message === "RATE_LIMIT") {
         setStatus("rate-limit");
       } else {
         setStatus("error");
         setErrorMessage(
-          err.message || "An unexpected error occurred. Please try again later."
+          err instanceof Error ? err.message : "An unexpected error occurred. Please try again later."
         );
       }
     }

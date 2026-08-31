@@ -41,12 +41,12 @@ jobs:
           cache: 'pnpm'
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@v4
         with:
           version: 10
 
       - name: Install Dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Lint ${{ matrix.app }}
         run: pnpm --filter ${{ matrix.app }} lint
@@ -77,12 +77,12 @@ jobs:
           cache: 'pnpm'
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@v4
         with:
           version: 10
 
       - name: Install Dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Build Shared Packages
         run: pnpm --filter @agency-os/database build --filter @agency-os/types build --filter @agency-os/ui build --filter @agency-os/config build
@@ -92,47 +92,6 @@ jobs:
 
       - name: Type Check Types Package
         run: pnpm --filter @agency-os/types build
-
-  # Deployment to Vercel (Production)
-  deploy-production:
-    needs: [frontend, shared-packages]
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    environment: production
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: 10
-
-      - name: Install Dependencies
-        run: pnpm install
-
-      - name: Deploy Agency Web to Vercel
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID_AGENCY_WEB }}
-          working-directory: ./apps/agency-web
-          vercel-args: '--prod'
-
-      - name: Deploy Admin Dashboard to Vercel
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID_ADMIN_DASHBOARD }}
-          working-directory: ./apps/admin-dashboard
-          vercel-args: '--prod'
 
   # Deployment to Vercel (Preview)
   deploy-preview:
@@ -150,12 +109,12 @@ jobs:
           cache: 'pnpm'
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@v4
         with:
           version: 10
 
       - name: Install Dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Deploy Agency Web Preview to Vercel
         uses: amondnet/vercel-action@v25

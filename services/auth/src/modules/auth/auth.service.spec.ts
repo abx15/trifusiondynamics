@@ -3,6 +3,7 @@ import { AuthService } from './auth.service';
 import { PrismaService } from '../database/prisma.service';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
 import { UnauthorizedException } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import * as bcrypt from 'bcryptjs';
 
 jest.mock('@agency-os/database', () => ({
@@ -23,6 +24,14 @@ describe('AuthService', () => {
       providers: [
         AuthService,
         { provide: PrismaService, useValue: prismaMock },
+        {
+          provide: CACHE_MANAGER,
+          useValue: {
+            get: jest.fn(),
+            set: jest.fn(),
+            del: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -43,8 +52,11 @@ describe('AuthService', () => {
       prismaMock.user.findFirst.mockResolvedValue({
         id: 'user-1',
         email: 'test@test.com',
+        name: 'Test User',
         password: hashedPassword,
         organizationId: 'org-1',
+        isActive: true,
+        mustChangePassword: false,
         roles: [],
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -65,8 +77,11 @@ describe('AuthService', () => {
       prismaMock.user.findFirst.mockResolvedValue({
         id: 'user-1',
         email: 'test@test.com',
+        name: 'Test User',
         password: hashedPassword,
         organizationId: 'org-1',
+        isActive: true,
+        mustChangePassword: false,
         roles: [],
         createdAt: new Date(),
         updatedAt: new Date(),

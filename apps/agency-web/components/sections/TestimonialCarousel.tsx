@@ -17,16 +17,16 @@ export default function TestimonialCarousel({ testimonials }: TestimonialsProps)
   const scrollPrev = useCallback(() => emblaApi && emblaApi.scrollPrev(), [emblaApi]);
   const scrollNext = useCallback(() => emblaApi && emblaApi.scrollNext(), [emblaApi]);
 
-  const onSelect = useCallback(() => {
-    if (!emblaApi) return;
-    setSelectedIndex(emblaApi.selectedScrollSnap());
-  }, [emblaApi]);
-
   useEffect(() => {
     if (!emblaApi) return;
-    onSelect();
-    emblaApi.on("select", onSelect);
-  }, [emblaApi, onSelect]);
+    const syncSelectedIndex = () => setSelectedIndex(emblaApi.selectedScrollSnap());
+    emblaApi.on("select", syncSelectedIndex);
+    const raf = requestAnimationFrame(syncSelectedIndex);
+    return () => {
+      cancelAnimationFrame(raf);
+      emblaApi.off("select", syncSelectedIndex);
+    };
+  }, [emblaApi]);
 
   return (
     <section className="py-16 sm:py-24 bg-[#090d19] relative overflow-hidden">

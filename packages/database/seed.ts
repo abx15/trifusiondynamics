@@ -191,11 +191,14 @@ async function main() {
       create: { userId: tfxAdminUser.id, roleId: dbRoles.superadmin.id },
     })
   );
-  console.log(`[SEED] Superadmin Account: trifusiondynamics@gmail.com | Password: trifusiondynamicsA3web`);
+  console.log(`[SEED] Superadmin Account: trifusiondynamics@gmail.com | Password: [REDACTED - set via env]`);
 
   // Account 1b: Configured Admin from env
   const configuredAdminEmail = process.env.ADMIN_EMAIL || 'admin@trifusiondynamics.com';
-  const configuredAdminPassword = process.env.ADMIN_PASSWORD || 'ChangeThisPassword123!';
+  const configuredAdminPassword = process.env.ADMIN_PASSWORD;
+  if (!configuredAdminPassword) {
+    throw new Error('ADMIN_PASSWORD environment variable must be set');
+  }
   const configuredAdminPassHash = await bcrypt.hash(configuredAdminPassword, 12);
   const configuredAdminUser = await safeRun('Upsert Configured Admin User', () =>
     prisma.user.upsert({
@@ -231,10 +234,13 @@ async function main() {
       create: { userId: configuredAdminUser.id, roleId: dbRoles.superadmin.id },
     })
   );
-  console.log(`[SEED] Admin Account: ${configuredAdminEmail} | Password: ${configuredAdminPassword}`);
+  console.log(`[SEED] Admin Account: ${configuredAdminEmail} | Password: [REDACTED - set via env]`);
 
   // Get shared default password for all new accounts
-  const defaultTempPassword = process.env.DEFAULT_TEMP_PASSWORD || 'Welcome@123';
+  const defaultTempPassword = process.env.DEFAULT_TEMP_PASSWORD;
+  if (!defaultTempPassword) {
+    throw new Error('DEFAULT_TEMP_PASSWORD environment variable must be set');
+  }
 
   // Account 2: Sales & Partnerships
   const salesPass = defaultTempPassword;
@@ -273,7 +279,7 @@ async function main() {
       create: { userId: salesUser.id, roleId: dbRoles.agent.id },
     })
   );
-  console.log(`[SEED] Sales account (sales.trifusion@gmail.com) created with default password: ${salesPass}`);
+  console.log(`[SEED] Sales account (sales.trifusion@gmail.com) created. Password: [REDACTED - must change on first login]`);
 
   // Account 3: Support
   const supportPass = defaultTempPassword;
@@ -312,7 +318,7 @@ async function main() {
       create: { userId: supportUser.id, roleId: dbRoles.agent.id },
     })
   );
-  console.log(`[SEED] Support account (support.trifusion@gmail.com) created with default password: ${supportPass}`);
+  console.log(`[SEED] Support account (support.trifusion@gmail.com) created. Password: [REDACTED - must change on first login]`);
 
   // Account 4: HR & Careers
   const hrPass = defaultTempPassword;
@@ -351,7 +357,7 @@ async function main() {
       create: { userId: hrUser.id, roleId: dbRoles.agent.id },
     })
   );
-  console.log(`[SEED] HR account (hr.trifusion@gmail.com) created with default password: ${hrPass}`);
+  console.log(`[SEED] HR account (hr.trifusion@gmail.com) created. Password: [REDACTED - must change on first login]`);
 
   const user = tfxAdminUser;
   const hashedPassword = tfxAdminPassHash;
@@ -1874,9 +1880,8 @@ async function main() {
   console.log('Analytics & Automation seeded successfully!');
   console.log('Seeding completed successfully.');
   console.log(`========================================`);
-  console.log(`DEFAULT PASSWORD INFORMATION:`);
-  console.log(`All newly created accounts use the default password: ${defaultTempPassword}`);
-  console.log(`Users must change this password on first login.`);
+  console.log(`ACCOUNT SUMMARY:`);
+  console.log(`All newly created accounts must change password on first login.`);
   console.log(`Superadmin account (trifusiondynamics@gmail.com) keeps its permanent password.`);
   console.log(`========================================`);
 }

@@ -30,7 +30,7 @@ model User {
   isActive           Boolean       @default(true)
   mustChangePassword Boolean       @default(false)
   organizationId     String
-  organization       Organization  @relation(fields: [organizationId], references: [id])
+  organization       Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   roles              UserRole[]
   refreshTokens      RefreshToken[]
   createdAt          DateTime      @default(now())
@@ -62,8 +62,8 @@ model Permission {
 model RolePermission {
   roleId       String
   permissionId String
-  role         Role       @relation(fields: [roleId], references: [id])
-  permission   Permission @relation(fields: [permissionId], references: [id])
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
   @@id([roleId, permissionId])
   @@schema("auth")
@@ -72,8 +72,8 @@ model RolePermission {
 model UserRole {
   userId String
   roleId String
-  user   User   @relation(fields: [userId], references: [id])
-  role   Role   @relation(fields: [roleId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@id([userId, roleId])
   @@schema("auth")
@@ -83,7 +83,7 @@ model RefreshToken {
   id        String   @id @default(uuid())
   token     String   @unique
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime
   revoked   Boolean  @default(false)
   createdAt DateTime @default(now())
@@ -150,7 +150,7 @@ enum ClientStatus {
 model ClientContact {
   id        String   @id @default(uuid())
   clientId  String
-  client    Client   @relation(fields: [clientId], references: [id])
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
   name      String
   role      String?
   email     String?
@@ -213,7 +213,7 @@ enum PipelineStage {
 model FollowUp {
   id        String   @id @default(uuid())
   leadId    String
-  lead      Lead     @relation(fields: [leadId], references: [id])
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
   note      String   @db.Text
   scheduledAt DateTime?
   completedAt DateTime?
@@ -285,7 +285,7 @@ enum ProjectStatus {
 model ProjectMember {
   id        String   @id @default(uuid())
   projectId String
-  project   Project  @relation(fields: [projectId], references: [id])
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   userId    String   // references auth.User.id
   role      String   @default("member")   // "lead", "member", "viewer"
   addedAt   DateTime @default(now())
@@ -297,7 +297,7 @@ model ProjectMember {
 model Milestone {
   id          String    @id @default(uuid())
   projectId   String
-  project     Project   @relation(fields: [projectId], references: [id])
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   title       String
   dueDate     DateTime?
   isCompleted Boolean   @default(false)
@@ -310,7 +310,7 @@ model Milestone {
 model Task {
   id             String     @id @default(uuid())
   projectId      String
-  project        Project    @relation(fields: [projectId], references: [id])
+  project        Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
   title          String
   description    String?    @db.Text
   status         TaskStatus @default(TODO)
@@ -318,7 +318,7 @@ model Task {
   assignedToId   String?    // references auth.User.id
   dueDate        DateTime?
   sprintId       String?
-  sprint         Sprint?    @relation(fields: [sprintId], references: [id])
+  sprint         Sprint?    @relation(fields: [sprintId], references: [id], onDelete: SetNull)
   timeLogs       TimeLog[]
   order          Int        @default(0)   // for kanban column ordering
   createdAt      DateTime   @default(now())
@@ -365,7 +365,7 @@ model Sprint {
 model TimeLog {
   id        String   @id @default(uuid())
   taskId    String
-  task      Task     @relation(fields: [taskId], references: [id])
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
   userId    String   // references auth.User.id
   minutes   Int
   note      String?
@@ -418,7 +418,7 @@ enum InvoiceStatus {
 model Payment {
   id            String        @id @default(uuid())
   invoiceId     String
-  invoice       Invoice       @relation(fields: [invoiceId], references: [id])
+  invoice       Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
   amount        Decimal       @db.Decimal(12, 2)
   method        PaymentMethod
   transactionRef String?
@@ -559,7 +559,7 @@ enum EmployeeStatus {
 model Leave {
   id          String      @id @default(uuid())
   employeeId  String
-  employee    Employee    @relation(fields: [employeeId], references: [id])
+  employee    Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   type        LeaveType
   startDate   DateTime
   endDate     DateTime
@@ -591,7 +591,7 @@ enum LeaveStatus {
 model EmployeeDocument {
   id         String   @id @default(uuid())
   employeeId String
-  employee   Employee @relation(fields: [employeeId], references: [id])
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   type       String
   fileUrl    String
   uploadedAt DateTime @default(now())
@@ -822,7 +822,7 @@ enum TriggerType {
 model WorkflowRun {
   id         String   @id @default(uuid())
   workflowId String
-  workflow   Workflow @relation(fields: [workflowId], references: [id])
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
   status     RunStatus @default(SUCCESS)
   input      Json?
   output     Json?
@@ -893,7 +893,7 @@ model Webhook {
 model WebhookDelivery {
   id         String   @id @default(uuid())
   webhookId  String
-  webhook    Webhook  @relation(fields: [webhookId], references: [id])
+  webhook    Webhook  @relation(fields: [webhookId], references: [id], onDelete: Cascade)
   event      String
   payload    Json
   statusCode Int?

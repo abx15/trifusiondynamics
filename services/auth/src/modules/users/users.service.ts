@@ -40,9 +40,10 @@ export class UsersService {
     }
 
     // 3. Use shared default temporary password from environment
-    const defaultTempPassword =
-      process.env.DEFAULT_TEMP_PASSWORD || 'Welcome@123';
-    const tempPassword = defaultTempPassword;
+    const tempPassword = process.env.DEFAULT_TEMP_PASSWORD;
+    if (!tempPassword) {
+      throw new Error('DEFAULT_TEMP_PASSWORD environment variable must be set');
+    }
     const hashedPassword = await bcrypt.hash(tempPassword, 12);
 
     // 4. Create User Record
@@ -105,9 +106,9 @@ export class UsersService {
       }
     }
 
-    // Log user creation (no individual password - uses shared default)
+    // Log user creation (no password logged — uses shared default)
     console.log(
-      `[USER PROVISIONED] Email: ${user.email} | Role: ${dto.role} | All new accounts use default password: ${tempPassword} (must change on first login)`,
+      `[USER PROVISIONED] Email: ${user.email} | Role: ${dto.role} | Must change password on first login`,
     );
 
     // Return created user WITHOUT password

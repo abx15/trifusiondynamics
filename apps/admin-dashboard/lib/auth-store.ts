@@ -89,7 +89,7 @@ interface AuthState {
 function getStoredUser(): User | null {
   if (typeof window === "undefined") return null;
   try {
-    const stored = sessionStorage.getItem("user") || localStorage.getItem("user");
+    const stored = sessionStorage.getItem("user");
     if (stored) return JSON.parse(stored) as User;
   } catch {
     // ignore parse errors
@@ -99,7 +99,7 @@ function getStoredUser(): User | null {
 
 function getStoredAccessToken(): string | null {
   if (typeof window === "undefined") return null;
-  return sessionStorage.getItem("accessToken") || localStorage.getItem("accessToken");
+  return sessionStorage.getItem("accessToken");
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -109,23 +109,14 @@ export const useAuthStore = create<AuthState>((set) => ({
   setUser: (user) => {
     if (typeof window !== "undefined") {
       sessionStorage.setItem("user", JSON.stringify(user));
-      localStorage.setItem("user", JSON.stringify(user));
     }
     set({ user, isAuthenticated: true });
   },
   clearAuth: () => {
     if (typeof window !== "undefined") {
-      // Clear all session storage
       sessionStorage.removeItem("user");
       sessionStorage.removeItem("accessToken");
       sessionStorage.removeItem("refreshToken");
-      
-      // Clear all local storage
-      localStorage.removeItem("user");
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
-      
-      // Clear all cookies with different path options to ensure complete removal
       try {
         Cookies.remove("access_token", { path: "/" });
         Cookies.remove("refresh_token", { path: "/" });
@@ -138,10 +129,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   setAuth: (accessToken, user) => {
     if (typeof window !== "undefined") {
       sessionStorage.setItem("user", JSON.stringify(user));
-      localStorage.setItem("user", JSON.stringify(user));
       if (accessToken) {
         sessionStorage.setItem("accessToken", accessToken);
-        localStorage.setItem("accessToken", accessToken);
         Cookies.set("access_token", accessToken, { path: "/", expires: 1 });
       }
     }

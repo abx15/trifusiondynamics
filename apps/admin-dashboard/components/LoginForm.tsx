@@ -31,7 +31,6 @@ export const DEMO_PRESETS = [
     label: "Super Admin",
     dept: "Executive",
     email: "trifusiondynamics@gmail.com",
-    password: "trifusiondynamicsA3web",
     target: "/super-admin",
     icon: Crown,
     color: "text-amber-400",
@@ -44,7 +43,6 @@ export const DEMO_PRESETS = [
     label: "Admin",
     dept: "Operations",
     email: "admin@trifusiondynamics.com",
-    password: "ChangeThisPassword123!",
     target: "/dashboard",
     icon: ShieldCheck,
     color: "text-purple-400",
@@ -57,7 +55,6 @@ export const DEMO_PRESETS = [
     label: "Sales",
     dept: "Partnerships",
     email: "sales.trifusion@gmail.com",
-    password: "Welcome@123",
     target: "/crm",
     icon: Briefcase,
     color: "text-blue-400",
@@ -70,7 +67,6 @@ export const DEMO_PRESETS = [
     label: "Support",
     dept: "Helpdesk",
     email: "support.trifusion@gmail.com",
-    password: "Welcome@123",
     target: "/tickets",
     icon: Headphones,
     color: "text-cyan-400",
@@ -83,7 +79,6 @@ export const DEMO_PRESETS = [
     label: "HR & People",
     dept: "Human Resources",
     email: "hr.trifusion@gmail.com",
-    password: "Welcome@123",
     target: "/hr",
     icon: Users,
     color: "text-pink-400",
@@ -96,7 +91,6 @@ export const DEMO_PRESETS = [
     label: "Agent",
     dept: "Support Hub",
     email: "agent@trifusiondynamics.com",
-    password: "Agent@123",
     target: "/agent/dashboard",
     icon: UserCheck,
     color: "text-emerald-400",
@@ -109,7 +103,6 @@ export const DEMO_PRESETS = [
     label: "Employee",
     dept: "Staff Ops",
     email: "bob.dev@trifusiondynamics.com",
-    password: "Welcome@123",
     target: "/attendance",
     icon: Laptop,
     color: "text-indigo-400",
@@ -122,7 +115,6 @@ export const DEMO_PRESETS = [
     label: "Client",
     dept: "Tenant Portal",
     email: "client@apexretail.com",
-    password: "Client@123",
     target: "/client/dashboard",
     icon: Building2,
     color: "text-orange-400",
@@ -170,9 +162,9 @@ export function LoginForm() {
   const handleSelectPreset = (preset: typeof DEMO_PRESETS[0]) => {
     setSelectedPreset(preset.key);
     setIdentifier(preset.email);
-    setPassword(preset.password);
+    setPassword("");
     setError(null);
-    toast.info(`Filled credentials for ${preset.label} (${preset.dept})`);
+    toast.info(`Filled email for ${preset.label} (${preset.dept}) — enter password manually`);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

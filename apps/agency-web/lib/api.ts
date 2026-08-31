@@ -29,7 +29,10 @@ export async function getCmsServices(): Promise<ServiceItem[]> {
     
     // Map backend stubs [{id, name}] to our enriched local features
     return SERVICES_DATA.map((local) => {
-      const match = backendServices.find((b: any) => b.id === local.id || b.name?.toLowerCase() === local.name?.toLowerCase());
+      const match = backendServices.find(
+      (b: { id: string; name?: string }) =>
+        b.id === local.id || b.name?.toLowerCase() === local.name?.toLowerCase(),
+    );
       if (match) {
         return {
           ...local,

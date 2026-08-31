@@ -32,8 +32,8 @@ export default function NewInvoicePage() {
     { description: "", quantity: 1, unitPrice: 0, taxRate: 18, amount: 0 },
   ]);
 
-  const today = new Date().toISOString().split("T")[0];
-  const in30 = new Date(Date.now() + 30 * 86400_000).toISOString().split("T")[0];
+  const today = React.useMemo(() => new Date().toISOString().split("T")[0], []);
+  const in30 = React.useMemo(() => new Date(Date.now() + 30 * 86400_000).toISOString().split("T")[0], []);
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormValues>({
     resolver: zodResolver(schema),

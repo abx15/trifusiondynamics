@@ -16,7 +16,7 @@ export class AppController {
       status: 'ok',
       checks: {
         postgres: 'ok',
-        redis: 'ok',
+        redis: process.env.REDIS_URL ? 'configured' : 'not_configured',
         ai_service: 'ok',
       },
     };
