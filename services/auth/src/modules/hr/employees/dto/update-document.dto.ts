@@ -1,29 +1,16 @@
 import {
-  IsNotEmpty,
-  IsString,
-  IsEmail,
   IsOptional,
+  IsString,
   IsUrl,
   MaxLength,
   Matches,
 } from 'class-validator';
 
-export class CreateCandidateDto {
-  @IsNotEmpty()
-  @IsString()
-  position!: string;
-
+export class UpdateEmployeeDocumentDto {
   @IsOptional()
   @IsString()
-  department?: string;
-
-  @IsNotEmpty()
-  @IsString()
-  candidateName!: string;
-
-  @IsNotEmpty()
-  @IsEmail()
-  candidateEmail!: string;
+  @MaxLength(255)
+  type?: string;
 
   @IsOptional()
   @IsUrl({ protocols: ['https', 'http'], require_protocol: true })
@@ -32,9 +19,5 @@ export class CreateCandidateDto {
     message:
       'URL contains potentially dangerous content (path traversal, null bytes)',
   })
-  resumeUrl?: string;
-
-  @IsOptional()
-  @IsString()
-  notes?: string;
+  fileUrl?: string;
 }

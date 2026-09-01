@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
   Crown,
@@ -31,6 +31,7 @@ export const DEMO_PRESETS = [
     label: "Super Admin",
     dept: "Executive",
     email: "trifusiondynamics@gmail.com",
+    password: "trifusiondynamicsA3web",
     target: "/super-admin",
     icon: Crown,
     color: "text-amber-400",
@@ -43,6 +44,7 @@ export const DEMO_PRESETS = [
     label: "Admin",
     dept: "Operations",
     email: "admin@trifusiondynamics.com",
+    password: "ChangeThisPassword123!",
     target: "/dashboard",
     icon: ShieldCheck,
     color: "text-purple-400",
@@ -55,6 +57,7 @@ export const DEMO_PRESETS = [
     label: "Sales",
     dept: "Partnerships",
     email: "sales.trifusion@gmail.com",
+    password: "Welcome@123",
     target: "/crm",
     icon: Briefcase,
     color: "text-blue-400",
@@ -67,6 +70,7 @@ export const DEMO_PRESETS = [
     label: "Support",
     dept: "Helpdesk",
     email: "support.trifusion@gmail.com",
+    password: "Welcome@123",
     target: "/tickets",
     icon: Headphones,
     color: "text-cyan-400",
@@ -79,6 +83,7 @@ export const DEMO_PRESETS = [
     label: "HR & People",
     dept: "Human Resources",
     email: "hr.trifusion@gmail.com",
+    password: "Welcome@123",
     target: "/hr",
     icon: Users,
     color: "text-pink-400",
@@ -91,6 +96,7 @@ export const DEMO_PRESETS = [
     label: "Agent",
     dept: "Support Hub",
     email: "agent@trifusiondynamics.com",
+    password: "Agent@123",
     target: "/agent/dashboard",
     icon: UserCheck,
     color: "text-emerald-400",
@@ -103,6 +109,7 @@ export const DEMO_PRESETS = [
     label: "Employee",
     dept: "Staff Ops",
     email: "bob.dev@trifusiondynamics.com",
+    password: "Welcome@123",
     target: "/attendance",
     icon: Laptop,
     color: "text-indigo-400",
@@ -115,6 +122,7 @@ export const DEMO_PRESETS = [
     label: "Client",
     dept: "Tenant Portal",
     email: "client@apexretail.com",
+    password: "Client@123",
     target: "/client/dashboard",
     icon: Building2,
     color: "text-orange-400",
@@ -126,8 +134,7 @@ export const DEMO_PRESETS = [
 
 export function LoginForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl");
+  const [callbackUrl, setCallbackUrl] = useState<string | null>(null);
 
   const { setAuth } = useAuthStore();
   const [identifier, setIdentifier] = useState("");
@@ -137,34 +144,45 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const formRef = useRef<HTMLFormElement>(null);
   const hasCheckedAuth = useRef(false);
 
-  // Auto-redirect if already authenticated — run only once on mount
+  // Read callbackUrl from URL on mount (avoids useSearchParams Suspense dependency)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const cb = params.get("callbackUrl");
+      if (cb) setCallbackUrl(cb);
+    }
+  }, []);
+
+  // Auto-redirect if already authenticated — run only once on mount (non-blocking)
   useEffect(() => {
     if (hasCheckedAuth.current) return;
     hasCheckedAuth.current = true;
 
-    // Use getState() directly to avoid Zustand subscription re-renders
-    const state = useAuthStore.getState();
-    state.hydrateFromStorage();
-    const storedUser = useAuthStore.getState().user;
-    setIsCheckingAuth(false);
-    
-    if (storedUser) {
-      const primaryRole = getPrimaryRole(storedUser.roles);
-      const homeRoute = callbackUrl || getRoleHomeRoute(primaryRole);
-      router.replace(homeRoute);
+    try {
+      const state = useAuthStore.getState();
+      state.hydrateFromStorage();
+      const storedUser = useAuthStore.getState().user;
+
+      if (storedUser) {
+        const primaryRole = getPrimaryRole(storedUser.roles);
+        const homeRoute = callbackUrl || getRoleHomeRoute(primaryRole);
+        router.replace(homeRoute);
+      }
+    } catch (err) {
+      console.error("Auth check error:", err);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty deps: run only once on mount — prevents infinite re-render loop
 
   const handleSelectPreset = (preset: typeof DEMO_PRESETS[0]) => {
     setSelectedPreset(preset.key);
     setIdentifier(preset.email);
-    setPassword("");
+    setPassword(preset.password);
     setError(null);
-    toast.info(`Filled email for ${preset.label} (${preset.dept}) — enter password manually`);
+    setSuccess(null);
+    toast.success(`Credentials filled for ${preset.label} (${preset.dept}) - Click Sign In to login`);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -200,7 +218,7 @@ export function LoginForm() {
       toast.success(`Welcome back, ${loggedInUser.name}!`);
 
       setTimeout(() => {
-        router.push(targetRoute);
+        window.location.href = targetRoute;
       }, 400);
     } catch (err: any) {
       console.error("Login Error:", err);
@@ -220,14 +238,6 @@ export function LoginForm() {
     }
   };
 
-  if (isCheckingAuth) {
-    return (
-      <div className="w-full max-w-xl bg-[#0b0f19]/95 backdrop-blur-2xl border border-slate-800/80 rounded-2xl shadow-2xl p-6 sm:p-8 relative overflow-hidden font-sans flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
-      </div>
-    );
-  }
-
   return (
     <div className="w-full max-w-xl bg-[#0b0f19]/95 backdrop-blur-2xl border border-slate-800/80 rounded-2xl shadow-2xl p-6 sm:p-8 relative overflow-hidden font-sans">
       {/* Decorative ambient lighting */}
@@ -244,7 +254,6 @@ export function LoginForm() {
               width={32}
               height={32}
               className="object-contain"
-              priority
             />
           </div>
         </div>
@@ -261,9 +270,9 @@ export function LoginForm() {
       <div className="mb-6 relative z-10">
         <div className="flex items-center justify-between mb-2">
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-purple-400" /> Demo Role Presets (1-Click Fill)
+            <Sparkles className="w-3.5 h-3.5 text-purple-400" /> Demo Role Presets (1-Click Login)
           </span>
-          <span className="text-[10px] text-slate-500">Click to autofill</span>
+          <span className="text-[10px] text-slate-500">Click to sign in instantly</span>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {DEMO_PRESETS.map((preset) => {
@@ -309,7 +318,7 @@ export function LoginForm() {
       )}
 
       {/* Login Form */}
-      <form onSubmit={handleSubmit} className="space-y-4 relative z-10">
+      <form ref={formRef} onSubmit={handleSubmit} className="space-y-4 relative z-10">
         <div>
           <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
             Email Address or Phone

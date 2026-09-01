@@ -125,7 +125,14 @@ export class EmployeesService {
       where: { id, organizationId: orgId },
       include: {
         leaves: true,
-        documents: true,
+        documents: {
+          select: {
+            id: true,
+            employeeId: true,
+            type: true,
+            uploadedAt: true,
+          },
+        },
       },
     });
     if (!employee) {
@@ -146,7 +153,14 @@ export class EmployeesService {
       where: { userId, organizationId: orgId },
       include: {
         leaves: true,
-        documents: true,
+        documents: {
+          select: {
+            id: true,
+            employeeId: true,
+            type: true,
+            uploadedAt: true,
+          },
+        },
       },
     });
     if (!employee) {

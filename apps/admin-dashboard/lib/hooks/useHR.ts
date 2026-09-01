@@ -29,7 +29,7 @@ export interface EmployeeDocument {
   id: string;
   employeeId: string;
   type: string;
-  fileUrl: string;
+  fileUrl?: string;
   uploadedAt: string;
 }
 
@@ -201,6 +201,17 @@ export function useUpdateCandidateStage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["candidates"] });
+    },
+  });
+}
+
+export function useDownloadDocument() {
+  return useMutation({
+    mutationFn: async ({ employeeId, documentId }: { employeeId: string; documentId: string }) => {
+      const { data } = await apiClient.get(
+        `/hr/employees/${employeeId}/documents/${documentId}/download`,
+      );
+      return data as { fileUrl: string; type: string; uploadedAt: string };
     },
   });
 }

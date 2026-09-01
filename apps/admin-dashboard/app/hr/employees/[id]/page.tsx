@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import { useEmployee, useEmployeeAttendanceSummary, useUpdateEmployee } from "@/lib/hooks/useHR";
+import { useEmployee, useEmployeeAttendanceSummary, useUpdateEmployee, useDownloadDocument } from "@/lib/hooks/useHR";
 import { toast } from "@/lib/toast";
 import { Calendar, Clock, FileText, ArrowLeft, RefreshCw } from "lucide-react";
 
@@ -18,6 +18,7 @@ export default function EmployeeProfilePage() {
 
   const { data: employee, isLoading, error } = useEmployee(id);
   const updateEmployee = useUpdateEmployee();
+  const downloadDocument = useDownloadDocument();
 
   const currentMonth = new Date().getMonth() + 1;
   const currentYear = new Date().getFullYear();
@@ -161,14 +162,25 @@ export default function EmployeeProfilePage() {
                           Uploaded: {new Date(doc.uploadedAt).toLocaleDateString()}
                         </p>
                       </div>
-                      <a
-                        href={doc.fileUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-primary hover:underline font-semibold"
+                      <button
+                        onClick={() => {
+                          downloadDocument.mutate(
+                            { employeeId: id, documentId: doc.id },
+                            {
+                              onSuccess: (data) => {
+                                window.open(data.fileUrl, "_blank");
+                              },
+                              onError: () => {
+                                toast.error("Unable to open document.");
+                              },
+                            },
+                          );
+                        }}
+                        disabled={downloadDocument.isPending}
+                        className="text-primary hover:underline font-semibold disabled:opacity-50"
                       >
                         View
-                      </a>
+                      </button>
                     </div>
                   ))}
                 </div>
