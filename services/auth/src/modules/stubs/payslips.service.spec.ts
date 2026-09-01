@@ -22,8 +22,8 @@ describe('PayslipsService', () => {
     it('should apply 5% tax for gross > 25000', async () => {
       dbMock.payslip.create.mockImplementation((args: any) => args.data);
       const result = await service.generatePayslip({ grossSalary: 30000 });
-      expect(result.taxAmount).toBe(1500);
-      expect(result.netSalary).toBe(28500);
+      expect(result.tax).toBe(1500);
+      expect(result.netAmount).toBe(28500);
     });
   });
 });

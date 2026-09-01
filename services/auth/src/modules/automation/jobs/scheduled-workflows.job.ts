@@ -15,11 +15,15 @@ export class ScheduledWorkflowsJob {
   @Cron(CronExpression.EVERY_5_MINUTES)
   async handleScheduledWorkflows() {
     this.logger.debug('Checking for SCHEDULED workflows...');
+    // Bounded fetch: even though isActive is filtered, a tenant could accumulate
+    // many scheduled workflows. A hard take cap prevents accidental memory
+    // spikes on the cron tick.
     const workflows = await this.db.workflow.findMany({
       where: {
         isActive: true,
         triggerType: 'SCHEDULED',
       },
+      take: 1000,
     });
 
     const currentHour = new Date().getHours();

@@ -108,24 +108,41 @@ export class LeavesService {
       throw new NotFoundException('Reviewer employee record not found');
     }
 
-    const updatedLeave = await this.prisma.leave.update({
-      where: { id },
-      data: {
-        status: dto.status,
-        approvedById: reviewerEmp.id,
-      },
-    });
+    // Atomic: leave status + employee status must be consistent.
+    // We re-check the leave + employee inside the transaction to avoid a TOCTOU race.
+    const { updatedLeave, employeeUpdated } = await this.prisma.$transaction(
+      async (tx) => {
+        const current = await tx.leave.findUnique({
+          where: { id },
+          include: { employee: true },
+        });
+        if (!current || current.employee.organizationId !== orgId) {
+          throw new NotFoundException(`Leave request with ID ${id} not found`);
+        }
 
-    // If approved and currently ACTIVE employee, set employee status to ON_LEAVE
-    if (
-      dto.status === LeaveStatus.APPROVED &&
-      leave.employee.status === EmployeeStatus.ACTIVE
-    ) {
-      await this.prisma.employee.update({
-        where: { id: leave.employeeId },
-        data: { status: EmployeeStatus.ON_LEAVE },
-      });
-    }
+        const updated = await tx.leave.update({
+          where: { id },
+          data: {
+            status: dto.status,
+            approvedById: reviewerEmp.id,
+          },
+        });
+
+        let employeeTouched = false;
+        if (
+          dto.status === LeaveStatus.APPROVED &&
+          current.employee.status === EmployeeStatus.ACTIVE
+        ) {
+          await tx.employee.update({
+            where: { id: leave.employeeId },
+            data: { status: EmployeeStatus.ON_LEAVE },
+          });
+          employeeTouched = true;
+        }
+
+        return { updatedLeave: updated, employeeUpdated: employeeTouched };
+      },
+    );
 
     return updatedLeave;
   }

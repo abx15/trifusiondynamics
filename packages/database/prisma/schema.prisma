@@ -183,6 +183,7 @@ model Lead {
   @@index([organizationId])
   @@index([stage])
   @@index([assignedToId])
+  @@index([organizationId, stage, createdAt])
   @@schema("crm")
 }
 
@@ -269,6 +270,8 @@ model Project {
   updatedAt      DateTime      @updatedAt
 
   @@index([organizationId])
+  @@index([organizationId, status, createdAt])
+  @@index([organizationId, clientId])
   @@schema("projects")
 }
 
@@ -328,6 +331,7 @@ model Task {
   @@index([projectId])
   @@index([assignedToId])
   @@index([sprintId])
+  @@index([projectId, status, createdAt])
   @@schema("projects")
 }
 
@@ -401,6 +405,8 @@ model Invoice {
   @@index([status])
   @@index([clientId])
   @@index([dueDate])
+  @@index([organizationId, status, createdAt])
+  @@index([clientId, status])
   @@schema("billing")
 }
 
@@ -535,6 +541,7 @@ model Employee {
   @@index([organizationId])
   @@index([status])
   @@index([department])
+  @@index([organizationId, status, department])
   @@schema("hr")
 }
 
@@ -901,5 +908,6 @@ model WebhookDelivery {
   attempt    Int      @default(1)
   createdAt  DateTime @default(now())
 
+  @@index([webhookId, createdAt])
   @@schema("developer")
 }

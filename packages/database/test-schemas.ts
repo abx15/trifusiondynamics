@@ -7,17 +7,34 @@ try {
   console.warn(err);
 }
 
-// Connect to neondb database directly using IP + endpoint option
+// SAFETY: This script drops the `auth` schema and is DESTRUCTIVE.
+// It must only run against a non-production database.
+if (
+  process.env.NODE_ENV === 'production' ||
+  process.env.ALLOW_DESTRUCTIVE_SCHEMA_TEST !== 'true'
+) {
+  console.error(
+    'ABORT: test-schemas.ts will not run in production.\n' +
+      'Set ALLOW_DESTRUCTIVE_SCHEMA_TEST=true to override (use a test/dev DB only).',
+  );
+  process.exit(1);
+}
+
+const dbUrl = process.env.DIRECT_URL || process.env.DATABASE_URL;
+if (!dbUrl) {
+  throw new Error('DIRECT_URL or DATABASE_URL must be set');
+}
+
 const prisma = new PrismaClient({
   datasources: {
     db: {
-      url: "postgresql://neondb_owner:npg_eJYdr40UaXjg@54.147.180.180/neondb?sslmode=require&options=project%3Dep-rough-brook-at80fqp7"
-    }
-  }
+      url: dbUrl,
+    },
+  },
 });
 
 async function main() {
-  console.log('Connecting to neondb database...');
+  console.log('Connecting to database...');
   try {
     console.log('Attempting to drop schema auth cascade...');
     await prisma.$executeRawUnsafe(`

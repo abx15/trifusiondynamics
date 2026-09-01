@@ -19,8 +19,8 @@ export class PayslipsService {
     return this.db.payslip.create({
       data: {
         ...data,
-        taxAmount: tax,
-        netSalary: net,
+        tax,
+        netAmount: net,
       },
     });
   }

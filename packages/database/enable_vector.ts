@@ -13,7 +13,7 @@ const prisma = new PrismaClient({
 });
 
 async function main() {
-  await prisma.$executeRawUnsafe('CREATE EXTENSION IF NOT EXISTS vector;');
+  await prisma.$executeRaw`CREATE EXTENSION IF NOT EXISTS vector;`;
   console.log('Vector extension enabled.');
 }
 main().finally(() => prisma.$disconnect());
