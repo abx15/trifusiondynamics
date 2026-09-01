@@ -5,6 +5,14 @@ import * as bcrypt from 'bcryptjs';
 let prisma: PrismaClient;
 
 beforeAll(async () => {
+  // SAFETY: Ensure we're not connecting to production database
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'TEST SAFETY: Tests cannot run in production environment. ' +
+        'Set NODE_ENV=test or ensure TEST_DATABASE_URL is configured.',
+    );
+  }
+
   // Use the test database
   process.env.MONGODB_URI = 'mongodb://localhost:27017/trifusion_test';
   process.env.DATABASE_URL =

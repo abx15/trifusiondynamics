@@ -59,8 +59,14 @@ export class UsersController {
   @Get('organizations')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @RequirePermission('hr:read')
-  async listOrganizations() {
-    return this.usersService.listOrganizations();
+  async listOrganizations(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.usersService.listOrganizations(
+      page ? parseInt(page, 10) : undefined,
+      limit ? parseInt(limit, 10) : undefined,
+    );
   }
 
   @Post('organizations')
@@ -73,8 +79,14 @@ export class UsersController {
   @Get('roles')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @RequirePermission('hr:read')
-  async listRoles() {
-    return this.usersService.listRoles();
+  async listRoles(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.usersService.listRoles(
+      page ? parseInt(page, 10) : undefined,
+      limit ? parseInt(limit, 10) : undefined,
+    );
   }
 
   @Patch(':id')

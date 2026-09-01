@@ -25,12 +25,15 @@ export class LeadEventsListener {
   }
 
   private async triggerEventWorkflows(eventName: string, payload: any) {
-    // Find active EVENT workflows with matching event name
+    // Find active EVENT workflows with matching event name.
+    // Hard cap to avoid unbounded result sets if many workflows are ever created.
+    const MAX_WORKFLOWS_PER_TENANT = 500;
     const workflows = await this.db.workflow.findMany({
       where: {
         isActive: true,
         triggerType: 'EVENT',
       },
+      take: MAX_WORKFLOWS_PER_TENANT,
     });
 
     const matchingWorkflows = workflows.filter((wf: any) => {

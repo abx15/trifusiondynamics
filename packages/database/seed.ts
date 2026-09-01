@@ -32,6 +32,13 @@ async function safeRun<T>(label: string, fn: () => Promise<T>, retries = 3): Pro
 }
 
 async function main() {
+  // SAFETY CHECK: Prevent running seed script in production by default
+  if (process.env.NODE_ENV === 'production' && process.env.ALLOW_SEED_IN_PRODUCTION !== 'true') {
+    throw new Error('SEED SAFETY: Running seed script in production is disabled by default. ' +
+      'Set ALLOW_SEED_IN_PRODUCTION=true to override this safety check. ' +
+      'This prevents accidental data modification in production.');
+  }
+
   const adminEmail = process.env.ADMIN_EMAIL || 'admin@agencyos.com';
 
   const adminPassword = process.env.ADMIN_PASSWORD;
@@ -40,6 +47,7 @@ async function main() {
   }
 
   console.log('Seeding database...');
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`Admin email configured: ${adminEmail}`);
 
   // 1. Create Default Organization

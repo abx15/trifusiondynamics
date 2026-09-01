@@ -7,7 +7,10 @@ import { PrismaService } from '../database/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
-import { parsePagination } from '../../common/utils/pagination';
+import {
+  parsePagination,
+  paginatedResult,
+} from '../../common/utils/pagination';
 
 @Injectable()
 export class UsersService {
@@ -273,17 +276,24 @@ export class UsersService {
     return { success: true, message: 'User deleted successfully' };
   }
 
-  async listOrganizations() {
-    return this.prisma.organization.findMany({
-      include: {
-        _count: {
-          select: {
-            users: true,
+  async listOrganizations(page?: number, limit?: number) {
+    const { skip, take } = parsePagination(page, Math.min(limit ?? 100, 100));
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.organization.findMany({
+        include: {
+          _count: {
+            select: {
+              users: true,
+            },
           },
         },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+      }),
+      this.prisma.organization.count(),
+    ]);
+    return paginatedResult(data, total, Math.floor(skip / take) + 1, take);
   }
 
   async createOrganization(data: { name: string; slug: string }) {
@@ -299,20 +309,28 @@ export class UsersService {
     });
   }
 
-  async listRoles() {
-    return this.prisma.role.findMany({
-      include: {
-        permissions: {
-          include: {
-            permission: true,
+  async listRoles(page?: number, limit?: number) {
+    const { skip, take } = parsePagination(page, Math.min(limit ?? 100, 100));
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.role.findMany({
+        include: {
+          permissions: {
+            include: {
+              permission: true,
+            },
+          },
+          _count: {
+            select: {
+              users: true,
+            },
           },
         },
-        _count: {
-          select: {
-            users: true,
-          },
-        },
-      },
-    });
+        orderBy: { name: 'asc' },
+        skip,
+        take,
+      }),
+      this.prisma.role.count(),
+    ]);
+    return paginatedResult(data, total, Math.floor(skip / take) + 1, take);
   }
 }

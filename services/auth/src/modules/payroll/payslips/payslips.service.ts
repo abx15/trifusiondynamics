@@ -29,57 +29,58 @@ export class PayslipsService {
     let skipped = 0;
 
     for (const emp of employees) {
-      // Find salary structure
-      const structure = await this.prisma.salaryStructure.findUnique({
-        where: { employeeId: emp.id },
-      });
+      await this.prisma.$transaction(async (tx) => {
+        // Find salary structure
+        const structure = await tx.salaryStructure.findUnique({
+          where: { employeeId: emp.id },
+        });
 
-      if (!structure) {
-        skipped++;
-        continue;
-      }
+        if (!structure) {
+          skipped++;
+          return;
+        }
 
-      // Check if payslip already exists for this month/year
-      const existing = await this.prisma.payslip.findUnique({
-        where: {
-          employeeId_month_year: {
+        // Check if payslip already exists for this month/year
+        const existing = await tx.payslip.findUnique({
+          where: {
+            employeeId_month_year: {
+              employeeId: emp.id,
+              month,
+              year,
+            },
+          },
+        });
+
+        if (existing) {
+          skipped++;
+          return;
+        }
+
+        // Compute values
+        const basic = Number(structure.basicSalary);
+        const hra = Number(structure.hra);
+        const allowances = Number(structure.allowances);
+        const deductions = Number(structure.deductions);
+
+        const gross = basic + hra + allowances;
+        const tax = gross > 25000 ? gross * 0.05 : 0;
+        const net = gross - deductions - tax;
+
+        await tx.payslip.create({
+          data: {
             employeeId: emp.id,
             month,
             year,
+            grossAmount: gross,
+            deductions: deductions,
+            tax,
+            netAmount: net,
+            status: PayslipStatus.GENERATED,
           },
-        },
+        });
+
+        generated++;
       });
-
-      if (existing) {
-        skipped++;
-        continue;
-      }
-
-      // Compute values
-      const basic = Number(structure.basicSalary);
-      const hra = Number(structure.hra);
-      const allowances = Number(structure.allowances);
-      const deductions = Number(structure.deductions);
-
-      const gross = basic + hra + allowances;
-      // Tax: gross > 25000 = 5% tax, else 0%
-      const tax = gross > 25000 ? gross * 0.05 : 0;
-      const net = gross - deductions - tax;
-
-      await this.prisma.payslip.create({
-        data: {
-          employeeId: emp.id,
-          month,
-          year,
-          grossAmount: gross,
-          deductions: deductions,
-          tax,
-          netAmount: net,
-          status: PayslipStatus.GENERATED,
-        },
-      });
-
-      generated++;
     }
 
     return { generated, skipped };
@@ -91,8 +92,13 @@ export class PayslipsService {
     page?: number,
     limit?: number,
   ) {
+    // Bounded employee fetch: organizations with an extreme number of employees
+    // would otherwise materialise the full employee list in memory.  The payslip
+    // query itself is paginated via `take` below; this cap simply prevents the
+    // employee ID list from growing unboundedly.
     const employees = await this.prisma.employee.findMany({
       where: { organizationId: orgId },
+      take: 1000,
     });
     const employeeIds = employees.map((emp) => emp.id);
 

@@ -105,12 +105,8 @@ export class AuthService {
       }
 
       // 5. Single Active Session Enforcement: Revoke ALL existing active refresh tokens
-      await this.prisma.refreshToken.updateMany({
-        where: { userId: user.id, revoked: false },
-        data: { revoked: true },
-      });
-
-      // 6. Construct JWT Payload
+      //    and issue a new one — both must succeed atomically to avoid a state where
+      //    the user is logged out of every session but has no new session.
       const permissionsList = Array.from(
         new Set(
           user.roles.flatMap((ur) =>
@@ -129,18 +125,23 @@ export class AuthService {
         permissions: permissionsList,
       };
 
-      // 7. Generate Tokens
       const accessToken = this.generateAccessToken(jwtPayload);
       const refreshToken = this.generateRefreshToken(jwtPayload);
 
-      // 8. Save refresh token to Postgres
-      await this.prisma.refreshToken.create({
-        data: {
-          token: refreshToken,
-          userId: user.id,
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-          revoked: false,
-        },
+      await this.prisma.$transaction(async (tx) => {
+        await tx.refreshToken.updateMany({
+          where: { userId: user.id, revoked: false },
+          data: { revoked: true },
+        });
+
+        await tx.refreshToken.create({
+          data: {
+            token: refreshToken,
+            userId: user.id,
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            revoked: false,
+          },
+        });
       });
 
       // 9. Log successful login (MongoDB removed, skipping)
@@ -342,19 +343,23 @@ export class AuthService {
       permissions: permissionsList,
     };
 
-    // 3. Rotate Tokens (delete old, create new)
-    await this.prisma.refreshToken.delete({ where: { id: dbToken.id } });
-
+    // 3. Rotate Tokens (delete old, create new) — atomic transaction ensures
+    //    the old token is revoked and the new one is issued together, so a
+    //    crash between the two steps cannot strand the user without a session.
     const newAccessToken = this.generateAccessToken(jwtPayload);
     const newRefreshToken = this.generateRefreshToken(jwtPayload);
 
-    await this.prisma.refreshToken.create({
-      data: {
-        token: newRefreshToken,
-        userId: user.id,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-        revoked: false,
-      },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.refreshToken.delete({ where: { id: dbToken.id } });
+
+      await tx.refreshToken.create({
+        data: {
+          token: newRefreshToken,
+          userId: user.id,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+          revoked: false,
+        },
+      });
     });
 
     // 4. Log refresh event (MongoDB removed, skipping)
