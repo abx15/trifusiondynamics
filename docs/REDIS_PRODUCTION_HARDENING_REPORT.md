@@ -366,8 +366,8 @@ Rate limiting is the highest-volume Redis operation (every request triggers an `
 
 1. **`services/auth/src/modules/database/redis.service.ts`** — Added `acquireLock`/`releaseLock` methods (distributed locks), `redisKey()` helper, `REDIS_KEY_PREFIX` with environment isolation, bounded reconnect (already existed), fire-and-forget connect (already existed)
 2. **`services/auth/src/modules/database/redis-cache.service.ts`** — NEW: Redis-backed cache implementing CacheManager interface (replaces process-local memory store)
-3. **`services/auth/src/modules/database/redis.module.ts`** — Updated to export `RedisCacheService` and `REDIS_CACHE_SERVICE` token
-4. **`services/auth/src/app.module.ts`** — Replaced `CacheModule.register({ store: 'memory' })` with `CACHE_MANAGER` provider backed by `RedisCacheService`
+3. **`services/auth/src/modules/database/redis.module.ts`** — Updated to be `@Global()`, provides `RedisService` + `CACHE_MANAGER` (backed by `RedisCacheService`), exports both globally
+4. **`services/auth/src/app.module.ts`** — Removed `CacheModule.register({ store: 'memory' })`, now uses global `CACHE_MANAGER` from `RedisModule`
 5. **`services/auth/src/modules/automation/jobs/scheduled-workflows.job.ts`** — Added distributed lock acquisition/release around job execution
 6. **`services/auth/src/modules/analytics/jobs/rollup.job.ts`** — Added distributed lock acquisition/release
 7. **`services/auth/src/app.controller.ts`** — Readiness check now uses actual `redis.ping()` instead of `redis.isReady()`

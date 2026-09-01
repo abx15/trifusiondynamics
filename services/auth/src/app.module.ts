@@ -16,14 +16,11 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD, APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { ApiLoggingInterceptor } from './gateway/interceptors/api-logging.interceptor';
 import { AllExceptionsFilter } from './gateway/filters/http-exception.filter';
 import { LoggerModule } from 'nestjs-pino';
 import { randomUUID } from 'crypto';
 import { RedisModule } from './modules/database/redis.module';
-import { RedisService } from './modules/database/redis.service';
-import { RedisCacheService } from './modules/database/redis-cache.service';
 import { RedisThrottlerStorage } from './modules/database/redis-throttler.storage';
 
 @Module({
@@ -78,12 +75,6 @@ import { RedisThrottlerStorage } from './modules/database/redis-throttler.storag
     {
       provide: APP_FILTER,
       useClass: AllExceptionsFilter,
-    },
-    {
-      provide: CACHE_MANAGER,
-      useFactory: (redisService: RedisService) =>
-        new RedisCacheService(redisService),
-      inject: [RedisService],
     },
   ],
 })
