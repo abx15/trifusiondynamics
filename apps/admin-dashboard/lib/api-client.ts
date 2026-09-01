@@ -12,12 +12,11 @@ export const apiClient = axios.create({
   },
 });
 
-// Request Interceptor: Attach Bearer token fallback alongside cookies
 apiClient.interceptors.request.use(
   (config) => {
     let token = useAuthStore.getState().accessToken;
     if (!token && typeof window !== "undefined") {
-      token = sessionStorage.getItem("accessToken") || localStorage.getItem("accessToken");
+      token = sessionStorage.getItem("accessToken") || null;
     }
     if (token && !config.headers.Authorization) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -85,9 +84,11 @@ apiClient.interceptors.response.use(
           Cookies.remove("refresh_token", { path: "/", sameSite: "strict" });
           Cookies.remove("refresh_token", { path: "/" });
           
-          // Clear storage
-          sessionStorage.clear();
-          localStorage.clear();
+          // Clear auth-specific storage (targeted, not full clear — localStorage.clear()
+          // and sessionStorage.clear() would wipe unrelated app state)
+          sessionStorage.removeItem("accessToken");
+          sessionStorage.removeItem("user");
+          sessionStorage.removeItem("refreshToken");
           
           if (errMessage === "SESSION_SUPERSEDED") {
             // Single active session enforcement — user logged in elsewhere

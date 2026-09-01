@@ -1,8 +1,16 @@
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
-require('dotenv').config({ path: '../../.env' });
+require('dotenv').config({ path: require('path').resolve(__dirname, './.env') });
+
+// SAFETY: This script tests hardcoded credentials against the database.
+// Guard against accidental production use.
+if (process.env.NODE_ENV === 'production') {
+  console.error('ABORT: test_passwords.js contains test credentials and must not run in production.');
+  process.exit(1);
+}
+
 const prisma = new PrismaClient({
-  datasources: { db: { url: process.env.DIRECT_URL || process.env.DATABASE_URL } }
+  datasources: { db: { url: process.env.DIRECT_URL || process.env.DATABASE_URL } },
 });
 
 const accountsToTest = [

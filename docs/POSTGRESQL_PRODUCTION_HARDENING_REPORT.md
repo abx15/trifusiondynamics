@@ -366,6 +366,15 @@ Recommendations tracked as P2 follow-up:
 
 1. `scripts/migrate.sh` — New: safe migration helper with dry-run and guard
 
+### Frontend Security Hardening (Phase 2)
+
+1. **`apps/admin-dashboard/lib/api-client.ts`** — Removed `localStorage.getItem("accessToken")` fallback (XSS vulnerability); replaced `localStorage.clear()`/`sessionStorage.clear()` with targeted `removeItem()` calls
+2. **`apps/admin-dashboard/next.config.ts`** — Added security headers (CSP, X-Frame-Options, X-Content-Type-Options, HSTS, Referrer-Policy, Permissions-Policy)
+3. **`apps/agency-web/next.config.ts`** — Added security headers
+4. **`packages/database/check_db.js`** — Added production guard, fixed dotenv path, added `take: 100` cap
+5. **`packages/database/test_passwords.js`** — Added production guard, fixed dotenv path
+6. **`apps/admin-dashboard/scratch_parse_seed.js`** — Fixed hardcoded Windows path, removed unused import
+
 ---
 
 ## 19. Testing Results
@@ -423,7 +432,7 @@ Before applying `20260901000001_production_hardening_indexes` to production:
 
 ## Conclusion
 
-The PostgreSQL database layer has been hardened with connection/query timeouts, atomic transactions for session-sensitive operations, composite indexes for common multi-tenant query patterns, and credential-hygiene fixes. Migration infrastructure is now in place with a baseline migration and an index migration, plus a runbook for safe production deployments.
+The PostgreSQL database layer has been hardened with connection/query timeouts, atomic transactions for session-sensitive operations, composite indexes for common multi-tenant query patterns, and credential-hygiene fixes. The frontend admin dashboard has also been hardened with security headers (CSP, HSTS, X-Frame-Options, etc.) and removal of the localStorage token-storage XSS vector. Migration infrastructure is now in place with a baseline migration and an index migration, plus a runbook for safe production deployments.
 
 The database is **safe for initial production deployment** with the following preconditions:
 1. Rotate the credentials found in `packages/database/.env`

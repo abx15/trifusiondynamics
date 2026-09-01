@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const seedPath = 'c:/Users/arunk/Desktop/AgencyOS/packages/database/seed.ts';
+const seedPath = path.resolve(__dirname, '../../packages/database/seed.ts');
 const content = fs.readFileSync(seedPath, 'utf8');
 const lines = content.split('\n');
 
