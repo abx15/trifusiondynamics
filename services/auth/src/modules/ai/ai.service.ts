@@ -14,21 +14,29 @@ export class AiService {
   private readonly aiServiceUrl =
     process.env.AI_SERVICE_URL || 'http://localhost:8001';
   private readonly internalSecret = process.env.AI_SERVICE_SECRET || '';
+  private readonly isConfigured: boolean;
 
   constructor(
     private httpService: HttpService,
     private db: PrismaService,
   ) {
-    // Production must always set AI_SERVICE_SECRET. In development an empty value
-    // is permitted but the dev session logs a clear warning.
-    if (!this.internalSecret) {
-      if (process.env.NODE_ENV === 'production') {
-        throw new Error(
-          'AI_SERVICE_SECRET must be set when NODE_ENV=production',
-        );
-      }
+    // Production must always set AI_SERVICE_SECRET. Instead of crashing the
+    // entire API, log a warning and degrade gracefully — AI endpoints return
+    // 503 when called, auth service continues serving normally.
+    this.isConfigured = !!this.internalSecret;
+    if (!this.isConfigured) {
       console.warn(
-        '[AI] AI_SERVICE_SECRET is not set — internal AI requests will be unauthenticated (development only)',
+        '[AI] AI_SERVICE_SECRET is not set — AI endpoints will return 503. ' +
+          'Set AI_SERVICE_SECRET in environment variables to enable AI functionality.',
+      );
+    }
+  }
+
+  private ensureConfigured(): void {
+    if (!this.isConfigured) {
+      throw new HttpException(
+        'AI service is not configured. Contact your administrator.',
+        HttpStatus.SERVICE_UNAVAILABLE,
       );
     }
   }
@@ -46,6 +54,7 @@ export class AiService {
     organizationId: string,
     dto: GenerateProposalDto,
   ) {
+    this.ensureConfigured();
     try {
       const response = await firstValueFrom(
         this.httpService.post(
@@ -99,6 +108,7 @@ export class AiService {
     organizationId: string,
     dto: AuditWebsiteDto,
   ) {
+    this.ensureConfigured();
     try {
       const response = await firstValueFrom(
         this.httpService.post(
@@ -144,6 +154,7 @@ export class AiService {
   }
 
   async writeEmail(userId: string, organizationId: string, dto: WriteEmailDto) {
+    this.ensureConfigured();
     try {
       const response = await firstValueFrom(
         this.httpService.post(
@@ -181,6 +192,7 @@ export class AiService {
     organizationId: string,
     dto: SummarizeMeetingDto,
   ) {
+    this.ensureConfigured();
     try {
       const response = await firstValueFrom(
         this.httpService.post(
@@ -213,6 +225,7 @@ export class AiService {
   }
 
   async chat(userId: string, dto: AiChatDto) {
+    this.ensureConfigured();
     try {
       const response = await firstValueFrom(
         this.httpService.post(

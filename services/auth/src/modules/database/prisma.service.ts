@@ -58,10 +58,10 @@ export class PrismaService
       // Apply session-level GUCs (timeouts) on the shared connection pool.
       // Neon honours these per-session; they protect against runaway queries
       // and stuck transactions that would otherwise exhaust the pool.
-      await this.$executeRaw`
+      await this.$executeRawUnsafe`
         SET statement_timeout = ${STATEMENT_TIMEOUT_MS};
       `;
-      await this.$executeRaw`
+      await this.$executeRawUnsafe`
         SET idle_in_transaction_session_timeout = ${IDLE_IN_TXN_TIMEOUT_MS};
       `;
       this.logger.log(
