@@ -68,8 +68,13 @@ pnpm --filter database exec -- prisma generate --check
 ## Documentation
 
 Relevant docs live in `docs/` — update them when making schema or infrastructure changes:
-- `POSTGRESQL_PRODUCTION_HARDENING_REPORT.md` — master production readiness report
+- `POSTGRESQL_PRODUCTION_HARDENING_REPORT.md` — PostgreSQL production readiness report
 - `DATABASE_SCHEMA_AUDIT.md` — model-by-model schema analysis
 - `DATABASE_BACKUP_AND_RECOVERY.md` — backup strategy
 - `RESTORE_PROCEDURE.md` — step-by-step restore runbooks
 - `HIGH_RISK_QUERY_REPORT.md` — query risk assessment
+- `REDIS_ARCHITECTURE.md` — Redis architecture audit
+- `REDIS_OPERATIONS.md` — Redis operations guide
+- `REDIS_PRODUCTION_HARDENING_REPORT.md` — Redis production hardening report
+- `CLOUDFLARE_PRODUCTION_SETUP.md` — Cloudflare edge security setup instructions
+- `CLOUDFLARE_EDGE_SECURITY_REPORT.md` — Cloudflare edge security report
