@@ -33,8 +33,15 @@ export class RecruitmentController {
   findAll(
     @CurrentUser('orgId') orgId: string,
     @Query('stage') stage?: RecruitmentStage,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
-    return this.recruitmentService.findAll(orgId, stage);
+    return this.recruitmentService.findAll(
+      orgId,
+      stage,
+      page ? parseInt(page, 10) : undefined,
+      limit ? parseInt(limit, 10) : undefined,
+    );
   }
 
   @Patch(':id/stage')

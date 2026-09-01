@@ -36,8 +36,16 @@ export class EmployeesController {
     @CurrentUser('orgId') orgId: string,
     @Query('department') department?: string,
     @Query('status') status?: EmployeeStatus,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
-    return this.employeesService.findAll(orgId, department, status);
+    return this.employeesService.findAll(
+      orgId,
+      department,
+      status,
+      page ? parseInt(page, 10) : undefined,
+      limit ? parseInt(limit, 10) : undefined,
+    );
   }
 
   @Get('me')

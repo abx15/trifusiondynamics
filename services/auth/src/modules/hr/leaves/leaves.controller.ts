@@ -36,11 +36,21 @@ export class LeavesController {
   async findAll(
     @CurrentUser() user: JwtPayload,
     @Query('employeeId') employeeId?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
     const hasHrRead = user.permissions.includes('hr:read');
+    const pageNum = page ? parseInt(page, 10) : undefined;
+    const limitNum = limit ? parseInt(limit, 10) : undefined;
 
     if (hasHrRead) {
-      return this.leavesService.findAll(user.orgId, employeeId);
+      return this.leavesService.findAll(
+        user.orgId,
+        employeeId,
+        undefined,
+        pageNum,
+        limitNum,
+      );
     }
 
     // If not HR manager, restrict only to self
@@ -51,7 +61,13 @@ export class LeavesController {
       throw new NotFoundException('Employee record not found');
     }
 
-    return this.leavesService.findAll(user.orgId, undefined, employee.id);
+    return this.leavesService.findAll(
+      user.orgId,
+      undefined,
+      employee.id,
+      pageNum,
+      limitNum,
+    );
   }
 
   @Patch(':id/review')

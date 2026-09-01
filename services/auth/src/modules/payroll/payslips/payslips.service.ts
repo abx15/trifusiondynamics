@@ -5,6 +5,9 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { PayslipStatus } from '@prisma/client';
+import { parsePagination } from '../../../common/utils/pagination';
+
+const PAYSLIPS_MAX_LIMIT = 200;
 
 @Injectable()
 export class PayslipsService {
@@ -82,7 +85,12 @@ export class PayslipsService {
     return { generated, skipped };
   }
 
-  async findAll(orgId: string, employeeId?: string) {
+  async findAll(
+    orgId: string,
+    employeeId?: string,
+    page?: number,
+    limit?: number,
+  ) {
     const employees = await this.prisma.employee.findMany({
       where: { organizationId: orgId },
     });
@@ -92,12 +100,19 @@ export class PayslipsService {
       return [];
     }
 
+    const { skip, take } = parsePagination(
+      page,
+      Math.min(limit ?? PAYSLIPS_MAX_LIMIT, PAYSLIPS_MAX_LIMIT),
+    );
+
     const where: any = {
       employeeId: employeeId ? employeeId : { in: employeeIds },
     };
 
     const payslips = await this.prisma.payslip.findMany({
       where,
+      skip,
+      take,
       orderBy: [{ year: 'desc' }, { month: 'desc' }],
     });
 

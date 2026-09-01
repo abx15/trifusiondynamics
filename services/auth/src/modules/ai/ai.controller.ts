@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Body, Query, UseGuards } from '@nestjs/common';
 import { AiService } from './ai.service';
 import { GenerateProposalDto } from './dto/generate-proposal.dto';
 import { AuditWebsiteDto } from './dto/audit-website.dto';
@@ -27,8 +27,16 @@ export class AiController {
 
   @Get('proposal-generator/history')
   @RequirePermissions('ai:read')
-  async getProposalHistory(@CurrentUser() user: JwtPayload) {
-    return this.aiService.getProposalHistory(user.orgId);
+  async getProposalHistory(
+    @CurrentUser() user: JwtPayload,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.aiService.getProposalHistory(
+      user.orgId,
+      page ? parseInt(page, 10) : undefined,
+      limit ? parseInt(limit, 10) : undefined,
+    );
   }
 
   @Post('seo-audit')
@@ -42,8 +50,16 @@ export class AiController {
 
   @Get('seo-audit/history')
   @RequirePermissions('ai:read')
-  async getSeoAuditHistory(@CurrentUser() user: JwtPayload) {
-    return this.aiService.getSeoAuditHistory(user.orgId);
+  async getSeoAuditHistory(
+    @CurrentUser() user: JwtPayload,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.aiService.getSeoAuditHistory(
+      user.orgId,
+      page ? parseInt(page, 10) : undefined,
+      limit ? parseInt(limit, 10) : undefined,
+    );
   }
 
   @Post('email-writer')

@@ -3,6 +3,9 @@ import { PrismaService } from '../../database/prisma.service';
 import { CreateCandidateDto } from './dto/create-candidate.dto';
 import { MoveStageDto } from './dto/move-stage.dto';
 import { RecruitmentStage } from '@prisma/client';
+import { parsePagination } from '../../../common/utils/pagination';
+
+const RECRUITMENT_MAX_LIMIT = 200;
 
 @Injectable()
 export class RecruitmentService {
@@ -23,13 +26,24 @@ export class RecruitmentService {
     });
   }
 
-  async findAll(orgId: string, stage?: RecruitmentStage) {
+  async findAll(
+    orgId: string,
+    stage?: RecruitmentStage,
+    page?: number,
+    limit?: number,
+  ) {
     const where: any = { organizationId: orgId };
     if (stage) {
       where.stage = stage;
     }
+    const { skip, take } = parsePagination(
+      page,
+      Math.min(limit ?? RECRUITMENT_MAX_LIMIT, RECRUITMENT_MAX_LIMIT),
+    );
     return this.prisma.recruitment.findMany({
       where,
+      skip,
+      take,
       orderBy: { createdAt: 'desc' },
     });
   }

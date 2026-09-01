@@ -5,6 +5,7 @@ import {
   Patch,
   Delete,
   Body,
+  Query,
   UseGuards,
   Param,
 } from '@nestjs/common';
@@ -41,9 +42,18 @@ export class UsersController {
   @Get()
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @RequirePermission('hr:read')
-  async listUsers(@CurrentUser() user: JwtPayload) {
+  async listUsers(
+    @CurrentUser() user: JwtPayload,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
     const isSuper = isSuperAdminUser(user);
-    return this.usersService.listUsers(user.orgId, isSuper);
+    return this.usersService.listUsers(
+      user.orgId,
+      isSuper,
+      page ? parseInt(page, 10) : undefined,
+      limit ? parseInt(limit, 10) : undefined,
+    );
   }
 
   @Get('organizations')

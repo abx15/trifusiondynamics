@@ -6,7 +6,7 @@ export const REDIS_KEY_PREFIX = 'agencyos:';
 /**
  * Production-safe Redis client wrapper.
  *
- * Design goals (see P1 hardening plan):
+ * Design goals:
  * - Never block application startup waiting for Redis.
  * - Bounded reconnect attempts (no infinite reconnect loop).
  * - Offline queue disabled so a dead Redis does not buffer/block requests.

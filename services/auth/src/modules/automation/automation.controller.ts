@@ -5,6 +5,7 @@ import {
   Body,
   Patch,
   Param,
+  Query,
   UseGuards,
   Req,
 } from '@nestjs/common';
@@ -31,8 +32,16 @@ export class AutomationController {
 
   @Get('workflows')
   @RequirePermissions('automation:read')
-  findAll(@Req() req) {
-    return this.automationService.findAll(req.user.organizationId);
+  findAll(
+    @Req() req,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.automationService.findAll(
+      req.user.organizationId,
+      page ? parseInt(page, 10) : undefined,
+      limit ? parseInt(limit, 10) : undefined,
+    );
   }
 
   @Get('workflows/:id')
@@ -69,7 +78,17 @@ export class AutomationController {
 
   @Get('workflows/:id/runs')
   @RequirePermissions('automation:read')
-  getRuns(@Req() req, @Param('id') id: string) {
-    return this.automationService.getRuns(req.user.organizationId, id);
+  getRuns(
+    @Req() req,
+    @Param('id') id: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.automationService.getRuns(
+      req.user.organizationId,
+      id,
+      page ? parseInt(page, 10) : undefined,
+      limit ? parseInt(limit, 10) : undefined,
+    );
   }
 }

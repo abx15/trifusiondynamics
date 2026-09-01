@@ -5,6 +5,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
   Req,
 } from '@nestjs/common';
@@ -31,8 +32,16 @@ export class ApiKeysController {
 
   @Get()
   @RequirePermissions('developer:read')
-  findAll(@Req() req) {
-    return this.apiKeysService.findAll(req.user.organizationId);
+  findAll(
+    @Req() req,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.apiKeysService.findAll(
+      req.user.organizationId,
+      page ? parseInt(page, 10) : undefined,
+      limit ? parseInt(limit, 10) : undefined,
+    );
   }
 
   @Delete(':id')

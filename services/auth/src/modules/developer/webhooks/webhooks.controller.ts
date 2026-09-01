@@ -5,6 +5,7 @@ import {
   Body,
   Param,
   Patch,
+  Query,
   UseGuards,
   Req,
 } from '@nestjs/common';
@@ -30,8 +31,16 @@ export class WebhooksController {
 
   @Get()
   @RequirePermissions('developer:read')
-  findAll(@Req() req) {
-    return this.webhooksService.findAll(req.user.organizationId);
+  findAll(
+    @Req() req,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.webhooksService.findAll(
+      req.user.organizationId,
+      page ? parseInt(page, 10) : undefined,
+      limit ? parseInt(limit, 10) : undefined,
+    );
   }
 
   @Patch(':id/toggle')

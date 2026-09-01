@@ -3,6 +3,9 @@ import { PrismaService } from '../database/prisma.service';
 import { CreateWorkflowDto, TriggerType } from './dto/create-workflow.dto';
 import { UpdateWorkflowDto } from './dto/update-workflow.dto';
 import { WorkflowEngineService } from './engine/workflow-engine.service';
+import { parsePagination } from '../../common/utils/pagination';
+
+const WORKFLOW_MAX_LIMIT = 100;
 
 @Injectable()
 export class AutomationService {
@@ -20,9 +23,15 @@ export class AutomationService {
     });
   }
 
-  async findAll(organizationId: string) {
+  async findAll(organizationId: string, page?: number, limit?: number) {
+    const { skip, take } = parsePagination(
+      page,
+      Math.min(limit ?? WORKFLOW_MAX_LIMIT, WORKFLOW_MAX_LIMIT),
+    );
     return this.db.workflow.findMany({
       where: { organizationId },
+      skip,
+      take,
       orderBy: { createdAt: 'desc' },
       include: {
         runs: {
@@ -79,10 +88,18 @@ export class AutomationService {
     return { message: 'Workflow triggered successfully' };
   }
 
-  async getRuns(organizationId: string, id: string) {
+  async getRuns(
+    organizationId: string,
+    id: string,
+    page?: number,
+    limit?: number,
+  ) {
     await this.findOne(organizationId, id); // check exists
+    const { skip, take } = parsePagination(page, limit);
     return this.db.workflowRun.findMany({
       where: { workflowId: id },
+      skip,
+      take,
       orderBy: { startedAt: 'desc' },
     });
   }

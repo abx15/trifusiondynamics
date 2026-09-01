@@ -8,6 +8,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { CreateApiKeyDto } from './dto/create-api-key.dto';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
+import { parsePagination } from '../../../common/utils/pagination';
 
 @Injectable()
 export class ApiKeysService {
@@ -46,9 +47,12 @@ export class ApiKeysService {
     };
   }
 
-  async findAll(organizationId: string) {
+  async findAll(organizationId: string, page?: number, limit?: number) {
+    const { skip, take } = parsePagination(page, limit);
     const keys = await this.db.apiKey.findMany({
       where: { organizationId },
+      skip,
+      take,
       orderBy: { createdAt: 'desc' },
     });
     // Never return hashedKey

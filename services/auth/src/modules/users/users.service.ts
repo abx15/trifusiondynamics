@@ -7,6 +7,7 @@ import { PrismaService } from '../database/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
+import { parsePagination } from '../../common/utils/pagination';
 
 @Injectable()
 export class UsersService {
@@ -125,11 +126,17 @@ export class UsersService {
     };
   }
 
-  async listUsers(orgId?: string, isSuperAdmin = false) {
+  async listUsers(
+    orgId?: string,
+    isSuperAdmin = false,
+    page?: number,
+    limit?: number,
+  ) {
+    const { skip, take } = parsePagination(page, limit);
     return this.prisma.user.findMany({
       where: isSuperAdmin ? {} : orgId ? { organizationId: orgId } : {},
-      // Safety cap to prevent unbounded result sets as the table grows.
-      take: 1000,
+      skip,
+      take,
       select: {
         id: true,
         email: true,

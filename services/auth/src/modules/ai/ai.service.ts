@@ -7,6 +7,7 @@ import { WriteEmailDto } from './dto/write-email.dto';
 import { SummarizeMeetingDto } from './dto/summarize-meeting.dto';
 import { AiChatDto } from './dto/ai-chat.dto';
 import { firstValueFrom } from 'rxjs';
+import { parsePagination } from '../../common/utils/pagination';
 
 @Injectable()
 export class AiService {
@@ -18,10 +19,16 @@ export class AiService {
     private httpService: HttpService,
     private db: PrismaService,
   ) {
+    // Production must always set AI_SERVICE_SECRET. In development an empty value
+    // is permitted but the dev session logs a clear warning.
     if (!this.internalSecret) {
-      // The AI service requires this secret in production; operators must set it.
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error(
+          'AI_SERVICE_SECRET must be set when NODE_ENV=production',
+        );
+      }
       console.warn(
-        'AI_SERVICE_SECRET is not set — internal AI requests will be unauthenticated',
+        '[AI] AI_SERVICE_SECRET is not set — internal AI requests will be unauthenticated (development only)',
       );
     }
   }
@@ -73,9 +80,16 @@ export class AiService {
     }
   }
 
-  async getProposalHistory(organizationId: string) {
+  async getProposalHistory(
+    organizationId: string,
+    page?: number,
+    limit?: number,
+  ) {
+    const { skip, take } = parsePagination(page, limit);
     return this.db.aiProposalRequest.findMany({
       where: { organizationId },
+      skip,
+      take,
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -115,9 +129,16 @@ export class AiService {
     }
   }
 
-  async getSeoAuditHistory(organizationId: string) {
+  async getSeoAuditHistory(
+    organizationId: string,
+    page?: number,
+    limit?: number,
+  ) {
+    const { skip, take } = parsePagination(page, limit);
     return this.db.aiSeoAudit.findMany({
       where: { organizationId },
+      skip,
+      take,
       orderBy: { createdAt: 'desc' },
     });
   }

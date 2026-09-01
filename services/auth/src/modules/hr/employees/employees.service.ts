@@ -7,6 +7,12 @@ import { PrismaService } from '../../database/prisma.service';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
 import { EmployeeStatus } from '@prisma/client';
+import {
+  parsePagination,
+  paginatedResult,
+} from '../../../common/utils/pagination';
+
+const MAX_EMPLOYEE_LIMIT = 200;
 
 @Injectable()
 export class EmployeesService {
@@ -55,7 +61,13 @@ export class EmployeesService {
     });
   }
 
-  async findAll(orgId: string, department?: string, status?: EmployeeStatus) {
+  async findAll(
+    orgId: string,
+    department?: string,
+    status?: EmployeeStatus,
+    page?: number,
+    limit?: number,
+  ) {
     const where: any = { organizationId: orgId };
     if (department) {
       where.department = department;
@@ -64,10 +76,24 @@ export class EmployeesService {
       where.status = status;
     }
 
-    const employees = await this.prisma.employee.findMany({
-      where,
-      orderBy: { employeeCode: 'asc' },
-    });
+    const {
+      skip,
+      limit: take,
+      page: p,
+    } = parsePagination(
+      page,
+      Math.min(limit ?? MAX_EMPLOYEE_LIMIT, MAX_EMPLOYEE_LIMIT),
+    );
+
+    const [total, employees] = await Promise.all([
+      this.prisma.employee.count({ where }),
+      this.prisma.employee.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { employeeCode: 'asc' },
+      }),
+    ]);
 
     const employeeIds = employees.map((emp) => emp.id);
 
@@ -85,11 +111,13 @@ export class EmployeesService {
     const userMap = new Map(users.map((u) => [u.id, u]));
     const structureMap = new Map(structures.map((s) => [s.employeeId, s]));
 
-    return employees.map((emp) => ({
+    const data = employees.map((emp) => ({
       ...emp,
       user: userMap.get(emp.userId) || null,
       salaryStructure: structureMap.get(emp.id) || null,
     }));
+
+    return paginatedResult(data, total, p, take);
   }
 
   async findOne(id: string, orgId: string) {

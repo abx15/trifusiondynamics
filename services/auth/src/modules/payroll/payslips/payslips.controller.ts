@@ -44,11 +44,20 @@ export class PayslipsController {
   async findAll(
     @CurrentUser() user: JwtPayload,
     @Query('employeeId') employeeId?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
     const hasPayrollRead = user.permissions.includes('payroll:read');
+    const pageNum = page ? parseInt(page, 10) : undefined;
+    const limitNum = limit ? parseInt(limit, 10) : undefined;
 
     if (hasPayrollRead) {
-      return this.payslipsService.findAll(user.orgId, employeeId);
+      return this.payslipsService.findAll(
+        user.orgId,
+        employeeId,
+        pageNum,
+        limitNum,
+      );
     }
 
     // Restrict only to self
@@ -59,7 +68,12 @@ export class PayslipsController {
       throw new NotFoundException('Employee record not found for this user');
     }
 
-    return this.payslipsService.findAll(user.orgId, employee.id);
+    return this.payslipsService.findAll(
+      user.orgId,
+      employee.id,
+      pageNum,
+      limitNum,
+    );
   }
 
   @Get(':id')

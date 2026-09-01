@@ -7,6 +7,9 @@ import { PrismaService } from '../../database/prisma.service';
 import { CreateLeaveDto } from './dto/create-leave.dto';
 import { ReviewLeaveDto } from './dto/review-leave.dto';
 import { LeaveStatus, EmployeeStatus } from '@prisma/client';
+import { parsePagination } from '../../../common/utils/pagination';
+
+const LEAVES_MAX_LIMIT = 200;
 
 @Injectable()
 export class LeavesService {
@@ -41,7 +44,13 @@ export class LeavesService {
     });
   }
 
-  async findAll(orgId: string, employeeId?: string, selfEmployeeId?: string) {
+  async findAll(
+    orgId: string,
+    employeeId?: string,
+    selfEmployeeId?: string,
+    page?: number,
+    limit?: number,
+  ) {
     const where: any = {
       employee: {
         organizationId: orgId,
@@ -54,8 +63,15 @@ export class LeavesService {
       where.employeeId = employeeId;
     }
 
+    const { skip, limit: take } = parsePagination(
+      page,
+      Math.min(limit ?? LEAVES_MAX_LIMIT, LEAVES_MAX_LIMIT),
+    );
+
     return this.prisma.leave.findMany({
       where,
+      skip,
+      take,
       include: {
         employee: {
           select: {

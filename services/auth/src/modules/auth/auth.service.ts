@@ -171,86 +171,94 @@ export class AuthService {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
-    const org = await this.prisma.organization.create({
-      data: {
-        name: dto.organizationName,
-        slug: `${slug}-${Date.now()}`,
-      },
-    });
+    const orgSlug = `${slug}-${Date.now()}`;
 
-    const hashedPassword = await bcrypt.hash(dto.password, 12);
-    const user = await this.prisma.user.create({
-      data: {
-        email: dto.email.toLowerCase().trim(),
-        name: dto.name,
-        password: hashedPassword,
-        organizationId: org.id,
-        isActive: true,
-        mustChangePassword: false,
-      },
-    });
-
-    let adminRole = await this.prisma.role.findUnique({
-      where: { name: 'admin' },
-    });
-    if (!adminRole) {
-      adminRole = await this.prisma.role.create({
-        data: { name: 'admin', description: 'Administrator' },
-      });
-    }
-
-    await this.prisma.userRole.create({
-      data: { userId: user.id, roleId: adminRole.id },
-    });
-
-    const allPermissions = await this.prisma.permission.findMany();
-    for (const perm of allPermissions) {
-      await this.prisma.rolePermission.upsert({
-        where: {
-          roleId_permissionId: { roleId: adminRole.id, permissionId: perm.id },
+    // Wrap org creation, user creation, role assignment, and refresh-token
+    // materialization in a single transaction so a partial failure cannot leave
+    // an org without an admin user.
+    return this.prisma.$transaction(async (tx) => {
+      const org = await tx.organization.create({
+        data: {
+          name: dto.organizationName,
+          slug: orgSlug,
         },
-        update: {},
-        create: { roleId: adminRole.id, permissionId: perm.id },
       });
-    }
 
-    const permissionsList = allPermissions.map((p) => p.action);
-    const jwtPayload: JwtPayload = {
-      sub: user.id,
-      email: user.email,
-      orgId: user.organizationId,
-      roles: ['admin'],
-      permissions: permissionsList,
-    };
+      const hashedPassword = await bcrypt.hash(dto.password, 12);
+      const user = await tx.user.create({
+        data: {
+          email: dto.email.toLowerCase().trim(),
+          name: dto.name,
+          password: hashedPassword,
+          organizationId: org.id,
+          isActive: true,
+          mustChangePassword: false,
+        },
+      });
 
-    const accessToken = this.generateAccessToken(jwtPayload);
-    const refreshToken = this.generateRefreshToken(jwtPayload);
+      let adminRole = await tx.role.findUnique({ where: { name: 'admin' } });
+      if (!adminRole) {
+        adminRole = await tx.role.create({
+          data: { name: 'admin', description: 'Administrator' },
+        });
+      }
 
-    await this.prisma.refreshToken.create({
-      data: {
-        token: refreshToken,
-        userId: user.id,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        revoked: false,
-      },
-    });
+      await tx.userRole.create({
+        data: { userId: user.id, roleId: adminRole.id },
+      });
 
-    return {
-      accessToken,
-      refreshToken,
-      user: {
-        id: user.id,
+      const allPermissions = await tx.permission.findMany();
+      for (const perm of allPermissions) {
+        await tx.rolePermission.upsert({
+          where: {
+            roleId_permissionId: {
+              roleId: adminRole.id,
+              permissionId: perm.id,
+            },
+          },
+          update: {},
+          create: { roleId: adminRole.id, permissionId: perm.id },
+        });
+      }
+
+      const permissionsList = allPermissions.map((p) => p.action);
+      const jwtPayload: JwtPayload = {
+        sub: user.id,
         email: user.email,
-        name: user.name,
-        isActive: user.isActive,
-        mustChangePassword: user.mustChangePassword,
-        organizationId: user.organizationId,
+        orgId: user.organizationId,
         roles: ['admin'],
         permissions: permissionsList,
-        createdAt: user.createdAt.toISOString(),
-        updatedAt: user.updatedAt.toISOString(),
-      },
-    };
+      };
+
+      const accessToken = this.generateAccessToken(jwtPayload);
+      const refreshToken = this.generateRefreshToken(jwtPayload);
+
+      await tx.refreshToken.create({
+        data: {
+          token: refreshToken,
+          userId: user.id,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          revoked: false,
+        },
+      });
+
+      return {
+        accessToken,
+        refreshToken,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          isActive: user.isActive,
+          mustChangePassword: user.mustChangePassword,
+          organizationId: user.organizationId,
+          roles: ['admin'],
+          permissions: permissionsList,
+          createdAt: user.createdAt.toISOString(),
+          updatedAt: user.updatedAt.toISOString(),
+        },
+      };
+    });
   }
 
   async logout(refreshTokenString?: string): Promise<{ success: boolean }> {

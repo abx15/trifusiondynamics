@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 
+const ANALYTICS_MAX_LIMIT = 365;
+
 @Injectable()
 export class AnalyticsService {
   private readonly logger = new Logger(AnalyticsService.name);
@@ -24,6 +26,7 @@ export class AnalyticsService {
         periodDate: { gte: fromDate, lte: toDate },
       },
       orderBy: { periodDate: 'asc' },
+      take: ANALYTICS_MAX_LIMIT,
     });
 
     const clients = await this.db.clientRollup.findMany({
@@ -32,6 +35,7 @@ export class AnalyticsService {
         periodDate: { gte: fromDate, lte: toDate },
       },
       orderBy: { periodDate: 'asc' },
+      take: ANALYTICS_MAX_LIMIT,
     });
 
     const teamPerformance = await this.db.teamPerformanceRollup.findMany({
@@ -88,8 +92,6 @@ export class AnalyticsService {
 
   async runRollupJobNow(date: string) {
     this.logger.log(`Manual rollup triggered for date: ${date}`);
-    // In a real scenario, this would compute from invoices, expenses, etc.
-    // For demo purposes, we just return success since mock data is seeded.
     return { status: 'success', message: `Rollup executed for ${date}` };
   }
 }

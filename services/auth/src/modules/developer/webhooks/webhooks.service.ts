@@ -2,6 +2,9 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateWebhookDto } from './dto/create-webhook.dto';
 import * as crypto from 'crypto';
+import { parsePagination } from '../../../common/utils/pagination';
+
+const WEBHOOK_MAX_LIMIT = 100;
 
 @Injectable()
 export class WebhooksService {
@@ -23,9 +26,15 @@ export class WebhooksService {
     });
   }
 
-  async findAll(organizationId: string) {
+  async findAll(organizationId: string, page?: number, limit?: number) {
+    const { skip, take } = parsePagination(
+      page,
+      Math.min(limit ?? WEBHOOK_MAX_LIMIT, WEBHOOK_MAX_LIMIT),
+    );
     return this.db.webhook.findMany({
       where: { organizationId },
+      skip,
+      take,
       orderBy: { createdAt: 'desc' },
     });
   }
