@@ -479,13 +479,13 @@ export class AuthService {
     // Fall back to the in-memory cache if Redis is unavailable.
     try {
       const stored = await this.redis.set(
-        `exchange_code:${code}`,
+        `code:${code}`,
         JSON.stringify({ userId, organizationId }),
         120,
       );
       if (!stored) {
         await this.cacheManager.set(
-          `exchange_code:${code}`,
+          `code:${code}`,
           { userId, organizationId },
           120,
         );
@@ -504,7 +504,7 @@ export class AuthService {
     let organizationId: string | null = null;
 
     // First try Redis (distributed, single-use), then in-memory cache, then JWT.
-    const redisCached = await this.redis.get(`exchange_code:${code}`);
+    const redisCached = await this.redis.get(`code:${code}`);
     if (redisCached) {
       try {
         const parsed = JSON.parse(redisCached) as {
@@ -513,7 +513,7 @@ export class AuthService {
         };
         userId = parsed.userId;
         organizationId = parsed.organizationId;
-        await this.redis.del(`exchange_code:${code}`);
+        await this.redis.del(`code:${code}`);
       } catch {
         /* fall through to cache/JWT */
       }
@@ -521,12 +521,11 @@ export class AuthService {
 
     if (!userId) {
       try {
-        const cachedData = await this.cacheManager.get(`exchange_code:${code}`);
+        const cachedData = await this.cacheManager.get(`code:${code}`);
         if (cachedData) {
           userId = (cachedData as any).userId;
           organizationId = (cachedData as any).organizationId;
-          // Delete from cache (single-use)
-          await this.cacheManager.del(`exchange_code:${code}`);
+          await this.cacheManager.del(`code:${code}`);
         } else {
           // Cache miss — fall back to JWT verification
           const payload = jwt.verify(code, this.getJwtSecret()) as any;

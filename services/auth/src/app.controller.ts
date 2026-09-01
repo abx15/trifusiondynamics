@@ -50,7 +50,9 @@ export class AppController {
     }
 
     // Redis is non-critical: cache/rate-limit degrade gracefully without it.
-    checks.redis = this.redis.isReady() ? 'ok' : 'degraded';
+    // Use an actual PING rather than isReady() to confirm the server is reachable.
+    const redisOk = await this.redis.ping();
+    checks.redis = redisOk ? 'ok' : 'degraded';
 
     let status: 'ok' | 'degraded' | 'unavailable';
     if (checks.postgres === 'ok') {

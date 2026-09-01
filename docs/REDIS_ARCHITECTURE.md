@@ -1,70 +1,176 @@
-# Redis Architecture & Distributed Rate Limiting
+# Redis Architecture Audit
 
-> Date: 2026-09-01
-> Scope: `services/auth/src/modules/database/redis.service.ts` and `redis-throttler.storage.ts`
-> Status: **VERIFIED** (code in place) · **RECOMMENDED** (provider/runtime configuration)
+> **Date**: 2026-09-01
+> **Repository**: https://github.com/abx15/trifusiondynamics
+> **Provider**: Upstash Redis (Redis-compatible, TLS)
 
-## 1. Connection behavior
+## Application Architecture
 
-- Client created in `RedisService` constructor from `process.env.REDIS_URL`.
-- If `REDIS_URL` is unset, the service logs a warning and operates in **fallback-only** mode.
-- In `NODE_ENV=test`, real connections are skipped entirely.
-- `connectTimeout: 5000` ms prevents the app from hanging at startup.
-- `reconnectStrategy` gives up after **10 attempts** (`attempts > 10 ? false : …`) — no infinite reconnect loops.
-- `disableOfflineQueue: true` ensures commands fail fast when disconnected (caller can fall back) instead of buffering.
+```
+Application (NestJS Backend)
+├── PrismaService (singleton) → PostgreSQL (Neon)
+├── RedisService (singleton) → Redis (Upstash)
+│   ├── Cache (via CacheManager — currently MEMORY store, NOT Redis)
+│   ├── Rate Limiting (distributed via Redis)
+│   └── Temporary State (exchange codes, TTL'd)
+└── Scheduled Jobs (process-local @Cron)
+    ├── ScheduledWorkflowsJob (every 5 min)
+    └── RollupJob (daily midnight)
 
-## 2. Failure behavior
+Frontend (Next.js admin-dashboard, agency-web)
+└── API client → NestJS Backend (HTTP)
+```
 
-Every public method (`set`, `get`, `del`, `incr`, `ttl`) checks `isReady()` first and returns a safe fallback (`false`, `null`, `undefined`) on failure. **The API never crashes because Redis is down.**
+## Redis Clients
 
-For rate limiting (`RedisThrottlerStorage.increment`):
+### 1. `RedisService` (`services/auth/src/modules/database/redis.service.ts`)
 
-- Primary: Redis `INCR` + `EXPIRE`.
-- If Redis is unavailable, an in-process `Map<key, {count, expiresAt}>` counter is used. This is per-instance only, so under multi-instance load each instance enforces independently — acceptable degradation for an outage window.
+| Attribute | Value |
+|---|---|
+| **Package** | `redis` (v4.x) |
+| **Pattern** | Module-level singleton (`redisService`) + NestJS `@Injectable()` provider |
+| **Config** | `process.env.REDIS_URL` |
+| **Key prefix** | `agencyos:` (applied via `fullKey()`) |
+| **connectTimeout** | 5,000 ms |
+| **reconnectStrategy** | Bounded: 10 attempts, exponential backoff capped at 2,000ms |
+| **offlineQueue** | Disabled (`disableOfflineQueue: true`) — fail fast |
+| **TLS** | Depends on `REDIS_URL` format (Upstash uses `rediss://`) |
+| **Command timeout** | Not configured (risk) |
+| **Health check** | `ping()` method → used in `app.controller.ts:53` |
 
-## 3. TTL policy
+### 2. `CacheModule` (`services/auth/src/app.module.ts:51`)
 
-Every temporary key receives a TTL on creation. No key is ever stored without expiry.
+| Attribute | Value |
+|---|---|
+| **Store** | `@nestjs/cache-manager` → `store: 'memory'` (process-local) |
+| **TTL** | 300 seconds |
+| **Scope** | Global (`isGlobal: true`) |
+| **Used by** | `auth.service.ts` (exchange code fallback), `stubs.controller.ts` (`@CacheInterceptor`) |
 
-| Key pattern                  | TTL              | Purpose                  |
-|------------------------------|------------------|--------------------------|
-| `agencyos:throttler:<name>:<key>` | per-throttler    | rate limit counter        |
-| `agencyos:exchange_code:<code>`  | 120 s          | single-use cross-domain auth exchange code |
-| (reserved future: `agencyos:otp:<userId>`, `agencyos:lock:<resource>:<id>`) | per-feature | OTP / distributed lock |
+**⚠️ Critical Issue**: The cache is process-local, not Redis-backed. In a multi-instance deployment, each instance maintains its own cache, causing cache misses and inconsistent data. This must be migrated to Redis.
 
-## 4. Distributed rate limiting — endpoints & limits
+## Redis Data Usage
 
-All limits are enforced via `@nestjs/throttler` with `RedisThrottlerStorage` and apply across **every** backend instance.
+### Cache (via CacheManager — MEMORY store, NOT Redis)
 
-| Endpoint                           | Limit (default throttler) | Window | Key basis               |
-|------------------------------------|----------------------------|--------|-------------------------|
-| All routes (default guard)         | 100 req                    | 60 s   | client IP               |
-| `POST /api/auth/login`             | inherited from default +  | 60 s   | client IP               |
-| `POST /api/auth/register`          | inherited from default +  | 60 s   | client IP               |
-| `POST /api/auth/refresh`           | inherited from default +  | 60 s   | client IP               |
-| `POST /api/ai/*`                   | inherited from default    | 60 s   | client IP               |
-| `POST /api/ai/chat`                | inherited from default    | 60 s   | client IP               |
+| Key Pattern | Purpose | TTL | Location |
+|---|---|---|---|
+| `exchange_code:${code}` | JWT exchange code (fallback) | 300s | `auth.service.ts:487` |
+| `@CacheInterceptor` on stubs routes | CMS FAQ, services, pages | 3600s | `stubs.controller.ts:156-175` |
 
-The default global guard (`ThrottlerGuard`) is registered as `APP_GUARD`, so every route is rate-limited by default; per-route `@Throttle()` overrides can tighten (or relax) the limit where legitimate UX demands it (none configured yet — recommend tightening auth endpoints separately in a follow-up).
+```
+Redis
+├── Cache                     ← NOT IMPLEMENTED (uses process-local memory)
+├── Rate Limiting             ← IMPLEMENTED (Redis-backed, distributed)
+├── Temporary State           ← IMPLEMENTED (exchange codes with TTL)
+├── Locks                     ← NOT IMPLEMENTED (scheduled jobs need locks)
+└── Future Realtime/Queues    ← NOT IMPLEMENTED (no BullMQ)
+```
 
-## 5. Key naming convention
+### Rate Limiting (Redis-backed, distributed)
 
-All keys are prefixed with `agencyos:` to prevent collisions with anything else that may share the Redis instance.
+| Endpoint | Key Strategy | Window | Limit | Location |
+|---|---|---|---|---|
+| `POST /auth/login` | IP address | 60s | 10 req | `auth.controller.ts:95` |
+| `POST /auth/register` | IP address | 60s | 5 req | `auth.controller.ts:114` |
+| `POST /auth/refresh` | IP address | 60s | 30 req | `auth.controller.ts:150` |
+| All endpoints (default) | IP address | 60s | 100 req | `app.module.ts:42-48` |
 
-- `agencyos:throttler:<throttlerName>:<route-or-ip>` — rate limit
-- `agencyos:cache:<resource>:<id>` — future-proofed cache namespace (not currently used; fallback to in-memory cache or DB)
-- `agencyos:exchange_code:<jwt-code>` — single-use codes
-- User input is **never** used to construct arbitrary Redis keys; all key segments are server-controlled constants.
+**Redis key**: `agencyos:default:${throttlerName}:${key}` via `redisService.incr()`
+**Fallback**: in-memory `Map<string, {count, expiresAt}>` when Redis unavailable
 
-## 6. Security guarantees
+### Temporary State
 
-- No sensitive permanent data in Redis.
-- No secret material in keys (no passwords, no tokens in plaintext, no user emails).
-- TTL on every key — Redis can never grow unbounded from these integrations.
-- Connection retry is bounded (10 attempts) — no reconnect storm.
+| Key Pattern | Purpose | TTL | Critical? | Location |
+|---|---|---|---|---|
+| `exchange_code:${code}` | Cross-domain auth code | 120s | CRITICAL (auth flow) | `auth.service.ts:478-517` |
+| Rate limit counters | Brute force protection | `ttl/1000` seconds | SECURITY-SENSITIVE | `redis-throttler.storage.ts:39` |
 
-## 7. Operational notes
+### Locks
 
-- Set `REDIS_URL` in Render / GitHub Actions before deploying.
-- Provision the provider's automated failover / monitoring.
-- If Redis is ever down in production, the service stays up but rate-limiting is per-instance — temporary loss of distributed enforcement is preferable to a service outage.
+No distributed locks currently implemented. Scheduled jobs run per-process via `@Cron` — see §12.
+
+### Scheduled Jobs (at risk)
+
+| Job | Schedule | Instance Issue | Lock Needed? |
+|---|---|---|---|
+| `ScheduledWorkflowsJob.handleScheduledWorkflows()` | Every 5 min | Runs on ALL instances | YES |
+| `RollupJob.handleDailyRollup()` | Every day at midnight | Runs on ALL instances | YES |
+
+## Key Naming Convention (current)
+
+```
+agencyos:                              ← global prefix
+  default:                             ← throttler name
+    <ip>:<route>                       ← rate limit key (auto-generated by NestJS throttler)
+  exchange_code:<jwt>                  ← exchange code (JWT is the key, ~500 chars)
+```
+
+**Issues with current naming**:
+1. Exchange code key embeds the full JWT (potentially 500+ chars as key name)
+2. No structured namespace by data type (cache/ratelimit/otp/lock)
+3. No environment/tenant isolation in keys
+
+## In-Memory State (non-Redis)
+
+| Location | Type | Multi-instance Safe? | Impact |
+|---|---|---|---|
+| `CacheModule` memory store | Cache (cache-manager) | NO — process-local | Cache inconsistency across instances |
+| `RedisThrottlerStorage.fallback` Map | Rate limit counters | NO — per-process | Rate limiting degrades to per-instance when Redis down |
+| `ScheduledWorkflowsJob` | @Cron job | NO — runs on all instances | Duplicate workflow execution |
+| `RollupJob` | @Cron job | NO — runs on all instances | Duplicate rollup computation |
+| `stubs.controller.ts` hardcoded data | Static data | N/A | Not shared state, acceptable |
+
+## Connection Configuration
+
+```typescript
+// redis.service.ts:38-49
+createClient({
+  url: process.env.REDIS_URL,
+  socket: {
+    connectTimeout: 5000,
+    reconnectStrategy: (attempts) =>
+      attempts > 10 ? false : Math.min(attempts * 200, 2000),
+  },
+  disableOfflineQueue: true,
+});
+```
+
+| Parameter | Value | Notes |
+|---|---|---|
+| `connectTimeout` | 5000ms | ✅ Reasonable |
+| `reconnectStrategy` | 10 attempts max, bounded backoff | ✅ No infinite reconnect loop |
+| `disableOfflineQueue` | true | ✅ Fail-fast, no command buffering |
+| `commandTimeout` | Not set | ⚠️ Commands could hang indefinitely |
+| TLS | Via `rediss://` in REDIS_URL | ✅ Upstash uses TLS URLs |
+
+## Failure Behavior
+
+### Cache (non-critical)
+Redis/memory cache down → application continues, falls back to database queries. ✅ Correct.
+
+### Rate Limiting (security-sensitive)
+Redis down → in-memory fallback Map. ✅ Graceful degradation, rate limiting still works per-instance.
+
+### Exchange Codes (critical)
+Redis down → falls back to `cacheManager` (process-local memory). ⚠️ Risk: if the request that sets the code and the request that verifies it hit different instances, the exchange will fail. JWT fallback exists as last resort.
+
+### Health Check
+
+| Endpoint | Check | Behavior |
+|---|---|---|
+| `GET /health` | Reports `redis: configured/not_configured` | Static check, no actual ping |
+| `GET /health/live` | None (liveness) | ✅ |
+| `GET /health/ready` | `redis.isReady()` | Returns `degraded` if Redis unavailable |
+
+## Summary of Issues
+
+| # | Issue | Severity | Multi-instance Impact |
+|---|---|---|---|
+| 1 | CacheManager uses `store: 'memory'` instead of Redis | CRITICAL | Each instance has independent cache; no shared cache |
+| 2 | `@CacheInterceptor` not backed by Redis | HIGH | Stale cache, cache misses |
+| 3 | No distributed locks on scheduled jobs | HIGH | Duplicate execution across instances |
+| 4 | No Redis command timeout | MEDIUM | Commands could hang indefinitely |
+| 5 | Exchange code Redis keys use full JWT as key name | LOW | Unnecessarily large key names |
+| 6 | Rate limit uses IP only (no user/org dimensions) | MEDIUM | Authenticated users sharing IP would share rate limits |
+| 7 | No Redis health check with actual PING | LOW | Health endpoint only checks config existence |

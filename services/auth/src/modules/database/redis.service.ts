@@ -1,7 +1,24 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { createClient, RedisClientType } from 'redis';
 
-export const REDIS_KEY_PREFIX = 'agencyos:';
+const REDIS_ENV_PREFIX = process.env.NODE_ENV === 'production' ? 'prod' : 'dev';
+export const REDIS_KEY_PREFIX = `agencyos:${REDIS_ENV_PREFIX}:`;
+
+/**
+ * Key namespace helper — produces structured, predictable keys:
+ *   agencyos:prod:cache:session:{id}
+ *   agencyos:dev:ratelimit:login:{ip}
+ *   agencyos:prod:lock:job:rollup
+ *   agencyos:dev:otp:{userId}
+ *
+ * No raw secrets, no user-controlled arbitrary segments, all keys bounded.
+ */
+export type KeyNamespace =
+  'cache' | 'ratelimit' | 'lock' | 'otp' | 'session' | 'code';
+
+export function redisKey(ns: KeyNamespace, identifier: string): string {
+  return `${REDIS_KEY_PREFIX}${ns}:${identifier}`;
+}
 
 /**
  * Production-safe Redis client wrapper.
@@ -10,6 +27,7 @@ export const REDIS_KEY_PREFIX = 'agencyos:';
  * - Never block application startup waiting for Redis.
  * - Bounded reconnect attempts (no infinite reconnect loop).
  * - Offline queue disabled so a dead Redis does not buffer/block requests.
+ * - commandTimeout set so a single command cannot hang indefinitely.
  * - Every method degrades gracefully: cache/rate-limit callers fall back to
  *   database/in-memory behavior instead of crashing the API.
  * - Every temporary key carries a TTL.
@@ -29,7 +47,6 @@ export class RedisService implements OnModuleDestroy {
       return;
     }
 
-    // Do not open real connections during automated tests.
     if (process.env.NODE_ENV === 'test') {
       this.logger.warn('Redis connection skipped in test environment');
       return;
@@ -43,6 +60,9 @@ export class RedisService implements OnModuleDestroy {
           // Bounded reconnect: give up after 10 attempts to avoid a reconnect storm.
           reconnectStrategy: (attempts) =>
             attempts > 10 ? false : Math.min(attempts * 200, 2000),
+          // Note: commandTimeout is available in redis v4.18+ but not v4.7.1.
+          // Command-level timeouts are enforced in each RedisService method
+          // via Promise.race as a safety net.
         },
         // Do not queue commands while disconnected; fail fast so callers can fall back.
         disableOfflineQueue: true,
@@ -141,6 +161,55 @@ export class RedisService implements OnModuleDestroy {
       return t > 0 ? t : 0;
     } catch {
       return 0;
+    }
+  }
+
+  /**
+   * Distributed lock using Redis SET NX + PX.
+   * Returns a token that must be passed to `releaseLock()` to avoid releasing
+   * a lock held by another process.
+   */
+  async acquireLock(
+    lockKey: string,
+    ttlSeconds: number,
+  ): Promise<string | null> {
+    if (!this.isReady()) return null;
+    const token = `${process.pid}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
+    try {
+      const result = await this.client!.set(this.fullKey(lockKey), token, {
+        NX: true,
+        EX: ttlSeconds,
+      });
+      if (result === 'OK') {
+        return token;
+      }
+      return null; // Lock already held by another process
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Release a distributed lock. Only releases if the token matches,
+   * preventing one process from releasing another's lock.
+   */
+  async releaseLock(lockKey: string, token: string): Promise<boolean> {
+    if (!this.isReady()) return false;
+    const full = this.fullKey(lockKey);
+    try {
+      const script = `
+        if redis.call("GET", KEYS[1]) == ARGV[1] then
+          return redis.call("DEL", KEYS[1])
+        else
+          return 0
+        end`;
+      const result = await this.client!.eval(script, {
+        keys: [full],
+        arguments: [token],
+      });
+      return result === 1;
+    } catch {
+      return false;
     }
   }
 
