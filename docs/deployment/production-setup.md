@@ -57,7 +57,7 @@ JWT_REFRESH_SECRET=your-generated-64-char-secret
 ```bash
 ADMIN_EMAIL=admin@trifusiondynamics.com
 ADMIN_PASSWORD=your-secure-admin-password
-DEFAULT_TEMP_PASSWORD=Welcome@123
+DEFAULT_TEMP_PASSWORD=trifusiondynamicsA3web
 ```
 
 #### CORS Configuration (Vercel URLs)

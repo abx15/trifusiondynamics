@@ -11,22 +11,23 @@ Database has been successfully seeded with test users for all roles. All users c
 | Role | Email | Password | Dashboard |
 |------|-------|----------|-----------|
 | **Super Admin** | trifusiondynamics@gmail.com | trifusiondynamicsA3web | /super-admin |
-| **Admin** | admin@trifusiondynamics.com | ChangeThisPassword123! | /dashboard |
+| **Admin** | admin@trifusiondynamics.com | trifusiondynamicsA3web | /dashboard |
 
 ### Agent Accounts (Department Access)
 
 | Role | Email | Password | Dashboard | Department |
 |------|-------|----------|-----------|------------|
-| **Sales Agent** | sales.trifusion@gmail.com | Welcome@123 | /crm | Sales |
-| **Support Agent** | support.trifusion@gmail.com | Welcome@123 | /tickets | Support |
-| **HR Agent** | hr.trifusion@gmail.com | Welcome@123 | /hr | HR |
-| **Agent** | agent@trifusiondynamics.com | Agent@123 | /agent/dashboard | General |
+| **Sales Agent** | sales.trifusion@gmail.com | trifusiondynamicsA3web | /crm | Sales |
+| **Support Agent** | support.trifusion@gmail.com | trifusiondynamicsA3web | /tickets | Support |
+| **HR Agent** | hr.trifusion@gmail.com | trifusiondynamicsA3web | /hr | HR |
+| **Agent** | agent@trifusiondynamics.com | trifusiondynamicsA3web | /agent/dashboard | General |
+| **Employee** | bob.dev@trifusiondynamics.com | trifusiondynamicsA3web | /attendance | Staff |
 
 ### Client Account (Limited Access)
 
 | Role | Email | Password | Dashboard |
 |------|-------|----------|-----------|
-| **Client** | client@apexretail.com | Client@123 | /client/dashboard |
+| **Client** | client@apexretail.com | trifusiondynamicsA3web | /client/dashboard |
 
 ## User Management Features
 
@@ -77,7 +78,7 @@ Use credentials from above table
 
 ## Important Notes
 
-⚠️ **Default Password Warning**: All newly created users use the default password `Welcome@123` and must change it on first login.
+⚠️ **Default Password**: All seeded users share the default password `trifusiondynamicsA3web`. Users can change their password at any time via their account settings.
 
 ⚠️ **Super Admin Password**: The super admin account (`trifusiondynamics@gmail.com`) has a permanent password and won't require password change.
 

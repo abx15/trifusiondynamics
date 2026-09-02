@@ -106,8 +106,8 @@ AgencyOS is a full-stack agency management system with the following components:
    
    # Admin
    ADMIN_EMAIL=admin@trifusiondynamics.com
-   ADMIN_PASSWORD=your-secure-admin-password
-   DEFAULT_TEMP_PASSWORD=Welcome@123
+    ADMIN_PASSWORD=your-secure-admin-password
+    DEFAULT_TEMP_PASSWORD=trifusiondynamicsA3web
    
    # CORS (Update with actual Vercel URLs after deployment)
    CORS_ALLOWED_ORIGINS=https://your-admin.vercel.app,https://your-auth.vercel.app,https://your-client.vercel.app,https://your-web.vercel.app

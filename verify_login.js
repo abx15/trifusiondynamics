@@ -2,7 +2,7 @@ const http = require('http');
 
 const data = JSON.stringify({
   email: 'admin@trifusiondynamics.com',
-  password: 'ChangeThisPassword123!'
+  password: 'trifusiondynamicsA3web'
 });
 
 const options = {

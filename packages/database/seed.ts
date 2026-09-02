@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import dns from 'dns';
+import process from 'process';
 
 // Configure DNS programmatically to Google Public DNS
 try {
@@ -261,7 +262,7 @@ async function main() {
         password: salesPassHash,
         name: 'Sales & Partnerships',
         isActive: true,
-        mustChangePassword: true,
+        mustChangePassword: false,
         organizationId: org.id,
       },
       create: {
@@ -269,7 +270,7 @@ async function main() {
         password: salesPassHash,
         name: 'Sales & Partnerships',
         isActive: true,
-        mustChangePassword: true,
+        mustChangePassword: false,
         organizationId: org.id,
       },
     })
@@ -288,7 +289,7 @@ async function main() {
       create: { userId: salesUser.id, roleId: dbRoles.agent.id },
     })
   );
-  console.log(`[SEED] Sales account (sales.trifusion@gmail.com) created. Password: [REDACTED - must change on first login]`);
+  console.log(`[SEED] Sales account (sales.trifusion@gmail.com) created. Password: [REDACTED]`);
 
   // Account 3: Support
   const supportPass = defaultTempPassword;
@@ -300,7 +301,7 @@ async function main() {
         password: supportPassHash,
         name: 'Support Team',
         isActive: true,
-        mustChangePassword: true,
+        mustChangePassword: false,
         organizationId: org.id,
       },
       create: {
@@ -308,7 +309,7 @@ async function main() {
         password: supportPassHash,
         name: 'Support Team',
         isActive: true,
-        mustChangePassword: true,
+        mustChangePassword: false,
         organizationId: org.id,
       },
     })
@@ -327,7 +328,7 @@ async function main() {
       create: { userId: supportUser.id, roleId: dbRoles.agent.id },
     })
   );
-  console.log(`[SEED] Support account (support.trifusion@gmail.com) created. Password: [REDACTED - must change on first login]`);
+  console.log(`[SEED] Support account (support.trifusion@gmail.com) created. Password: [REDACTED]`);
 
   // Account 4: HR & Careers
   const hrPass = defaultTempPassword;
@@ -339,7 +340,7 @@ async function main() {
         password: hrPassHash,
         name: 'HR & Careers',
         isActive: true,
-        mustChangePassword: true,
+        mustChangePassword: false,
         organizationId: org.id,
       },
       create: {
@@ -347,7 +348,7 @@ async function main() {
         password: hrPassHash,
         name: 'HR & Careers',
         isActive: true,
-        mustChangePassword: true,
+        mustChangePassword: false,
         organizationId: org.id,
       },
     })
@@ -366,30 +367,35 @@ async function main() {
       create: { userId: hrUser.id, roleId: dbRoles.agent.id },
     })
   );
-  console.log(`[SEED] HR account (hr.trifusion@gmail.com) created. Password: [REDACTED - must change on first login]`);
+  console.log(`[SEED] HR account (hr.trifusion@gmail.com) created. Password: [REDACTED]`);
 
-  const user = tfxAdminUser;
-  const hashedPassword = tfxAdminPassHash;
+  // Remove the conflicting variable assignment
+  // const user = tfxAdminUser;
+  // const hashedPassword = tfxAdminPassHash;
 
   await safeRun('Assign Admin Role to Admin User', () => 
     prisma.userRole.upsert({
       where: {
         userId_roleId: {
-          userId: user.id,
+          userId: tfxAdminUser.id,
           roleId: dbRoles.admin.id,
         },
       },
       update: {},
       create: {
-        userId: user.id,
+        userId: tfxAdminUser.id,
         roleId: dbRoles.admin.id,
       },
     })
   );
-  console.log(`Admin User upserted: ${user.email}`);
+  console.log(`Admin User upserted: ${tfxAdminUser.email}`);
+
+  // Set the user variable for use in project assignments
+  const user = tfxAdminUser;
+  const hashedPassword = tfxAdminPassHash;
 
   // 5c. Create Agent User
-  const agentPasswordHash = await bcrypt.hash('Agent@123', 12);
+  const agentPasswordHash = await bcrypt.hash(defaultTempPassword, 12);
   const agentUser = await safeRun('Upsert Agent User', () => 
     prisma.user.upsert({
       where: { email: 'agent@trifusiondynamics.com' },
@@ -424,18 +430,17 @@ async function main() {
     })
   );
   console.log(`Agent User upserted: ${agentUser.email}`);
-  const employeeUser = agentUser;
 
   // 5c.2 Create Employee User (separate from agent)
-  const employeePasswordHash = await bcrypt.hash('Welcome@123', 12);
-  const employeeUserSeed = await safeRun('Upsert Employee User', () =>
+  const employeePasswordHash = await bcrypt.hash(defaultTempPassword, 12);
+  const employeeUser = await safeRun('Upsert Employee User', () =>
     prisma.user.upsert({
       where: { email: 'bob.dev@trifusiondynamics.com' },
       update: {
         password: employeePasswordHash,
         name: 'Bob Developer',
         isActive: true,
-        mustChangePassword: true,
+        mustChangePassword: false,
         organizationId: org.id,
       },
       create: {
@@ -443,30 +448,30 @@ async function main() {
         password: employeePasswordHash,
         name: 'Bob Developer',
         isActive: true,
-        mustChangePassword: true,
+        mustChangePassword: false,
         organizationId: org.id,
       },
     })
   );
   await safeRun('Assign employee role to Employee User', () =>
     prisma.userRole.upsert({
-      where: { userId_roleId: { userId: employeeUserSeed.id, roleId: dbRoles.employee.id } },
+      where: { userId_roleId: { userId: employeeUser.id, roleId: dbRoles.employee.id } },
       update: {},
-      create: { userId: employeeUserSeed.id, roleId: dbRoles.employee.id },
+      create: { userId: employeeUser.id, roleId: dbRoles.employee.id },
     })
   );
   await safeRun('Assign agent role to Employee User', () =>
     prisma.userRole.upsert({
-      where: { userId_roleId: { userId: employeeUserSeed.id, roleId: dbRoles.agent.id } },
+      where: { userId_roleId: { userId: employeeUser.id, roleId: dbRoles.agent.id } },
       update: {},
-      create: { userId: employeeUserSeed.id, roleId: dbRoles.agent.id },
+      create: { userId: employeeUser.id, roleId: dbRoles.agent.id },
     })
   );
-  console.log(`Employee User upserted: ${employeeUserSeed.email}`);
+  console.log(`Employee User upserted: ${employeeUser.email}`);
 
 
   // 5d. Create Client User
-  const clientPasswordHash = await bcrypt.hash('Client@123', 12);
+  const clientPasswordHash = await bcrypt.hash(defaultTempPassword, 12);
   const clientUser = await safeRun('Upsert Client User', () => 
     prisma.user.upsert({
       where: { email: 'client@apexretail.com' },
@@ -1422,7 +1427,6 @@ async function main() {
     prisma.user.upsert({
       where: { email: 'bob.dev@trifusiondynamics.com' },
       update: {
-        password: hashedPassword,
         name: 'Bob Developer',
         isActive: true,
         organizationId: org.id,
@@ -1890,8 +1894,8 @@ async function main() {
   console.log('Seeding completed successfully.');
   console.log(`========================================`);
   console.log(`ACCOUNT SUMMARY:`);
-  console.log(`All newly created accounts must change password on first login.`);
-  console.log(`Superadmin account (trifusiondynamics@gmail.com) keeps its permanent password.`);
+  console.log(`All accounts are ready for login with their configured passwords.`);
+  console.log(`Superadmin account (trifusiondynamics@gmail.com) uses the admin password from env.`);
   console.log(`========================================`);
 }
 

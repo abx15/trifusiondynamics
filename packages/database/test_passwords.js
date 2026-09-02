@@ -13,18 +13,23 @@ const prisma = new PrismaClient({
   datasources: { db: { url: process.env.DIRECT_URL || process.env.DATABASE_URL } },
 });
 
+const DEFAULT_PASSWORD = 'trifusiondynamicsA3web';
+
 const accountsToTest = [
-  { email: 'trifusiondynamics@gmail.com', pass: 'trifusiondynamicsA3web', expectedRole: 'super_admin' },
-  { email: 'admin@trifusiondynamics.com', pass: 'ChangeThisPassword123!', expectedRole: 'admin' },
-  { email: 'sales.trifusion@gmail.com', pass: 'Welcome@123', expectedRole: 'sales_agent' },
-  { email: 'support.trifusion@gmail.com', pass: 'Welcome@123', expectedRole: 'support_agent' },
-  { email: 'hr.trifusion@gmail.com', pass: 'Welcome@123', expectedRole: 'hr_agent' },
-  { email: 'agent@trifusiondynamics.com', pass: 'Agent@123', expectedRole: 'agent' },
-  { email: 'bob.dev@trifusiondynamics.com', pass: 'Welcome@123', expectedRole: 'employee' },
-  { email: 'client@apexretail.com', pass: 'Client@123', expectedRole: 'client' },
+  { email: 'trifusiondynamics@gmail.com', expectedRole: 'super_admin' },
+  { email: 'admin@trifusiondynamics.com', expectedRole: 'admin' },
+  { email: 'sales.trifusion@gmail.com', expectedRole: 'sales_agent' },
+  { email: 'support.trifusion@gmail.com', expectedRole: 'support_agent' },
+  { email: 'hr.trifusion@gmail.com', expectedRole: 'hr_agent' },
+  { email: 'agent@trifusiondynamics.com', expectedRole: 'agent' },
+  { email: 'bob.dev@trifusiondynamics.com', expectedRole: 'employee' },
+  { email: 'client@apexretail.com', expectedRole: 'client' },
 ];
 
 async function testAuth() {
+  console.log(`Testing all accounts with default password: ${DEFAULT_PASSWORD}\n`);
+  let passCount = 0;
+
   for (const acc of accountsToTest) {
     const user = await prisma.user.findFirst({
       where: { email: acc.email },
@@ -34,9 +39,13 @@ async function testAuth() {
       console.log(`❌ ${acc.email} NOT FOUND`);
       continue;
     }
-    const isPassOk = await bcrypt.compare(acc.pass, user.password);
+    const isPassOk = await bcrypt.compare(DEFAULT_PASSWORD, user.password);
     console.log(`${isPassOk ? '✅' : '❌'} ${acc.email} | Pass Valid: ${isPassOk} | mustChangePass: ${user.mustChangePassword} | Roles:`, user.roles.map(r => r.role.name));
+    if (isPassOk) passCount++;
   }
+  console.log(`\n================================`);
+  console.log(`Results: ${passCount}/${accountsToTest.length} passwords valid!`);
+  console.log(`================================`);
   await prisma.$disconnect();
 }
 testAuth();

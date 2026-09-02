@@ -143,7 +143,7 @@ JWT_REFRESH_SECRET=your-64-character-random-secret-key-here
 # Admin
 ADMIN_EMAIL=admin@trifusiondynamics.com
 ADMIN_PASSWORD=your-secure-admin-password-here
-DEFAULT_TEMP_PASSWORD=Welcome@123
+DEFAULT_TEMP_PASSWORD=trifusiondynamicsA3web
 
 # CORS (Update with actual Vercel URLs)
 CORS_ALLOWED_ORIGINS=https://trifusiondynamicsadmin.vercel.app,https://trifusiondynamics.vercel.app

@@ -93,14 +93,16 @@ async function bootstrap() {
 
   // CORS — allow all known frontends with credentials
   // Read from CORS_ALLOWED_ORIGINS env var (comma-separated), fallback to all 4 known local ports
-  const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS
+  const localOrigins = [
+    'http://localhost:3000', // agency-web
+    'http://localhost:3001', // admin-dashboard
+    'http://localhost:3002', // client-portal
+    'http://localhost:3003', // auth-gateway
+  ];
+  const envOrigins = process.env.CORS_ALLOWED_ORIGINS
     ? process.env.CORS_ALLOWED_ORIGINS.split(',').map((o) => o.trim())
-    : [
-        'http://localhost:3000', // agency-web
-        'http://localhost:3001', // admin-dashboard
-        'http://localhost:3002', // client-portal
-        'http://localhost:3003', // auth-gateway
-      ];
+    : [];
+  const allowedOrigins = [...localOrigins, ...envOrigins];
 
   app.enableCors({
     origin: (origin, callback) => {

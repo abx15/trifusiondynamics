@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Image from "next/image";
 import {
   Crown,
@@ -44,7 +45,7 @@ export const DEMO_PRESETS = [
     label: "Admin",
     dept: "Operations",
     email: "admin@trifusiondynamics.com",
-    password: "ChangeThisPassword123!",
+    password: "trifusiondynamicsA3web",
     target: "/dashboard",
     icon: ShieldCheck,
     color: "text-purple-400",
@@ -57,7 +58,7 @@ export const DEMO_PRESETS = [
     label: "Sales",
     dept: "Partnerships",
     email: "sales.trifusion@gmail.com",
-    password: "Welcome@123",
+    password: "trifusiondynamicsA3web",
     target: "/crm",
     icon: Briefcase,
     color: "text-blue-400",
@@ -70,7 +71,7 @@ export const DEMO_PRESETS = [
     label: "Support",
     dept: "Helpdesk",
     email: "support.trifusion@gmail.com",
-    password: "Welcome@123",
+    password: "trifusiondynamicsA3web",
     target: "/tickets",
     icon: Headphones,
     color: "text-cyan-400",
@@ -83,7 +84,7 @@ export const DEMO_PRESETS = [
     label: "HR & People",
     dept: "Human Resources",
     email: "hr.trifusion@gmail.com",
-    password: "Welcome@123",
+    password: "trifusiondynamicsA3web",
     target: "/hr",
     icon: Users,
     color: "text-pink-400",
@@ -96,7 +97,7 @@ export const DEMO_PRESETS = [
     label: "Agent",
     dept: "Support Hub",
     email: "agent@trifusiondynamics.com",
-    password: "Agent@123",
+    password: "trifusiondynamicsA3web",
     target: "/agent/dashboard",
     icon: UserCheck,
     color: "text-emerald-400",
@@ -109,7 +110,7 @@ export const DEMO_PRESETS = [
     label: "Employee",
     dept: "Staff Ops",
     email: "bob.dev@trifusiondynamics.com",
-    password: "Welcome@123",
+    password: "trifusiondynamicsA3web",
     target: "/attendance",
     icon: Laptop,
     color: "text-indigo-400",
@@ -122,7 +123,7 @@ export const DEMO_PRESETS = [
     label: "Client",
     dept: "Tenant Portal",
     email: "client@apexretail.com",
-    password: "Client@123",
+    password: "trifusiondynamicsA3web",
     target: "/client/dashboard",
     icon: Building2,
     color: "text-orange-400",
@@ -221,7 +222,6 @@ export function LoginForm() {
         window.location.href = targetRoute;
       }, 400);
     } catch (err: any) {
-      console.error("Login Error:", err);
       const serverMsg = err?.response?.data?.message || err?.message || "Login failed";
       if (err?.response?.status === 429 || serverMsg.includes("Too many failed attempts")) {
         setError("Too many failed attempts. Please wait 15 minutes before trying again.");
@@ -231,7 +231,7 @@ export function LoginForm() {
       } else if (err?.response?.status === 401) {
         setError("Invalid email or password. Please check your credentials.");
       } else {
-        setError(serverMsg || "Authentication service unreachable. Please ensure the backend is active.");
+        setError(`${serverMsg} (Status: ${err?.response?.status || 'Network Error'})`);
       }
     } finally {
       setIsLoading(false);
@@ -389,6 +389,21 @@ export function LoginForm() {
             <span>Sign In to Unified Workspace</span>
           )}
         </button>
+
+        <div className="flex items-center justify-between pt-1 relative z-10">
+          <Link
+            href="/(auth)/register"
+            className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+          >
+            Don't have an account? Register here
+          </Link>
+          <Link
+            href="/"
+            className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+          >
+            Back to home
+          </Link>
+        </div>
       </form>
     </div>
   );
