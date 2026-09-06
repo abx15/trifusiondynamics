@@ -50,7 +50,7 @@ export function getPrimaryRole(roles: string[] = []): PrimaryRole {
   if (normalized.includes("client")) {
     return "client";
   }
-  return "admin";
+  return "employee";
 }
 
 export function getRoleHomeRoute(primaryRole: PrimaryRole): string {
@@ -80,10 +80,12 @@ interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   accessToken: string | null;
+  isHydrating: boolean;
   setUser: (user: User) => void;
   clearAuth: () => void;
   setAuth: (accessToken: string, user: User) => void;
-  hydrateFromStorage: () => void;
+  hydrateFromStorage: () => boolean;
+  setHydrated: (hydrated: boolean) => void;
 }
 
 function getStoredUser(): User | null {
@@ -106,6 +108,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
   accessToken: null,
+  isHydrating: true,
   setUser: (user) => {
     if (typeof window !== "undefined") {
       sessionStorage.setItem("user", JSON.stringify(user));
@@ -124,7 +127,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         // ignore cookie remove errors
       }
     }
-    set({ user: null, isAuthenticated: false, accessToken: null });
+    set({ user: null, isAuthenticated: false, accessToken: null, isHydrating: false });
   },
   setAuth: (accessToken, user) => {
     if (typeof window !== "undefined") {
@@ -133,12 +136,15 @@ export const useAuthStore = create<AuthState>((set) => ({
         sessionStorage.setItem("accessToken", accessToken);
       }
     }
-    set({ user, isAuthenticated: true, accessToken });
+    set({ user, isAuthenticated: true, accessToken, isHydrating: false });
   },
   hydrateFromStorage: () => {
     // Idempotency guard: if already hydrated, skip to prevent re-render loops
     const currentState = useAuthStore.getState();
-    if (currentState.user) return;
+    if (currentState.user) {
+      set({ isHydrating: false });
+      return true;
+    }
 
     const user = getStoredUser();
     let accessToken = getStoredAccessToken();
@@ -146,8 +152,14 @@ export const useAuthStore = create<AuthState>((set) => ({
       accessToken = Cookies.get("access_token") || null;
     }
     if (user) {
-      set({ user, isAuthenticated: true, accessToken });
+      set({ user, isAuthenticated: true, accessToken, isHydrating: false });
+      return true;
     }
+    set({ isHydrating: false });
+    return false;
+  },
+  setHydrated: (hydrated) => {
+    set({ isHydrating: !hydrated });
   },
 }));
 

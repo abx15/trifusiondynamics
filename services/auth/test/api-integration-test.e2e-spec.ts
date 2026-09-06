@@ -25,15 +25,15 @@ describe('API Integration Tests (Live Service)', () => {
         password: 'trifusiondynamicsA3web',
       });
 
-      if (adminLogin.status === 201) {
-        adminToken = adminLogin.body.accessToken;
-      }
+    if (adminLogin.status === 201) {
+      adminToken = adminLogin.body.accessToken;
+    }
 
-      // For testing purposes, we'll use the admin token for employee/client tests
-      // In a real scenario, you'd have separate test users
-    });
+    // For testing purposes, we'll use the admin token for employee/client tests
+    // In a real scenario, you'd have separate test users
+  });
 
-    afterAll(async () => {
+  afterAll(async () => {
     await app.close();
   });
 
@@ -51,9 +51,9 @@ describe('API Integration Tests (Live Service)', () => {
         .post('/api/auth/login')
         .send({
           email: 'admin@trifusiondynamics.com',
-        password: 'trifusiondynamicsA3web',
-      })
-      .expect(201);
+          password: 'trifusiondynamicsA3web',
+        })
+        .expect(201);
 
       expect(response.body).toHaveProperty('accessToken');
       expect(response.body).toHaveProperty('refreshToken');

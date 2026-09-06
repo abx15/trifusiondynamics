@@ -219,7 +219,7 @@ export function LoginForm() {
       toast.success(`Welcome back, ${loggedInUser.name}!`);
 
       setTimeout(() => {
-        window.location.href = targetRoute;
+        router.replace(targetRoute);
       }, 400);
     } catch (err: any) {
       const serverMsg = err?.response?.data?.message || err?.message || "Login failed";

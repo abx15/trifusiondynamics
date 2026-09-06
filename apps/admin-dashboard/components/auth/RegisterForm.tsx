@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import Cookies from "js-cookie";
 import { useAuthStore } from "@/lib/auth-store";
 import { apiClient } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
@@ -88,13 +87,6 @@ export function RegisterForm() {
       }
 
       setAuth(accessToken, finalUser);
-
-      const tokenToStore = refreshToken || accessToken;
-      Cookies.set("refresh_token", tokenToStore, {
-        secure: true,
-        sameSite: "strict",
-        expires: 7,
-      });
 
       toast.success("Organization registered and logged in successfully!");
       router.push("/dashboard");

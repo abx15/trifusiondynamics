@@ -38,21 +38,13 @@ export default function HrLayout({ children }: { children: React.ReactNode }) {
             currentUser = res.data.user;
           } else {
             useAuthStore.getState().clearAuth();
-            if (typeof window !== "undefined") {
-              window.location.href = "/login";
-            } else {
-              router.replace("/login");
-            }
+            router.replace("/login");
             return;
           }
         } catch (err) {
           console.warn("HR session restore error:", err);
           useAuthStore.getState().clearAuth();
-          if (typeof window !== "undefined") {
-            window.location.href = "/login";
-          } else {
-            router.replace("/login");
-          }
+          router.replace("/login");
           return;
         } finally {
           setIsInitializing(false);

@@ -3,7 +3,10 @@ import * as path from 'path';
 
 // Load environment variables from local and root .env
 dotenv.config();
-dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
+dotenv.config({
+  path: path.resolve(__dirname, '../../../.env'),
+  override: true,
+});
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 import { NestFactory } from '@nestjs/core';

@@ -1,19 +1,38 @@
 "use client";
 
+import { useMemo, useCallback } from "react";
 import { useAuthStore } from "@/lib/auth-store";
 
 export function useAuth() {
-  const { user, accessToken, isAuthenticated } = useAuthStore();
+  const { user, accessToken, isAuthenticated, isHydrating } = useAuthStore();
 
-  const isAdmin = user?.roles?.some(role => ['admin', 'superadmin', 'super_admin'].includes(role)) || false;
-  const isEmployee = user?.roles?.some(role => ['employee', 'agent', 'sales_agent', 'support_agent', 'hr_agent'].includes(role)) || isAdmin;
+  const isAdmin = useMemo(
+    () =>
+      user?.roles?.some((role) =>
+        ["admin", "superadmin", "super_admin"].includes(role),
+      ) || false,
+    [user?.roles],
+  );
 
-  const hasPermission = (action: string) => {
-    if (!user) return false;
-    // Admins have wildcard access to everything
-    if (isAdmin) return true;
-    return user.permissions?.includes(action) || false;
-  };
+  const isEmployee = useMemo(
+    () =>
+      user?.roles?.some((role) =>
+        ["employee", "agent", "sales_agent", "support_agent", "hr_agent"].includes(
+          role,
+        ),
+      ) || isAdmin,
+    [user?.roles, isAdmin],
+  );
+
+  const hasPermission = useCallback(
+    (action: string) => {
+      if (!user) return false;
+      // Admins have wildcard access to everything
+      if (isAdmin) return true;
+      return user.permissions?.includes(action) || false;
+    },
+    [user, isAdmin],
+  );
 
   return {
     user,
@@ -22,7 +41,8 @@ export function useAuth() {
     isAdmin,
     isEmployee,
     hasPermission,
-    isLoading: false, // will coordinate with hydration mounting if required
+    isLoading: isHydrating,
+    isHydrating,
   };
 }
 
@@ -37,4 +57,3 @@ export function useIsEmployee() {
 }
 
 export default useAuth;
-

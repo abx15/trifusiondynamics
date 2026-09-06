@@ -75,7 +75,7 @@ export default function UsersSettingsPage() {
     } else {
       setIsLoading(false);
     }
-  }, [hasPermission]);
+  }, []);
 
   const handleSuccess = () => {
     fetchUsers();

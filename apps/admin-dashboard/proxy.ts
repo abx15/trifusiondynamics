@@ -24,6 +24,11 @@ function decodeJwtPayload(token: string) {
   }
 }
 
+function isTokenExpired(payload: any): boolean {
+  if (!payload?.exp) return false;
+  return Date.now() >= payload.exp * 1000;
+}
+
 function getUserPrimaryRole(roles: string[] = []): PrimaryRole {
   const normalized = roles.map((r) => r.toLowerCase().trim());
   if (normalized.includes("super_admin") || normalized.includes("superadmin")) return "super_admin";
@@ -34,7 +39,7 @@ function getUserPrimaryRole(roles: string[] = []): PrimaryRole {
   if (normalized.includes("agent")) return "agent";
   if (normalized.includes("employee") || normalized.includes("worker") || normalized.includes("staff")) return "employee";
   if (normalized.includes("client")) return "client";
-  return "admin";
+  return "employee";
 }
 
 function getRoleHomeRoute(role: PrimaryRole): string {
@@ -56,21 +61,45 @@ function getRoleHomeRoute(role: PrimaryRole): string {
     case "client":
       return "/client/dashboard";
     default:
-      return "/dashboard";
+      return "/login";
   }
 }
 
-export function proxy(request: NextRequest) {
+function getAccessToken(request: NextRequest): string | null {
+  const accessToken = request.cookies.get("access_token")?.value;
+  if (accessToken) return accessToken;
+
+  const authHeader = request.headers.get("authorization");
+  if (authHeader?.startsWith("Bearer ")) {
+    return authHeader.substring(7);
+  }
+  return null;
+}
+
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  const accessToken = request.cookies.get("access_token")?.value;
-  const refreshToken = request.cookies.get("refresh_token")?.value;
-  const token = accessToken || refreshToken;
+  const accessToken = getAccessToken(request);
+  let token: string | null = null;
+  let tokenExpired = false;
 
-  const isAuthPage = pathname.startsWith("/login") || pathname.startsWith("/register") || pathname.startsWith("/auth/callback");
+  if (accessToken) {
+    token = accessToken;
+    const payload = decodeJwtPayload(accessToken);
+    if (payload) {
+      tokenExpired = isTokenExpired(payload);
+      if (tokenExpired) {
+        token = null;
+      }
+    }
+  }
+
+  const isAuthPage =
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/register") ||
+    pathname.startsWith("/auth/callback");
   const isLogoutPage = pathname === "/logout";
 
-  // Handle explicit logout URL
   if (isLogoutPage) {
     const response = NextResponse.redirect(new URL("/login", request.url));
     response.cookies.delete("access_token");
@@ -78,18 +107,17 @@ export function proxy(request: NextRequest) {
     return response;
   }
 
-  // Route groupings
   const isSuperAdminRoute = pathname.startsWith("/super-admin");
-  const isClientRoute     = pathname.startsWith("/client");
-  const isAgentRoute      = pathname.startsWith("/agent");
-  const isEmployeeRoute   =
+  const isClientRoute = pathname.startsWith("/client");
+  const isAgentRoute = pathname.startsWith("/agent");
+  const isEmployeeRoute =
     pathname.startsWith("/employee") ||
     pathname.startsWith("/attendance") ||
     pathname.startsWith("/leave") ||
     pathname.startsWith("/payslips");
-  const isSalesRoute      = pathname.startsWith("/crm") || pathname.startsWith("/leads-inbox");
-  const isSupportRoute    = pathname.startsWith("/tickets");
-  const isHrRoute         = pathname.startsWith("/hr") || pathname.startsWith("/payroll");
+  const isSalesRoute = pathname.startsWith("/crm") || pathname.startsWith("/leads-inbox");
+  const isSupportRoute = pathname.startsWith("/tickets");
+  const isHrRoute = pathname.startsWith("/hr") || pathname.startsWith("/payroll");
   const isAdminDashboardRoute =
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/analytics") ||
@@ -113,46 +141,38 @@ export function proxy(request: NextRequest) {
     isHrRoute ||
     isAdminDashboardRoute;
 
-  // 1. Unauthenticated users trying to access protected routes -> redirect to /login
   if (!token && isProtected) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  // 2. If token is present
-  if (token) {
+  if (token && !tokenExpired) {
     const payload = decodeJwtPayload(token);
     const roles: string[] = payload?.roles || [];
     const primaryRole = getUserPrimaryRole(roles);
     const homeRoute = getRoleHomeRoute(primaryRole);
 
-    // Authenticated user opening /login or /register -> redirect to role home
     if (isAuthPage && !pathname.startsWith("/auth/callback")) {
       return NextResponse.redirect(new URL(homeRoute, request.url));
     }
 
-    // Root / -> redirect to role home
     if (pathname === "/") {
       return NextResponse.redirect(new URL(homeRoute, request.url));
     }
 
-    // SuperAdmin has universal master access to everything
     if (primaryRole === "super_admin") {
       return NextResponse.next();
     }
 
-    // Non-SuperAdmin trying to access /super-admin -> redirect
     if (isSuperAdminRoute) {
       return NextResponse.redirect(new URL(homeRoute, request.url));
     }
 
-    // Admin has access to all non-super-admin routes
     if (primaryRole === "admin") {
       return NextResponse.next();
     }
 
-    // Client user restrictions
     if (primaryRole === "client") {
       if (!isClientRoute) {
         return NextResponse.redirect(new URL("/client/dashboard", request.url));
@@ -160,7 +180,6 @@ export function proxy(request: NextRequest) {
       return NextResponse.next();
     }
 
-    // Employee user restrictions
     if (primaryRole === "employee") {
       if (!isEmployeeRoute) {
         return NextResponse.redirect(new URL("/attendance", request.url));
@@ -168,7 +187,6 @@ export function proxy(request: NextRequest) {
       return NextResponse.next();
     }
 
-    // Sales Agent restrictions
     if (primaryRole === "sales_agent") {
       if (!isSalesRoute && !isAgentRoute) {
         return NextResponse.redirect(new URL("/crm", request.url));
@@ -176,7 +194,6 @@ export function proxy(request: NextRequest) {
       return NextResponse.next();
     }
 
-    // Support Agent restrictions
     if (primaryRole === "support_agent") {
       if (!isSupportRoute && !isAgentRoute) {
         return NextResponse.redirect(new URL("/tickets", request.url));
@@ -184,7 +201,6 @@ export function proxy(request: NextRequest) {
       return NextResponse.next();
     }
 
-    // HR Agent restrictions
     if (primaryRole === "hr_agent") {
       if (!isHrRoute && !isAgentRoute) {
         return NextResponse.redirect(new URL("/hr", request.url));
@@ -192,7 +208,6 @@ export function proxy(request: NextRequest) {
       return NextResponse.next();
     }
 
-    // General Agent restrictions
     if (primaryRole === "agent") {
       if (!isAgentRoute && !isSupportRoute && !isSalesRoute) {
         return NextResponse.redirect(new URL("/agent/dashboard", request.url));

@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import Cookies from "js-cookie";
 import { useAuthStore } from "@/lib/auth-store";
 import { apiClient } from "@/lib/api-client";
 
@@ -19,21 +18,7 @@ export function useLogout() {
     clearAuth();
 
     if (typeof window !== "undefined") {
-      const cookiePaths = [
-        { path: "/", sameSite: "lax" as const },
-        { path: "/", sameSite: "strict" as const },
-        { path: "/" },
-      ];
-
-      cookiePaths.forEach((options) => {
-        Cookies.remove("access_token", options);
-        Cookies.remove("refresh_token", options);
-      });
-
-      sessionStorage.clear();
-      localStorage.clear();
-
-      window.location.replace("/login");
+      router.replace("/login");
     } else {
       router.replace("/login");
     }
