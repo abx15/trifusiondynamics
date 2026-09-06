@@ -9,7 +9,6 @@ graph TB
     subgraph "Frontend Applications"
         A[Agency Web<br/>Next.js<br/>Port 3000]
         B[Admin Dashboard<br/>Next.js<br/>Port 3001]
-        C[Client Portal<br/>Next.js<br/>Port 3002]
     end
 
     subgraph "Backend Services"
@@ -36,7 +35,6 @@ graph TB
     %% Connections
     A -->|HTTP/HTTPS| D
     B -->|HTTP/HTTPS| D
-    C -->|HTTP/HTTPS| D
 
     D -->|AI Requests| E
     D -->|Prisma ORM| F
@@ -55,7 +53,6 @@ graph TB
 
     style A fill:#4CAF50,color:#fff
     style B fill:#2196F3,color:#fff
-    style C fill:#FF9800,color:#fff
     style D fill:#9C27B0,color:#fff
     style E fill:#E91E63,color:#fff
     style F fill:#607D8B,color:#fff
@@ -67,9 +64,9 @@ graph TB
 ```
 agency-os/
 ├── apps/                    # Frontend applications
-│   ├── agency-web/          # Main frontend
-│   ├── admin-dashboard/
-│   └── client-portal/
+│   ├── agency-web/          # Main frontend (marketing site)
+│   ├── admin-dashboard/     # Admin control panel (all role portals)
+│   └── shared-assets/       # Shared static assets
 ├── packages/
 │   ├── database/            # Prisma schema, migrations, seed scripts
 │   │   └── prisma/
@@ -131,9 +128,8 @@ AgencyOS handles the full agency lifecycle:
 
 The project is organized as a **pnpm workspace + Turborepo** monorepo:
 
-- `apps/admin-dashboard` — Next.js admin control panel
+- `apps/admin-dashboard` — Next.js control panel (admin, employee, client, and super-admin role portals)
 - `apps/agency-web` — Public marketing site with CMS
-- `apps/client-portal` — Client-facing dashboard
 - `services/auth` — NestJS API gateway (main business logic)
 - `services/ai-service` — FastAPI microservice for AI workloads
 - `packages/database` — Shared Prisma schema and database utilities
@@ -285,9 +281,8 @@ pnpm run dev
 ```
 
 Services will be available at:
-- Admin Dashboard: `http://localhost:3000`
-- Client Portal: `http://localhost:3001`
-- Agency Website: `http://localhost:3002`
+- Agency Website: `http://localhost:3000`
+- Admin Dashboard: `http://localhost:3001` (includes client, employee, agent, and super-admin role portals)
 - Auth API: `http://localhost:8000`
 - AI Service: `http://localhost:8001`
 
@@ -297,8 +292,7 @@ Services will be available at:
 
 || Component | Platform |
 ||-----------|----------|
-|| Admin Dashboard | Vercel |
-|| Client Portal | Vercel |
+|| Admin Dashboard (all role portals) | Vercel |
 || Agency Website | Vercel |
 || Auth API (NestJS) | Render |
 || AI Service (FastAPI) | Render |

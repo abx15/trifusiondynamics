@@ -131,7 +131,6 @@ export const useAuthStore = create<AuthState>((set) => ({
       sessionStorage.setItem("user", JSON.stringify(user));
       if (accessToken) {
         sessionStorage.setItem("accessToken", accessToken);
-        Cookies.set("access_token", accessToken, { path: "/", expires: 1 });
       }
     }
     set({ user, isAuthenticated: true, accessToken });

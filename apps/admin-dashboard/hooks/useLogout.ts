@@ -3,21 +3,25 @@
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
 import { useAuthStore } from "@/lib/auth-store";
+import { apiClient } from "@/lib/api-client";
 
 export function useLogout() {
   const router = useRouter();
   const clearAuth = useAuthStore((state) => state.clearAuth);
 
   const logout = async () => {
-    // Clear all auth state immediately
+    try {
+      await apiClient.post("/auth/logout");
+    } catch (err) {
+      console.warn("Logout API call failed, proceeding with local cleanup:", err);
+    }
+
     clearAuth();
 
     if (typeof window !== "undefined") {
-      // Clear all cookies with every possible option to ensure complete removal
       const cookiePaths = [
         { path: "/", sameSite: "lax" as const },
         { path: "/", sameSite: "strict" as const },
-        { path: "/", sameSite: "none" as const },
         { path: "/" },
       ];
 
@@ -26,11 +30,9 @@ export function useLogout() {
         Cookies.remove("refresh_token", options);
       });
 
-      // Clear all storage
       sessionStorage.clear();
       localStorage.clear();
 
-      // Force replace to login (prevents back-button from returning)
       window.location.replace("/login");
     } else {
       router.replace("/login");
@@ -41,4 +43,3 @@ export function useLogout() {
 }
 
 export default useLogout;
-
