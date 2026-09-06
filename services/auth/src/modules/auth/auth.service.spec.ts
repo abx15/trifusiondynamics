@@ -67,6 +67,7 @@ describe('AuthService', () => {
         organizationId: 'org-1',
         isActive: true,
         mustChangePassword: false,
+        organization: { isActive: true },
         roles: [],
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -92,6 +93,7 @@ describe('AuthService', () => {
         organizationId: 'org-1',
         isActive: true,
         mustChangePassword: false,
+        organization: { isActive: true },
         roles: [],
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -99,6 +101,27 @@ describe('AuthService', () => {
 
       await expect(
         service.login({ email: 'test@test.com', password: 'wrongpassword' }),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('should throw UnauthorizedException if organization is archived', async () => {
+      const hashedPassword = await bcrypt.hash('password123', 10);
+      prismaMock.user.findFirst.mockResolvedValue({
+        id: 'user-1',
+        email: 'test@test.com',
+        name: 'Test User',
+        password: hashedPassword,
+        organizationId: 'org-1',
+        isActive: true,
+        mustChangePassword: false,
+        organization: { isActive: false },
+        roles: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as any);
+
+      await expect(
+        service.login({ email: 'test@test.com', password: 'password123' }),
       ).rejects.toThrow(UnauthorizedException);
     });
   });

@@ -8,6 +8,7 @@ import {
   Query,
   UseGuards,
   Param,
+  ForbiddenException,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -74,6 +75,27 @@ export class UsersController {
   @RequirePermission('hr:write')
   async createOrganization(@Body() body: { name: string; slug: string }) {
     return this.usersService.createOrganization(body);
+  }
+
+  @Patch('organizations/:id/archive')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermission('users:delete')
+  async archiveOrganization(
+    @Param('id') id: string,
+    @Body() body: { confirmation: { name: string } },
+    @CurrentUser() user: JwtPayload,
+  ) {
+    if (!isSuperAdminUser(user)) {
+      throw new ForbiddenException(
+        'Only super administrators can archive organizations',
+      );
+    }
+
+    return this.usersService.archiveOrganization(id, body.confirmation, {
+      id: user.sub,
+      email: user.email,
+      roles: user.roles,
+    });
   }
 
   @Get('roles')

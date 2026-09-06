@@ -42,6 +42,7 @@ beforeAll(async () => {
     data: {
       name: 'Test Org',
       slug: 'test-org',
+      isActive: true,
     },
   });
 

@@ -63,6 +63,9 @@ export class AuthService {
           OR: [{ email: inputIdentifier }, { phone: inputIdentifier }],
         },
         include: {
+          organization: {
+            select: { isActive: true },
+          },
           roles: {
             include: {
               role: {
@@ -85,6 +88,10 @@ export class AuthService {
 
       if (!user.isActive) {
         throw new UnauthorizedException('Your account has been deactivated');
+      }
+
+      if (!user.organization.isActive) {
+        throw new UnauthorizedException('Your organization has been archived');
       }
 
       // 2. Check brute force block (5+ failed logins in the last 15 minutes)
@@ -185,6 +192,7 @@ export class AuthService {
         data: {
           name: dto.organizationName,
           slug: orgSlug,
+          isActive: true,
         },
       });
 

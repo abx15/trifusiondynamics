@@ -1,0 +1,2 @@
+# This is the source of truth for the migration history.
+provider = "postgresql"

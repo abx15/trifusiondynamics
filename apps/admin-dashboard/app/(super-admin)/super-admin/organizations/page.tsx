@@ -13,6 +13,8 @@ import {
   AlertCircle,
   MoreVertical,
   Activity,
+  Trash2,
+  X,
 } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
 import { toast } from "@/lib/toast";
@@ -21,6 +23,7 @@ interface Organization {
   id: string;
   name: string;
   slug: string;
+  isActive: boolean;
   createdAt: string;
   _count?: {
     users: number;
@@ -35,6 +38,9 @@ export default function SuperAdminOrganizationsPage() {
   const [newOrgName, setNewOrgName] = useState("");
   const [newOrgSlug, setNewOrgSlug] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [archiveOrg, setArchiveOrg] = useState<Organization | null>(null);
+  const [archiveConfirmName, setArchiveConfirmName] = useState("");
+  const [isArchiving, setIsArchiving] = useState(false);
 
   const fetchOrganizations = async () => {
     try {
@@ -77,6 +83,32 @@ export default function SuperAdminOrganizationsPage() {
       toast.error(err?.response?.data?.message || "Failed to create organization");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleArchive = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!archiveOrg || archiveConfirmName !== archiveOrg.name) {
+      toast.error("Please type the organization name exactly to confirm");
+      return;
+    }
+
+    try {
+      setIsArchiving(true);
+      await apiClient.patch(`/users/organizations/${archiveOrg.id}/archive`, {
+        confirmation: { name: archiveOrg.name },
+      });
+      toast.success(`Organization "${archiveOrg.name}" has been archived`);
+      setArchiveOrg(null);
+      setArchiveConfirmName("");
+      fetchOrganizations();
+    } catch (err: any) {
+      console.error("Error archiving organization:", err);
+      toast.error(
+        err?.response?.data?.message || "Failed to archive organization",
+      );
+    } finally {
+      setIsArchiving(false);
     }
   };
 
@@ -194,6 +226,81 @@ export default function SuperAdminOrganizationsPage() {
         </div>
       )}
 
+      {archiveOrg && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-lg bg-zinc-900 border border-red-500/30 rounded-2xl p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-red-400" /> Archive Organization
+              </h3>
+              <button
+                onClick={() => {
+                  setArchiveOrg(null);
+                  setArchiveConfirmName("");
+                }}
+                className="text-zinc-500 hover:text-zinc-300 text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs text-zinc-400">
+              <p>
+                This will <strong className="text-red-400">archive</strong> the organization <strong className="text-white">"{archiveOrg.name}"</strong>.
+              </p>
+              <p className="text-amber-300">
+                Archiving preserves all business data (clients, leads, projects, invoices).
+                All users in this organization will be deactivated and their sessions revoked.
+              </p>
+              <p className="text-amber-300">
+                {archiveOrg._count?.users ?? 0} user(s) will be affected.
+              </p>
+            </div>
+
+            <form onSubmit={handleArchive} className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-zinc-300 mb-1">
+                  Type the organization name to confirm
+                </label>
+                <input
+                  type="text"
+                  value={archiveConfirmName}
+                  onChange={(e) => setArchiveConfirmName(e.target.value)}
+                  placeholder={archiveOrg.name}
+                  className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-red-500/30 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-red-400 font-mono"
+                  required
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setArchiveOrg(null);
+                    setArchiveConfirmName("");
+                  }}
+                  className="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-300 font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isArchiving || archiveConfirmName !== archiveOrg.name}
+                  className="px-4 py-2 rounded-xl bg-red-500 hover:bg-red-400 text-xs text-white font-semibold flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isArchiving ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-3.5 h-3.5" />
+                  )}
+                  Archive Organization
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Organizations Grid */}
       {isLoading ? (
         <div className="flex items-center justify-center p-12">
@@ -210,13 +317,13 @@ export default function SuperAdminOrganizationsPage() {
               key={org.id}
               className="p-5 rounded-2xl bg-zinc-900/60 border border-zinc-800 hover:border-amber-500/40 transition-all flex flex-col justify-between space-y-4"
             >
-              <div className="space-y-2">
+            <div className="space-y-2">
                 <div className="flex items-start justify-between gap-2">
                   <div className="h-10 w-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
                     <Building2 className="w-5 h-5" />
                   </div>
                   <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                    <Activity className="w-3 h-3" /> Active
+                    <Activity className="w-3 h-3" /> {org.isActive ? "Active" : "Archived"}
                   </span>
                 </div>
 
@@ -235,6 +342,19 @@ export default function SuperAdminOrganizationsPage() {
                   {new Date(org.createdAt).toLocaleDateString()}
                 </span>
               </div>
+
+              {org.isActive && (
+                <button
+                  onClick={() => {
+                    setArchiveOrg(org);
+                    setArchiveConfirmName("");
+                  }}
+                  className="mt-2 px-2.5 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-semibold hover:bg-red-500/20 transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  Archive Organization
+                </button>
+              )}
             </div>
           ))}
         </div>

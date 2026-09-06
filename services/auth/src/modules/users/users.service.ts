@@ -2,6 +2,8 @@ import {
   Injectable,
   ConflictException,
   NotFoundException,
+  BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -11,9 +13,12 @@ import {
   parsePagination,
   paginatedResult,
 } from '../../common/utils/pagination';
+import { type OrganizationResponse } from '@agency-os/types';
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(private prisma: PrismaService) {}
 
   async createUserByAdmin(dto: CreateUserDto, currentOrgId?: string) {
@@ -280,6 +285,7 @@ export class UsersService {
     const { skip, take } = parsePagination(page, Math.min(limit ?? 100, 100));
     const [data, total] = await this.prisma.$transaction([
       this.prisma.organization.findMany({
+        where: { isActive: true },
         include: {
           _count: {
             select: {
@@ -291,7 +297,7 @@ export class UsersService {
         skip,
         take,
       }),
-      this.prisma.organization.count(),
+      this.prisma.organization.count({ where: { isActive: true } }),
     ]);
     return paginatedResult(data, total, Math.floor(skip / take) + 1, take);
   }
@@ -305,8 +311,76 @@ export class UsersService {
       data: {
         name: data.name,
         slug: `${slug}-${Date.now()}`,
+        isActive: true,
       },
     });
+  }
+
+  async archiveOrganization(
+    orgId: string,
+    confirmation: { name: string },
+    actor: { id: string; email: string; roles: string[] },
+  ): Promise<{
+    success: boolean;
+    message: string;
+    organization: OrganizationResponse;
+  }> {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: orgId },
+    });
+
+    if (!org) {
+      throw new NotFoundException('Organization not found');
+    }
+
+    if (!org.isActive) {
+      throw new BadRequestException('Organization is already archived');
+    }
+
+    if (!confirmation?.name || confirmation.name !== org.name) {
+      throw new BadRequestException(
+        'Confirmation required: the organization name must match to archive',
+      );
+    }
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      const updatedOrg = await tx.organization.update({
+        where: { id: orgId },
+        data: { isActive: false },
+      });
+
+      await tx.user.updateMany({
+        where: { organizationId: orgId, isActive: true },
+        data: { isActive: false },
+      });
+
+      await tx.refreshToken.updateMany({
+        where: {
+          user: { organizationId: orgId },
+          revoked: false,
+        },
+        data: { revoked: true },
+      });
+
+      return updatedOrg;
+    });
+
+    this.logger.log(
+      `Organization archived — id=${result.id} name="${result.slug}" by actor=${actor.email}`,
+    );
+
+    return {
+      success: true,
+      message: 'Organization archived successfully',
+      organization: {
+        id: result.id,
+        name: result.name,
+        slug: result.slug,
+        isActive: false,
+        createdAt: result.createdAt.toISOString(),
+        updatedAt: result.updatedAt.toISOString(),
+      },
+    };
   }
 
   async listRoles(page?: number, limit?: number) {
