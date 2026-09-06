@@ -87,29 +87,33 @@ export function Sidebar({ collapsed = false, setCollapsed, onItemClick }: Sideba
   const menuGroups: MenuGroup[] = [];
 
   // 1. Overview Section
-  const overviewItems: SidebarItem[] = [
-    {
-      label: "Dashboard",
-      href: "/dashboard",
-      icon: LayoutDashboard,
-      active: pathname === "/dashboard",
-      disabled: false,
-    },
-    {
-      label: "ERP",
-      href: "/erp",
-      icon: Layers,
-      active: pathname === "/erp",
-      disabled: false,
-    },
-    {
-      label: "Finance",
-      href: "/finance",
-      icon: TrendingUp,
-      active: pathname === "/finance",
-      disabled: false,
-    },
-  ];
+  const overviewItems: SidebarItem[] = [];
+
+  if (isAdmin) {
+    overviewItems.push(
+      {
+        label: "Dashboard",
+        href: "/dashboard",
+        icon: LayoutDashboard,
+        active: pathname === "/dashboard",
+        disabled: false,
+      },
+      {
+        label: "ERP",
+        href: "/erp",
+        icon: Layers,
+        active: pathname === "/erp",
+        disabled: false,
+      },
+      {
+        label: "Finance",
+        href: "/finance",
+        icon: TrendingUp,
+        active: pathname === "/finance",
+        disabled: false,
+      }
+    );
+  }
 
   if (isAdmin || hasPermission("analytics:read")) {
     overviewItems.push({
@@ -121,10 +125,12 @@ export function Sidebar({ collapsed = false, setCollapsed, onItemClick }: Sideba
     });
   }
 
-  menuGroups.push({
-    label: "Overview",
-    items: overviewItems,
-  });
+  if (overviewItems.length > 0) {
+    menuGroups.push({
+      label: "Overview",
+      items: overviewItems,
+    });
+  }
 
   // 2. Employee Self-Service Section
   if (isEmployee) {
@@ -241,7 +247,7 @@ export function Sidebar({ collapsed = false, setCollapsed, onItemClick }: Sideba
     });
   }
 
-  if (isAdmin || hasPermission("projects:read")) {
+  if (isAdmin || hasPermission("helpdesk:read") || hasPermission("projects:read")) {
     operationsItems.push({
       label: "Support Tickets",
       href: "/tickets",

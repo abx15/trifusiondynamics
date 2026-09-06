@@ -128,21 +128,24 @@ export class AuthService {
       const accessToken = this.generateAccessToken(jwtPayload);
       const refreshToken = this.generateRefreshToken(jwtPayload);
 
-      await this.prisma.$transaction(async (tx) => {
-        await tx.refreshToken.updateMany({
-          where: { userId: user.id, revoked: false },
-          data: { revoked: true },
-        });
+      await this.prisma.$transaction(
+        async (tx) => {
+          await tx.refreshToken.updateMany({
+            where: { userId: user.id, revoked: false },
+            data: { revoked: true },
+          });
 
-        await tx.refreshToken.create({
-          data: {
-            token: refreshToken,
-            userId: user.id,
-            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-            revoked: false,
-          },
-        });
-      });
+          await tx.refreshToken.create({
+            data: {
+              token: refreshToken,
+              userId: user.id,
+              expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+              revoked: false,
+            },
+          });
+        },
+        { timeout: 20000, maxWait: 10000 },
+      );
 
       // 9. Log successful login (MongoDB removed, skipping)
       return {
@@ -349,18 +352,21 @@ export class AuthService {
     const newAccessToken = this.generateAccessToken(jwtPayload);
     const newRefreshToken = this.generateRefreshToken(jwtPayload);
 
-    await this.prisma.$transaction(async (tx) => {
-      await tx.refreshToken.delete({ where: { id: dbToken.id } });
+    await this.prisma.$transaction(
+      async (tx) => {
+        await tx.refreshToken.delete({ where: { id: dbToken.id } });
 
-      await tx.refreshToken.create({
-        data: {
-          token: newRefreshToken,
-          userId: user.id,
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-          revoked: false,
-        },
-      });
-    });
+        await tx.refreshToken.create({
+          data: {
+            token: newRefreshToken,
+            userId: user.id,
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+            revoked: false,
+          },
+        });
+      },
+      { timeout: 20000, maxWait: 10000 },
+    );
 
     // 4. Log refresh event (MongoDB removed, skipping)
     return {

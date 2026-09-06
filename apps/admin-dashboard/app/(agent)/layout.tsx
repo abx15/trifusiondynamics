@@ -64,7 +64,7 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
 
       if (currentUser) {
         const primary = getPrimaryRole(currentUser.roles);
-        const allowedRoles = ['agent', 'sales_agent', 'support_agent', 'hr_agent'];
+        const allowedRoles = ['super_admin', 'admin', 'agent', 'sales_agent', 'support_agent', 'hr_agent'];
         if (!allowedRoles.includes(primary)) {
           router.replace(getRoleHomeRoute(primary));
           return;

@@ -1,3 +1,11 @@
+import * as dotenv from 'dotenv';
+import * as path from 'path';
+
+// Load environment variables from local and root .env
+dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { Logger } from 'nestjs-pino';
@@ -12,7 +20,11 @@ import { json, urlencoded } from 'express';
 import { randomUUID } from 'crypto';
 
 // Configure DNS to Google Public DNS for better connectivity
-dns.setServers(['8.8.8.8', '8.8.4.4']);
+try {
+  dns.setServers(['8.8.8.8', '8.8.4.4']);
+} catch {
+  // Ignore DNS set errors if restricted in container/environment
+}
 
 const MAX_BODY_SIZE = '5mb';
 const MIN_SECRET_LENGTH = 32;

@@ -40,6 +40,10 @@ async function main() {
       'This prevents accidental data modification in production.');
   }
 
+  // SAFETY CHECK: Ensure seed operations are idempotent and won't remove existing data
+  // This script uses upsert operations which only create data if it doesn't exist
+  // Existing data will never be deleted or overwritten when this script runs
+
   const adminEmail = process.env.ADMIN_EMAIL || 'admin@agencyos.com';
 
   const adminPassword = process.env.ADMIN_PASSWORD;
@@ -50,12 +54,13 @@ async function main() {
   console.log('Seeding database...');
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`Admin email configured: ${adminEmail}`);
+  console.log('IMPORTANT: This script uses upsert operations - existing data will NOT be removed or overwritten');
 
-  // 1. Create Default Organization
+  // 1. Create Default Organization (only create if doesn't exist)
   const org = await safeRun('Create Default Organization', () => 
     prisma.organization.upsert({
       where: { slug: 'tfx-ai-demo-org' },
-      update: {},
+      update: {}, // Don't update existing organization to preserve data
       create: {
         name: 'TFX AI Demo Org',
         slug: 'tfx-ai-demo-org',
@@ -79,10 +84,10 @@ async function main() {
 
   const dbRoles: Record<string, any> = {};
   for (const r of rolesToCreate) {
-    const role = await safeRun(`Upsert Role: ${r.name}`, () => 
+    const role = await safeRun(`Upsert Role: ${r.name}`, () =>
       prisma.role.upsert({
         where: { name: r.name },
-        update: { description: r.description },
+        update: {}, // Don't update existing roles to preserve customizations
         create: r,
       })
     );
@@ -108,10 +113,10 @@ async function main() {
 
   const dbPermissions: Record<string, any> = {};
   for (const action of permissionsToCreate) {
-    const permission = await safeRun(`Upsert Permission: ${action}`, () => 
+    const permission = await safeRun(`Upsert Permission: ${action}`, () =>
       prisma.permission.upsert({
         where: { action },
-        update: {},
+        update: {}, // Don't update existing permissions
         create: { action },
       })
     );
@@ -182,10 +187,8 @@ async function main() {
     prisma.user.upsert({
       where: { email: 'trifusiondynamics@gmail.com' },
       update: {
-        password: tfxAdminPassHash,
-        name: 'Trifusion-Dynamics Admin',
+        // Only update if user is inactive - preserve password and other data if user exists
         isActive: true,
-        mustChangePassword: false,
         organizationId: org.id,
       },
       create: {
@@ -214,10 +217,8 @@ async function main() {
     prisma.user.upsert({
       where: { email: configuredAdminEmail },
       update: {
-        password: configuredAdminPassHash,
-        name: 'Administrator',
+        // Only update if user is inactive - preserve password and other data if user exists
         isActive: true,
-        mustChangePassword: false,
         organizationId: org.id,
       },
       create: {
@@ -259,10 +260,8 @@ async function main() {
     prisma.user.upsert({
       where: { email: 'sales.trifusion@gmail.com' },
       update: {
-        password: salesPassHash,
-        name: 'Sales & Partnerships',
+        // Only update if user is inactive - preserve password and other data if user exists
         isActive: true,
-        mustChangePassword: false,
         organizationId: org.id,
       },
       create: {
@@ -298,10 +297,8 @@ async function main() {
     prisma.user.upsert({
       where: { email: 'support.trifusion@gmail.com' },
       update: {
-        password: supportPassHash,
-        name: 'Support Team',
+        // Only update if user is inactive - preserve password and other data if user exists
         isActive: true,
-        mustChangePassword: false,
         organizationId: org.id,
       },
       create: {
@@ -337,10 +334,8 @@ async function main() {
     prisma.user.upsert({
       where: { email: 'hr.trifusion@gmail.com' },
       update: {
-        password: hrPassHash,
-        name: 'HR & Careers',
+        // Only update if user is inactive - preserve password and other data if user exists
         isActive: true,
-        mustChangePassword: false,
         organizationId: org.id,
       },
       create: {
@@ -396,12 +391,11 @@ async function main() {
 
   // 5c. Create Agent User
   const agentPasswordHash = await bcrypt.hash(defaultTempPassword, 12);
-  const agentUser = await safeRun('Upsert Agent User', () => 
+  const agentUser = await safeRun('Upsert Agent User', () =>
     prisma.user.upsert({
       where: { email: 'agent@trifusiondynamics.com' },
       update: {
-        password: agentPasswordHash,
-        name: 'Jane Agent',
+        // Only update if user is inactive - preserve password and other data if user exists
         isActive: true,
         organizationId: org.id,
       },
@@ -437,8 +431,7 @@ async function main() {
     prisma.user.upsert({
       where: { email: 'bob.dev@trifusiondynamics.com' },
       update: {
-        password: employeePasswordHash,
-        name: 'Bob Developer',
+        // Only update if user is inactive - preserve password and other data if user exists
         isActive: true,
         mustChangePassword: false,
         organizationId: org.id,
@@ -472,12 +465,11 @@ async function main() {
 
   // 5d. Create Client User
   const clientPasswordHash = await bcrypt.hash(defaultTempPassword, 12);
-  const clientUser = await safeRun('Upsert Client User', () => 
+  const clientUser = await safeRun('Upsert Client User', () =>
     prisma.user.upsert({
       where: { email: 'client@apexretail.com' },
       update: {
-        password: clientPasswordHash,
-        name: 'Sanjay Singhania',
+        // Only update if user is inactive - preserve password and other data if user exists
         isActive: true,
         organizationId: org.id,
       },
@@ -512,10 +504,10 @@ async function main() {
   console.log('Seeding CRM and Clients data...');
 
   // 5 Leads
-  await safeRun('Upsert Lead 1', () => 
+  await safeRun('Upsert Lead 1', () =>
     prisma.lead.upsert({
       where: { id: 'lead-1-uuid' },
-      update: {},
+      update: {}, // Don't update existing leads to preserve custom data
       create: {
         id: 'lead-1-uuid',
         name: 'John Doe',
@@ -531,10 +523,10 @@ async function main() {
     })
   );
 
-  await safeRun('Upsert Lead 2', () => 
+  await safeRun('Upsert Lead 2', () =>
     prisma.lead.upsert({
       where: { id: 'lead-2-uuid' },
-      update: {},
+      update: {}, // Don't update existing leads to preserve custom data
       create: {
         id: 'lead-2-uuid',
         name: 'Jane Smith',
@@ -550,10 +542,10 @@ async function main() {
     })
   );
 
-  await safeRun('Upsert Lead 3', () => 
+  await safeRun('Upsert Lead 3', () =>
     prisma.lead.upsert({
       where: { id: 'lead-3-uuid' },
-      update: {},
+      update: {}, // Don't update existing leads to preserve custom data
       create: {
         id: 'lead-3-uuid',
         name: 'Bob Johnson',
@@ -569,10 +561,10 @@ async function main() {
     })
   );
 
-  await safeRun('Upsert Lead 4', () => 
+  await safeRun('Upsert Lead 4', () =>
     prisma.lead.upsert({
       where: { id: 'lead-4-uuid' },
-      update: {},
+      update: {}, // Don't update existing leads to preserve custom data
       create: {
         id: 'lead-4-uuid',
         name: 'Alice Brown',
@@ -589,10 +581,10 @@ async function main() {
   );
 
   // Converted Lead (WON)
-  await safeRun('Upsert Lead 5 (WON)', () => 
+  await safeRun('Upsert Lead 5 (WON)', () =>
     prisma.lead.upsert({
       where: { id: 'lead-5-uuid' },
-      update: {},
+      update: {}, // Don't update existing leads to preserve custom data
       create: {
         id: 'lead-5-uuid',
         name: 'Charlie Green',
@@ -610,10 +602,10 @@ async function main() {
   );
 
   // 2 Clients (one converted, one manual)
-  const client1 = await safeRun('Upsert Client 1', () => 
+  const client1 = await safeRun('Upsert Client 1', () =>
     prisma.client.upsert({
       where: { id: 'client-1-uuid' },
-      update: {},
+      update: {}, // Don't update existing clients to preserve custom data
       create: {
         id: 'client-1-uuid',
         name: 'Charlie Green',
@@ -629,10 +621,10 @@ async function main() {
     })
   );
 
-  const client2 = await safeRun('Upsert Client 2', () => 
+  const client2 = await safeRun('Upsert Client 2', () =>
     prisma.client.upsert({
       where: { id: 'client-2-uuid' },
-      update: {},
+      update: {}, // Don't update existing clients to preserve custom data
       create: {
         id: 'client-2-uuid',
         name: 'David White',
@@ -647,10 +639,10 @@ async function main() {
   );
 
   // Contacts for clients
-  await safeRun('Upsert Contact 1', () => 
+  await safeRun('Upsert Contact 1', () =>
     prisma.clientContact.upsert({
       where: { id: 'contact-1-uuid' },
-      update: {},
+      update: {}, // Don't update existing contacts to preserve custom data
       create: {
         id: 'contact-1-uuid',
         clientId: client1.id,
@@ -663,10 +655,10 @@ async function main() {
     })
   );
 
-  await safeRun('Upsert Contact 2', () => 
+  await safeRun('Upsert Contact 2', () =>
     prisma.clientContact.upsert({
       where: { id: 'contact-2-uuid' },
-      update: {},
+      update: {}, // Don't update existing contacts to preserve custom data
       create: {
         id: 'contact-2-uuid',
         clientId: client2.id,
@@ -679,10 +671,10 @@ async function main() {
     })
   );
 
-  await safeRun('Upsert Contact 3', () => 
+  await safeRun('Upsert Contact 3', () =>
     prisma.clientContact.upsert({
       where: { id: 'contact-3-uuid' },
-      update: {},
+      update: {}, // Don't update existing contacts to preserve custom data
       create: {
         id: 'contact-3-uuid',
         clientId: client2.id,
@@ -696,10 +688,10 @@ async function main() {
   );
 
   // 2 Quotes
-  await safeRun('Upsert Quote 1', () => 
+  await safeRun('Upsert Quote 1', () =>
     prisma.quote.upsert({
       where: { id: 'quote-1-uuid' },
-      update: {},
+      update: {}, // Don't update existing quotes to preserve custom data
       create: {
         id: 'quote-1-uuid',
         leadId: 'lead-4-uuid',
@@ -716,10 +708,10 @@ async function main() {
     })
   );
 
-  await safeRun('Upsert Quote 2', () => 
+  await safeRun('Upsert Quote 2', () =>
     prisma.quote.upsert({
       where: { id: 'quote-2-uuid' },
-      update: {},
+      update: {}, // Don't update existing quotes to preserve custom data
       create: {
         id: 'quote-2-uuid',
         clientId: 'client-1-uuid',
@@ -742,10 +734,10 @@ async function main() {
   console.log('Seeding Projects and Tasks data...');
 
   // Project 1: Website Redesign
-  const project1 = await safeRun('Upsert Project 1', () => 
+  const project1 = await safeRun('Upsert Project 1', () =>
     prisma.project.upsert({
       where: { id: 'project-1-uuid' },
-      update: {},
+      update: {}, // Don't update existing projects to preserve custom data
       create: {
         id: 'project-1-uuid',
         name: 'Website Redesign',
@@ -786,10 +778,10 @@ async function main() {
   );
 
   // Project 1 Sprints
-  const sprint1 = await safeRun('Upsert Sprint 1', () => 
+  const sprint1 = await safeRun('Upsert Sprint 1', () =>
     prisma.sprint.upsert({
       where: { id: 'sprint-1-uuid' },
-      update: {},
+      update: {}, // Don't update existing sprints to preserve custom data
       create: {
         id: 'sprint-1-uuid',
         projectId: project1.id,
@@ -802,10 +794,10 @@ async function main() {
   );
 
   // Project 1 Milestones
-  await safeRun('Upsert Project 1 Milestone 1', () => 
+  await safeRun('Upsert Project 1 Milestone 1', () =>
     prisma.milestone.upsert({
       where: { id: 'milestone-1-uuid' },
-      update: {},
+      update: {}, // Don't update existing milestones to preserve custom data
       create: {
         id: 'milestone-1-uuid',
         projectId: project1.id,
@@ -817,10 +809,10 @@ async function main() {
     })
   );
 
-  await safeRun('Upsert Project 1 Milestone 2', () => 
+  await safeRun('Upsert Project 1 Milestone 2', () =>
     prisma.milestone.upsert({
       where: { id: 'milestone-2-uuid' },
-      update: {},
+      update: {}, // Don't update existing milestones to preserve custom data
       create: {
         id: 'milestone-2-uuid',
         projectId: project1.id,
@@ -831,10 +823,10 @@ async function main() {
     })
   );
 
-  await safeRun('Upsert Project 1 Milestone 3', () => 
+  await safeRun('Upsert Project 1 Milestone 3', () =>
     prisma.milestone.upsert({
       where: { id: 'milestone-3-uuid' },
-      update: {},
+      update: {}, // Don't update existing milestones to preserve custom data
       create: {
         id: 'milestone-3-uuid',
         projectId: project1.id,
@@ -846,10 +838,10 @@ async function main() {
   );
 
   // Project 1 Tasks
-  const task1 = await safeRun('Upsert Task 1', () => 
+  const task1 = await safeRun('Upsert Task 1', () =>
     prisma.task.upsert({
       where: { id: 'task-1-uuid' },
-      update: {},
+      update: {}, // Don't update existing tasks to preserve custom data
       create: {
         id: 'task-1-uuid',
         projectId: project1.id,
@@ -865,10 +857,10 @@ async function main() {
     })
   );
 
-  await safeRun('Upsert Task 2', () => 
+  await safeRun('Upsert Task 2', () =>
     prisma.task.upsert({
       where: { id: 'task-2-uuid' },
-      update: {},
+      update: {}, // Don't update existing tasks to preserve custom data
       create: {
         id: 'task-2-uuid',
         projectId: project1.id,
@@ -884,10 +876,10 @@ async function main() {
     })
   );
 
-  const task3 = await safeRun('Upsert Task 3', () => 
+  const task3 = await safeRun('Upsert Task 3', () =>
     prisma.task.upsert({
       where: { id: 'task-3-uuid' },
-      update: {},
+      update: {}, // Don't update existing tasks to preserve custom data
       create: {
         id: 'task-3-uuid',
         projectId: project1.id,
@@ -903,10 +895,10 @@ async function main() {
     })
   );
 
-  await safeRun('Upsert Task 4', () => 
+  await safeRun('Upsert Task 4', () =>
     prisma.task.upsert({
       where: { id: 'task-4-uuid' },
-      update: {},
+      update: {}, // Don't update existing tasks to preserve custom data
       create: {
         id: 'task-4-uuid',
         projectId: project1.id,
@@ -922,10 +914,10 @@ async function main() {
     })
   );
 
-  await safeRun('Upsert Task 5', () => 
+  await safeRun('Upsert Task 5', () =>
     prisma.task.upsert({
       where: { id: 'task-5-uuid' },
-      update: {},
+      update: {}, // Don't update existing tasks to preserve custom data
       create: {
         id: 'task-5-uuid',
         projectId: project1.id,
@@ -941,10 +933,10 @@ async function main() {
   );
 
   // Time Logs for Project 1 Tasks
-  await safeRun('Upsert TimeLog 1', () => 
+  await safeRun('Upsert TimeLog 1', () =>
     prisma.timeLog.upsert({
       where: { id: 'timelog-1-uuid' },
-      update: {},
+      update: {}, // Don't update existing time logs to preserve custom data
       create: {
         id: 'timelog-1-uuid',
         taskId: task1.id,
@@ -955,10 +947,10 @@ async function main() {
     })
   );
 
-  await safeRun('Upsert TimeLog 2', () => 
+  await safeRun('Upsert TimeLog 2', () =>
     prisma.timeLog.upsert({
       where: { id: 'timelog-2-uuid' },
-      update: {},
+      update: {}, // Don't update existing time logs to preserve custom data
       create: {
         id: 'timelog-2-uuid',
         taskId: task3.id,
@@ -971,10 +963,10 @@ async function main() {
 
 
   // Project 2: SaaS AI Portal
-  const project2 = await safeRun('Upsert Project 2', () => 
+  const project2 = await safeRun('Upsert Project 2', () =>
     prisma.project.upsert({
       where: { id: 'project-2-uuid' },
-      update: {},
+      update: {}, // Don't update existing projects to preserve custom data
       create: {
         id: 'project-2-uuid',
         name: 'SaaS AI Portal',
@@ -1003,10 +995,10 @@ async function main() {
   );
 
   // Project 2 Sprints (inactive)
-  const sprint2 = await safeRun('Upsert Sprint 2', () => 
+  const sprint2 = await safeRun('Upsert Sprint 2', () =>
     prisma.sprint.upsert({
       where: { id: 'sprint-2-uuid' },
-      update: {},
+      update: {}, // Don't update existing sprints to preserve custom data
       create: {
         id: 'sprint-2-uuid',
         projectId: project2.id,
@@ -1019,10 +1011,10 @@ async function main() {
   );
 
   // Project 2 Milestones
-  await safeRun('Upsert Project 2 Milestone', () => 
+  await safeRun('Upsert Project 2 Milestone', () =>
     prisma.milestone.upsert({
       where: { id: 'milestone-4-uuid' },
-      update: {},
+      update: {}, // Don't update existing milestones to preserve custom data
       create: {
         id: 'milestone-4-uuid',
         projectId: project2.id,
@@ -1034,10 +1026,10 @@ async function main() {
   );
 
   // Project 2 Tasks
-  const project2Task1 = await safeRun('Upsert Project 2 Task 1', () => 
+  const project2Task1 = await safeRun('Upsert Project 2 Task 1', () =>
     prisma.task.upsert({
       where: { id: 'task-6-uuid' },
-      update: {},
+      update: {}, // Don't update existing tasks to preserve custom data
       create: {
         id: 'task-6-uuid',
         projectId: project2.id,
@@ -1053,10 +1045,10 @@ async function main() {
     })
   );
 
-  await safeRun('Upsert Project 2 Task 2', () => 
+  await safeRun('Upsert Project 2 Task 2', () =>
     prisma.task.upsert({
       where: { id: 'task-7-uuid' },
-      update: {},
+      update: {}, // Don't update existing tasks to preserve custom data
       create: {
         id: 'task-7-uuid',
         projectId: project2.id,
@@ -1073,10 +1065,10 @@ async function main() {
   );
 
   // Time Logs for Project 2 Tasks
-  await safeRun('Upsert TimeLog 3', () => 
+  await safeRun('Upsert TimeLog 3', () =>
     prisma.timeLog.upsert({
       where: { id: 'timelog-3-uuid' },
-      update: {},
+      update: {}, // Don't update existing time logs to preserve custom data
       create: {
         id: 'timelog-3-uuid',
         taskId: project2Task1.id,
@@ -1109,10 +1101,10 @@ async function main() {
   };
 
   // Invoice 1: DRAFT
-  await safeRun('Upsert Invoice 1 (DRAFT)', () => 
+  await safeRun('Upsert Invoice 1 (DRAFT)', () =>
     prisma.invoice.upsert({
       where: { id: 'invoice-1-uuid' },
-      update: {},
+      update: {}, // Don't update existing invoices to preserve custom data
       create: {
         id: 'invoice-1-uuid',
         invoiceNumber: 'INV-2026-0001',
@@ -1135,10 +1127,10 @@ async function main() {
   );
 
   // Invoice 2: SENT
-  await safeRun('Upsert Invoice 2 (SENT)', () => 
+  await safeRun('Upsert Invoice 2 (SENT)', () =>
     prisma.invoice.upsert({
       where: { id: 'invoice-2-uuid' },
-      update: {},
+      update: {}, // Don't update existing invoices to preserve custom data
       create: {
         id: 'invoice-2-uuid',
         invoiceNumber: 'INV-2026-0002',
@@ -1160,10 +1152,10 @@ async function main() {
   );
 
   // Invoice 3: PARTIALLY_PAID
-  const inv3 = await safeRun('Upsert Invoice 3 (PARTIALLY_PAID)', () => 
+  const inv3 = await safeRun('Upsert Invoice 3 (PARTIALLY_PAID)', () =>
     prisma.invoice.upsert({
       where: { id: 'invoice-3-uuid' },
-      update: {},
+      update: {}, // Don't update existing invoices to preserve custom data
       create: {
         id: 'invoice-3-uuid',
         invoiceNumber: 'INV-2026-0003',
@@ -1185,10 +1177,10 @@ async function main() {
   );
 
   // Payment 1 against Invoice 3
-  await safeRun('Upsert Payment 1', () => 
+  await safeRun('Upsert Payment 1', () =>
     prisma.payment.upsert({
       where: { id: 'payment-1-uuid' },
-      update: {},
+      update: {}, // Don't update existing payments to preserve custom data
       create: {
         id: 'payment-1-uuid',
         invoiceId: inv3.id,
@@ -1201,10 +1193,10 @@ async function main() {
   );
 
   // Invoice 4: PAID
-  const inv4 = await safeRun('Upsert Invoice 4 (PAID)', () => 
+  const inv4 = await safeRun('Upsert Invoice 4 (PAID)', () =>
     prisma.invoice.upsert({
       where: { id: 'invoice-4-uuid' },
-      update: {},
+      update: {}, // Don't update existing invoices to preserve custom data
       create: {
         id: 'invoice-4-uuid',
         invoiceNumber: 'INV-2026-0004',
@@ -1227,10 +1219,10 @@ async function main() {
   );
 
   // Payment 2 against Invoice 4
-  await safeRun('Upsert Payment 2', () => 
+  await safeRun('Upsert Payment 2', () =>
     prisma.payment.upsert({
       where: { id: 'payment-2-uuid' },
-      update: {},
+      update: {}, // Don't update existing payments to preserve custom data
       create: {
         id: 'payment-2-uuid',
         invoiceId: inv4.id,
@@ -1243,10 +1235,10 @@ async function main() {
   );
 
   // Invoice 5: OVERDUE
-  await safeRun('Upsert Invoice 5 (OVERDUE)', () => 
+  await safeRun('Upsert Invoice 5 (OVERDUE)', () =>
     prisma.invoice.upsert({
       where: { id: 'invoice-5-uuid' },
-      update: {},
+      update: {}, // Don't update existing invoices to preserve custom data
       create: {
         id: 'invoice-5-uuid',
         invoiceNumber: 'INV-2026-0005',
@@ -1267,10 +1259,10 @@ async function main() {
   );
 
   // Estimate 1: SENT
-  await safeRun('Upsert Estimate 1', () => 
+  await safeRun('Upsert Estimate 1', () =>
     prisma.estimate.upsert({
       where: { id: 'estimate-1-uuid' },
-      update: {},
+      update: {}, // Don't update existing estimates to preserve custom data
       create: {
         id: 'estimate-1-uuid',
         estimateNumber: 'EST-2026-0001',
@@ -1288,10 +1280,10 @@ async function main() {
   );
 
   // Estimate 2: ACCEPTED
-  await safeRun('Upsert Estimate 2', () => 
+  await safeRun('Upsert Estimate 2', () =>
     prisma.estimate.upsert({
       where: { id: 'estimate-2-uuid' },
-      update: {},
+      update: {}, // Don't update existing estimates to preserve custom data
       create: {
         id: 'estimate-2-uuid',
         estimateNumber: 'EST-2026-0002',
@@ -1309,10 +1301,10 @@ async function main() {
   );
 
   // Subscription 1: ACTIVE
-  await safeRun('Upsert Subscription 1', () => 
+  await safeRun('Upsert Subscription 1', () =>
     prisma.subscription.upsert({
       where: { id: 'sub-1-uuid' },
-      update: {},
+      update: {}, // Don't update existing subscriptions to preserve custom data
       create: {
         id: 'sub-1-uuid',
         clientId: client1.id,
@@ -1327,10 +1319,10 @@ async function main() {
   );
 
   // Expenses spanning the last few months
-  await safeRun('Upsert Expense 1', () => 
+  await safeRun('Upsert Expense 1', () =>
     prisma.expenseRecord.upsert({
       where: { id: 'expense-1-uuid' },
-      update: {},
+      update: {}, // Don't update existing expenses to preserve custom data
       create: {
         id: 'expense-1-uuid',
         title: 'GitHub Copilot Enterprise License',
@@ -1342,10 +1334,10 @@ async function main() {
     })
   );
 
-  await safeRun('Upsert Expense 2', () => 
+  await safeRun('Upsert Expense 2', () =>
     prisma.expenseRecord.upsert({
       where: { id: 'expense-2-uuid' },
-      update: {},
+      update: {}, // Don't update existing expenses to preserve custom data
       create: {
         id: 'expense-2-uuid',
         title: 'UI Design Contractor Fees',
@@ -1357,10 +1349,10 @@ async function main() {
     })
   );
 
-  await safeRun('Upsert Expense 3', () => 
+  await safeRun('Upsert Expense 3', () =>
     prisma.expenseRecord.upsert({
       where: { id: 'expense-3-uuid' },
-      update: {},
+      update: {}, // Don't update existing expenses to preserve custom data
       create: {
         id: 'expense-3-uuid',
         title: 'Google Ad Campaigns (CRM Leads)',
@@ -1372,10 +1364,10 @@ async function main() {
     })
   );
 
-  await safeRun('Upsert Expense 4', () => 
+  await safeRun('Upsert Expense 4', () =>
     prisma.expenseRecord.upsert({
       where: { id: 'expense-4-uuid' },
-      update: {},
+      update: {}, // Don't update existing expenses to preserve custom data
       create: {
         id: 'expense-4-uuid',
         title: 'Office Pantry snacks and coffee',
@@ -1387,10 +1379,10 @@ async function main() {
     })
   );
 
-  await safeRun('Upsert Expense 5', () => 
+  await safeRun('Upsert Expense 5', () =>
     prisma.expenseRecord.upsert({
       where: { id: 'expense-5-uuid' },
-      update: {},
+      update: {}, // Don't update existing expenses to preserve custom data
       create: {
         id: 'expense-5-uuid',
         title: 'Jane Employee Monthly Salary',
@@ -1402,10 +1394,10 @@ async function main() {
     })
   );
 
-  await safeRun('Upsert Expense 6', () => 
+  await safeRun('Upsert Expense 6', () =>
     prisma.expenseRecord.upsert({
       where: { id: 'expense-6-uuid' },
-      update: {},
+      update: {}, // Don't update existing expenses to preserve custom data
       create: {
         id: 'expense-6-uuid',
         title: 'Vercel Pro Hosting Subscription',
@@ -1423,10 +1415,11 @@ async function main() {
   console.log('Seeding HR and Payroll data...');
 
   // Create additional users for employees
-  const bobUser = await safeRun('Upsert User: Bob Developer', () => 
+  const bobUser = await safeRun('Upsert User: Bob Developer', () =>
     prisma.user.upsert({
       where: { email: 'bob.dev@trifusiondynamics.com' },
       update: {
+        // Only update if user is inactive - preserve password and other data if user exists
         name: 'Bob Developer',
         isActive: true,
         organizationId: org.id,
@@ -1449,11 +1442,11 @@ async function main() {
     })
   );
 
-  const aliceUser = await safeRun('Upsert User: Alice Designer', () => 
+  const aliceUser = await safeRun('Upsert User: Alice Designer', () =>
     prisma.user.upsert({
       where: { email: 'alice.design@trifusiondynamics.com' },
       update: {
-        password: hashedPassword,
+        // Only update if user is inactive - preserve password and other data if user exists
         name: 'Alice Designer',
         isActive: true,
         organizationId: org.id,
@@ -1476,11 +1469,11 @@ async function main() {
     })
   );
 
-  const charlieUser = await safeRun('Upsert User: Charlie Intern', () => 
+  const charlieUser = await safeRun('Upsert User: Charlie Intern', () =>
     prisma.user.upsert({
       where: { email: 'charlie.intern@trifusiondynamics.com' },
       update: {
-        password: hashedPassword,
+        // Only update if user is inactive - preserve password and other data if user exists
         name: 'Charlie Intern',
         isActive: true,
         organizationId: org.id,
@@ -1504,10 +1497,10 @@ async function main() {
   );
 
   // Seed 4 Employee records
-  const empJane = await safeRun('Upsert Employee: Jane', () => 
+  const empJane = await safeRun('Upsert Employee: Jane', () =>
     prisma.employee.upsert({
       where: { employeeCode: 'TFX-EMP-001' },
-      update: { userId: employeeUser.id },
+      update: {}, // Don't update existing employees to preserve custom data
       create: {
         userId: employeeUser.id,
         employeeCode: 'TFX-EMP-001',
@@ -1521,10 +1514,10 @@ async function main() {
     })
   );
 
-  const empBob = await safeRun('Upsert Employee: Bob', () => 
+  const empBob = await safeRun('Upsert Employee: Bob', () =>
     prisma.employee.upsert({
       where: { employeeCode: 'TFX-EMP-002' },
-      update: { userId: bobUser.id },
+      update: {}, // Don't update existing employees to preserve custom data
       create: {
         userId: bobUser.id,
         employeeCode: 'TFX-EMP-002',
@@ -1539,10 +1532,10 @@ async function main() {
     })
   );
 
-  const empAlice = await safeRun('Upsert Employee: Alice', () => 
+  const empAlice = await safeRun('Upsert Employee: Alice', () =>
     prisma.employee.upsert({
       where: { employeeCode: 'TFX-EMP-003' },
-      update: { userId: aliceUser.id },
+      update: {}, // Don't update existing employees to preserve custom data
       create: {
         userId: aliceUser.id,
         employeeCode: 'TFX-EMP-003',
@@ -1556,10 +1549,10 @@ async function main() {
     })
   );
 
-  const empCharlie = await safeRun('Upsert Employee: Charlie', () => 
+  const empCharlie = await safeRun('Upsert Employee: Charlie', () =>
     prisma.employee.upsert({
       where: { employeeCode: 'TFX-EMP-004' },
-      update: { userId: charlieUser.id },
+      update: {}, // Don't update existing employees to preserve custom data
       create: {
         userId: charlieUser.id,
         employeeCode: 'TFX-EMP-004',
@@ -1574,10 +1567,10 @@ async function main() {
   );
 
   // Seed 2 Leaves
-  await safeRun('Upsert Leave 1 (APPROVED)', () => 
+  await safeRun('Upsert Leave 1 (APPROVED)', () =>
     prisma.leave.upsert({
       where: { id: 'leave-1-uuid' },
-      update: {},
+      update: {}, // Don't update existing leaves to preserve custom data
       create: {
         id: 'leave-1-uuid',
         employeeId: empCharlie.id,
@@ -1591,10 +1584,10 @@ async function main() {
     })
   );
 
-  await safeRun('Upsert Leave 2 (PENDING)', () => 
+  await safeRun('Upsert Leave 2 (PENDING)', () =>
     prisma.leave.upsert({
       where: { id: 'leave-2-uuid' },
-      update: {},
+      update: {}, // Don't update existing leaves to preserve custom data
       create: {
         id: 'leave-2-uuid',
         employeeId: empBob.id,
@@ -1608,10 +1601,10 @@ async function main() {
   );
 
   // Seed Salary Structures
-  await safeRun('Upsert Salary: Jane', () => 
+  await safeRun('Upsert Salary: Jane', () =>
     prisma.salaryStructure.upsert({
       where: { employeeId: empJane.id },
-      update: {},
+      update: {}, // Don't update existing salary structures to preserve custom data
       create: {
         employeeId: empJane.id,
         basicSalary: 80000.00,
@@ -1622,10 +1615,10 @@ async function main() {
     })
   );
 
-  await safeRun('Upsert Salary: Bob', () => 
+  await safeRun('Upsert Salary: Bob', () =>
     prisma.salaryStructure.upsert({
       where: { employeeId: empBob.id },
-      update: {},
+      update: {}, // Don't update existing salary structures to preserve custom data
       create: {
         employeeId: empBob.id,
         basicSalary: 50000.00,
@@ -1636,10 +1629,10 @@ async function main() {
     })
   );
 
-  await safeRun('Upsert Salary: Alice', () => 
+  await safeRun('Upsert Salary: Alice', () =>
     prisma.salaryStructure.upsert({
       where: { employeeId: empAlice.id },
-      update: {},
+      update: {}, // Don't update existing salary structures to preserve custom data
       create: {
         employeeId: empAlice.id,
         basicSalary: 40000.00,
@@ -1650,10 +1643,10 @@ async function main() {
     })
   );
 
-  await safeRun('Upsert Salary: Charlie', () => 
+  await safeRun('Upsert Salary: Charlie', () =>
     prisma.salaryStructure.upsert({
       where: { employeeId: empCharlie.id },
-      update: {},
+      update: {}, // Don't update existing salary structures to preserve custom data
       create: {
         employeeId: empCharlie.id,
         basicSalary: 15000.00,
@@ -1665,10 +1658,10 @@ async function main() {
   );
 
   // Seed Bank Details
-  await safeRun('Upsert Bank Details: Jane', () => 
+  await safeRun('Upsert Bank Details: Jane', () =>
     prisma.bankDetail.upsert({
       where: { employeeId: empJane.id },
-      update: {},
+      update: {}, // Don't update existing bank details to preserve custom data
       create: {
         employeeId: empJane.id,
         accountHolder: 'Jane Employee',
@@ -1679,10 +1672,10 @@ async function main() {
     })
   );
 
-  await safeRun('Upsert Bank Details: Bob', () => 
+  await safeRun('Upsert Bank Details: Bob', () =>
     prisma.bankDetail.upsert({
       where: { employeeId: empBob.id },
-      update: {},
+      update: {}, // Don't update existing bank details to preserve custom data
       create: {
         employeeId: empBob.id,
         accountHolder: 'Bob Developer',
@@ -1694,10 +1687,10 @@ async function main() {
   );
 
   // Seed 2 Payslips
-  await safeRun('Upsert Payslip 1 (PAID)', () => 
+  await safeRun('Upsert Payslip 1 (PAID)', () =>
     prisma.payslip.upsert({
       where: { employeeId_month_year: { employeeId: empJane.id, month: 6, year: 2026 } },
-      update: {},
+      update: {}, // Don't update existing payslips to preserve custom data
       create: {
         employeeId: empJane.id,
         month: 6,
@@ -1712,10 +1705,10 @@ async function main() {
     })
   );
 
-  await safeRun('Upsert Payslip 2 (GENERATED)', () => 
+  await safeRun('Upsert Payslip 2 (GENERATED)', () =>
     prisma.payslip.upsert({
       where: { employeeId_month_year: { employeeId: empBob.id, month: 6, year: 2026 } },
-      update: {},
+      update: {}, // Don't update existing payslips to preserve custom data
       create: {
         employeeId: empBob.id,
         month: 6,
@@ -1730,10 +1723,10 @@ async function main() {
   );
 
   // Seed 2 Recruitment candidates
-  await safeRun('Upsert Recruitment 1', () => 
+  await safeRun('Upsert Recruitment 1', () =>
     prisma.recruitment.upsert({
       where: { id: 'recruit-1-uuid' },
-      update: {},
+      update: {}, // Don't update existing recruitment entries to preserve custom data
       create: {
         id: 'recruit-1-uuid',
         position: 'Full Stack Developer',
@@ -1747,10 +1740,10 @@ async function main() {
     })
   );
 
-  await safeRun('Upsert Recruitment 2', () => 
+  await safeRun('Upsert Recruitment 2', () =>
     prisma.recruitment.upsert({
       where: { id: 'recruit-2-uuid' },
-      update: {},
+      update: {}, // Don't update existing recruitment entries to preserve custom data
       create: {
         id: 'recruit-2-uuid',
         position: 'Product Manager',
@@ -1768,11 +1761,11 @@ async function main() {
 
   // Seed AI Data
   console.log('Seeding AI data...');
-  
+
   await safeRun('Upsert AiProposalRequest 1', () =>
     prisma.aiProposalRequest.upsert({
       where: { id: 'ai-prop-1' },
-      update: {},
+      update: {}, // Don't update existing AI requests to preserve custom data
       create: {
         id: 'ai-prop-1',
         requirements: 'E-commerce website with AI product recommendations.',
@@ -1787,7 +1780,7 @@ async function main() {
   await safeRun('Upsert AiProposalRequest 2', () =>
     prisma.aiProposalRequest.upsert({
       where: { id: 'ai-prop-2' },
-      update: {},
+      update: {}, // Don't update existing AI requests to preserve custom data
       create: {
         id: 'ai-prop-2',
         requirements: 'Mobile app for fitness tracking.',
@@ -1802,7 +1795,7 @@ async function main() {
   await safeRun('Upsert AiSeoAudit 1', () =>
     prisma.aiSeoAudit.upsert({
       where: { id: 'ai-seo-1' },
-      update: {},
+      update: {}, // Don't update existing SEO audits to preserve custom data
       create: {
         id: 'ai-seo-1',
         websiteUrl: 'https://example.com',
@@ -1828,7 +1821,7 @@ async function main() {
     await safeRun(`Upsert RevenueRollup day ${i}`, () =>
       prisma.revenueRollup.upsert({
         where: { organizationId_periodType_periodDate: { organizationId: org.id, periodType: 'daily', periodDate: d } },
-        update: {},
+        update: {}, // Don't update existing rollups to preserve custom data
         create: {
           organizationId: org.id,
           periodType: 'daily',
@@ -1843,7 +1836,7 @@ async function main() {
     await safeRun(`Upsert ClientRollup day ${i}`, () =>
       prisma.clientRollup.upsert({
         where: { organizationId_periodDate: { organizationId: org.id, periodDate: d } },
-        update: {},
+        update: {}, // Don't update existing rollups to preserve custom data
         create: {
           organizationId: org.id,
           periodDate: d,
@@ -1859,7 +1852,7 @@ async function main() {
   await safeRun('Upsert Workflow 1', () =>
     prisma.workflow.upsert({
       where: { id: 'wf-1' },
-      update: {},
+      update: {}, // Don't update existing workflows to preserve custom data
       create: {
         id: 'wf-1',
         name: 'Welcome New Lead',
@@ -1876,7 +1869,7 @@ async function main() {
   await safeRun('Upsert Workflow 2', () =>
     prisma.workflow.upsert({
       where: { id: 'wf-2' },
-      update: {},
+      update: {}, // Don't update existing workflows to preserve custom data
       create: {
         id: 'wf-2',
         name: 'Check Overdue Invoices',

@@ -64,7 +64,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
       if (currentUser) {
         const primary = getPrimaryRole(currentUser.roles);
-        if (primary !== "client") {
+        if (primary !== "client" && primary !== "admin" && primary !== "super_admin") {
           router.replace(getRoleHomeRoute(primary));
           return;
         }

@@ -56,11 +56,44 @@ export default function AdminLayout({
 
       if (currentUser) {
         const primary = getPrimaryRole(currentUser.roles);
-        const adminRoles = ['super_admin', 'admin'];
-        if (!adminRoles.includes(primary)) {
-          router.replace(getRoleHomeRoute(primary));
+        const path = typeof window !== "undefined" ? window.location.pathname : "";
+
+        // Super Admin and Admin have full access to all admin group routes
+        if (primary === "super_admin" || primary === "admin") {
+          setIsInitializing(false);
           return;
         }
+
+        // Sales Agent is allowed on CRM & Leads Inbox
+        if (primary === "sales_agent" && (path.startsWith("/crm") || path.startsWith("/leads-inbox"))) {
+          setIsInitializing(false);
+          return;
+        }
+
+        // Support Agent is allowed on Tickets
+        if (primary === "support_agent" && path.startsWith("/tickets")) {
+          setIsInitializing(false);
+          return;
+        }
+
+        // HR Agent is allowed on Payroll
+        if (primary === "hr_agent" && path.startsWith("/payroll")) {
+          setIsInitializing(false);
+          return;
+        }
+
+        // General Agent is allowed on Tickets, CRM, Leads Inbox
+        if (primary === "agent" && (path.startsWith("/tickets") || path.startsWith("/crm") || path.startsWith("/leads-inbox"))) {
+          setIsInitializing(false);
+          return;
+        }
+
+        // Otherwise redirect to their role's dedicated home route
+        const homeRoute = getRoleHomeRoute(primary);
+        if (path !== homeRoute) {
+          router.replace(homeRoute);
+        }
+        return;
       }
       setIsInitializing(false);
     }
