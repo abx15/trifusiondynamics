@@ -76,7 +76,7 @@ apiClient.interceptors.response.use(
         useAuthStore.getState().clearAuth();
         
         if (typeof window !== "undefined") {
-          // Clear cookies explicitly
+          // Clear cookies explicitly with consistent settings
           Cookies.remove("access_token", { path: "/", sameSite: "lax" });
           Cookies.remove("access_token", { path: "/", sameSite: "strict" });
           Cookies.remove("access_token", { path: "/" });

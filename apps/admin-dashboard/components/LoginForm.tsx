@@ -218,9 +218,10 @@ export function LoginForm() {
       setSuccess(`Authenticated as ${loggedInUser.name}! Routing to ${targetRoute}...`);
       toast.success(`Welcome back, ${loggedInUser.name}!`);
 
+      // Add a small delay to ensure cookies are set before redirect
       setTimeout(() => {
         router.replace(targetRoute);
-      }, 400);
+      }, 500);
     } catch (err: any) {
       const serverMsg = err?.response?.data?.message || err?.message || "Login failed";
       if (err?.response?.status === 429 || serverMsg.includes("Too many failed attempts")) {

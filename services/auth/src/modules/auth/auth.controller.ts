@@ -44,10 +44,12 @@ export class AuthController {
     const isProd = process.env.NODE_ENV === 'production';
     const cookieDomain = process.env.COOKIE_DOMAIN || undefined;
 
+    // For production with separate Vercel domains, use lax SameSite and no domain (host-only cookies)
+    // This allows cookies to work on the same domain while maintaining security
     const cookieOptions: CookieOptions = {
       httpOnly: true,
       secure: isProd,
-      sameSite: isProd && !cookieDomain ? 'none' : 'lax',
+      sameSite: 'lax', // Changed from 'none' to 'lax' for better compatibility
       path: '/',
       ...(cookieDomain ? { domain: cookieDomain } : {}),
     };
@@ -70,7 +72,7 @@ export class AuthController {
     const clearOptions: CookieOptions = {
       httpOnly: true,
       secure: isProd,
-      sameSite: isProd && !cookieDomain ? 'none' : 'lax',
+      sameSite: 'lax', // Changed from 'none' to 'lax' for better compatibility
       path: '/',
       ...(cookieDomain ? { domain: cookieDomain } : {}),
     };
