@@ -47,7 +47,9 @@ export default function SuperAdminOrganizationsPage() {
       setIsLoading(true);
       const res = await apiClient.get("/users/organizations");
       if (res.data) {
-        setOrganizations(res.data);
+        // Handle both paginated response and direct array
+        const orgsData = Array.isArray(res.data) ? res.data : (res.data.data || []);
+        setOrganizations(orgsData);
       }
     } catch (err: any) {
       console.error("Failed to load organizations:", err);
