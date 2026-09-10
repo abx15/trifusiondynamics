@@ -123,6 +123,18 @@ export class UsersController {
     return this.usersService.updateUser(id, user.orgId, dto, isSuper);
   }
 
+  @Patch(':id/approve')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermission('hr:write')
+  async approveUser(
+    @Param('id') id: string,
+    @Body() body: { roles: string[] },
+    @CurrentUser() user: JwtPayload,
+  ) {
+    const isSuper = isSuperAdminUser(user);
+    return this.usersService.approveUser(id, user.orgId, body.roles, isSuper);
+  }
+
   @Delete(':id')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @RequirePermission('hr:write')

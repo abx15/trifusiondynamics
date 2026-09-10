@@ -58,7 +58,7 @@ export function RegisterForm() {
     setIsLoading(true);
 
     try {
-      // 1. Submit Registration
+      // 1. Submit Registration Request
       await apiClient.post("/auth/register", {
         organizationName: orgName,
         name,
@@ -66,30 +66,9 @@ export function RegisterForm() {
         password,
       });
 
-      // 2. Auto-Login
-      const loginRes = await apiClient.post("/auth/login", { email, password });
-      const { accessToken, refreshToken, user: returnedUser } = loginRes.data;
-
-      let finalUser = returnedUser;
-      if (!finalUser && accessToken) {
-        const decoded = parseJwt(accessToken);
-        finalUser = {
-          id: decoded?.sub || "admin_id",
-          email: decoded?.email || email,
-          name: decoded?.name || name || "System Admin",
-          isActive: true,
-          organizationId: decoded?.orgId || "org_id",
-          roles: decoded?.roles || ["admin"],
-          permissions: decoded?.permissions || [],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-      }
-
-      setAuth(accessToken, finalUser);
-
-      toast.success("Organization registered and logged in successfully!");
-      router.push("/dashboard");
+      // 2. Show success message and redirect to login
+      toast.success("Registration submitted successfully! Your account is pending admin approval.");
+      router.push("/login");
     } catch (err: any) {
       console.error("Registration error:", err);
       setError(

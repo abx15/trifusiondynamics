@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/lib/toast";
-import { UserCheck, ShieldAlert, BadgeCheck, CircleAlert, Crown, Users, Briefcase, User, ChevronDown, ChevronRight, UserPlus, Edit3 } from "lucide-react";
+import { UserCheck, ShieldAlert, BadgeCheck, CircleAlert, Crown, Users, Briefcase, User, ChevronDown, ChevronRight, UserPlus, Edit3, X, Check } from "lucide-react";
 import apiClient from "@/lib/api-client";
 import { UserFormSheet } from "@/components/UserFormSheet";
 
@@ -53,9 +53,14 @@ export default function UsersSettingsPage() {
     executives: true,
     agents: true,
     clients: true,
+    pending: true,
   });
   const [sheetOpen, setSheetOpen] = React.useState(false);
   const [editingUser, setEditingUser] = React.useState<Member | null>(null);
+  const [approvingUser, setApprovingUser] = React.useState<Member | null>(null);
+  const [approvalRoles, setApprovalRoles] = React.useState<string[]>(['employee']);
+  const [showPasswordDialog, setShowPasswordDialog] = React.useState(false);
+  const [generatedPassword, setGeneratedPassword] = React.useState<string>('');
 
   const fetchUsers = async () => {
     try {
@@ -108,6 +113,44 @@ export default function UsersSettingsPage() {
     toast.success(`Activated team member: ${name}`);
   };
 
+  const handleApproveUser = async (member: Member) => {
+    if (!isAdmin) {
+      toast.error("Access denied: Admin permissions required");
+      return;
+    }
+    
+    setApprovingUser(member);
+    setShowPasswordDialog(true);
+  };
+
+  const confirmApproval = async () => {
+    if (!approvingUser) return;
+
+    try {
+      const response = await apiClient.patch(`/users/${approvingUser.id}/approve`, {
+        roles: approvalRoles
+      });
+
+      setGeneratedPassword(response.data.tempPassword);
+      setShowPasswordDialog(false);
+      
+      toast.success(`User approved! Login credentials: ${approvingUser.email} / ${response.data.tempPassword}`);
+      
+      // Copy password to clipboard
+      if (typeof window !== 'undefined') {
+        await navigator.clipboard.writeText(response.data.tempPassword);
+        toast.info("Password copied to clipboard");
+      }
+
+      fetchUsers();
+    } catch (error: any) {
+      console.error("Approval error:", error);
+      toast.error(error.response?.data?.message || "Failed to approve user");
+    } finally {
+      setApprovingUser(null);
+    }
+  };
+
   const toggleGroup = (group: string) => {
     setExpandedGroups(prev => ({
       ...prev,
@@ -117,6 +160,7 @@ export default function UsersSettingsPage() {
 
   const groupedUsers = React.useMemo(() => {
     const groups: Record<string, Member[]> = {
+      pending: [],
       executives: [],
       agents: [],
       clients: [],
@@ -124,6 +168,13 @@ export default function UsersSettingsPage() {
 
     members.forEach(member => {
       const userRoles = member.roles.map(r => r.role.name);
+      
+      // Pending users are inactive users with no roles
+      if (!member.isActive && userRoles.length === 0) {
+        groups.pending.push(member);
+        return;
+      }
+
       const hasExecutiveRole = userRoles.some(role =>
         ['superadmin', 'super_admin', 'admin'].includes(role)
       );
@@ -196,33 +247,49 @@ export default function UsersSettingsPage() {
             )}
             {isAdmin && (
               <div className="flex gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 px-2 text-xs"
-                  onClick={() => handleEdit(member)}
-                >
-                  <Edit3 className="h-3.5 w-3.5 mr-1" />
-                  Edit
-                </Button>
-                {member.isActive ? (
+                {!member.isActive && member.roles.length === 0 ? (
+                  // Pending user - show approve button
                   <Button
-                    variant="ghost"
+                    variant="default"
                     size="sm"
-                    className="h-7 px-2 text-xs"
-                    onClick={() => handleDeactivate(member.id, member.name)}
+                    className="h-7 px-2 text-xs bg-emerald-600 hover:bg-emerald-700"
+                    onClick={() => handleApproveUser(member)}
                   >
-                    Deactivate
+                    <BadgeCheck className="h-3.5 w-3.5 mr-1" />
+                    Approve
                   </Button>
                 ) : (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 px-2 text-xs"
-                    onClick={() => handleActivate(member.id, member.name)}
-                  >
-                    Activate
-                  </Button>
+                  // Active user - show edit/deactivate buttons
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => handleEdit(member)}
+                    >
+                      <Edit3 className="h-3.5 w-3.5 mr-1" />
+                      Edit
+                    </Button>
+                    {member.isActive ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => handleDeactivate(member.id, member.name)}
+                      >
+                        Deactivate
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => handleActivate(member.id, member.name)}
+                      >
+                        Activate
+                      </Button>
+                    )}
+                  </>
                 )}
               </div>
             )}
@@ -282,6 +349,37 @@ export default function UsersSettingsPage() {
             </div>
           ) : (
             <div className="space-y-4">
+              {/* Pending Users Group */}
+              {groupedUsers.pending.length > 0 && (
+                <div className="border border-amber-200 dark:border-amber-800 rounded-lg overflow-hidden">
+                  <button
+                    onClick={() => toggleGroup('pending')}
+                    className="w-full flex items-center justify-between p-4 bg-amber-50 dark:bg-amber-950/20 hover:bg-amber-100 dark:hover:bg-amber-950/30 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <CircleAlert className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                      <div className="text-left">
+                        <h3 className="font-semibold text-amber-900 dark:text-amber-100">Pending Approvals</h3>
+                        <p className="text-xs text-amber-600 dark:text-amber-400">Users awaiting admin approval</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-2 py-1 rounded-full">
+                        {groupedUsers.pending.length}
+                      </span>
+                      {expandedGroups.pending ? <ChevronDown className="h-4 w-4 text-amber-600" /> : <ChevronRight className="h-4 w-4 text-amber-600" />}
+                    </div>
+                  </button>
+                  {expandedGroups.pending && (
+                    <div className="divide-y divide-amber-100 dark:divide-amber-900/30">
+                      {groupedUsers.pending.map((member) => (
+                        <UserRow key={member.id} member={member} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Executives Group */}
               <div className="border border-purple-200 dark:border-purple-800 rounded-lg overflow-hidden">
                 <button
@@ -391,6 +489,64 @@ export default function UsersSettingsPage() {
         user={editingUser}
         onSuccess={handleSuccess}
       />
+
+      {/* User Approval Dialog */}
+      {showPasswordDialog && approvingUser && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-zinc-900 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Approve User</h3>
+              <button 
+                onClick={() => setShowPasswordDialog(false)}
+                className="text-slate-500 hover:text-slate-700"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                <p className="text-sm text-amber-800 dark:text-amber-200">
+                  You are about to approve <strong>{approvingUser.name}</strong> ({approvingUser.email})
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Assign Role</label>
+                <select
+                  value={approvalRoles[0]}
+                  onChange={(e) => setApprovalRoles([e.target.value])}
+                  className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded-md bg-white dark:bg-zinc-800"
+                >
+                  <option value="employee">Employee</option>
+                  <option value="agent">Agent</option>
+                  <option value="sales_agent">Sales Agent</option>
+                  <option value="support_agent">Support Agent</option>
+                  <option value="hr_agent">HR Agent</option>
+                  <option value="admin">Admin</option>
+                  <option value="super_admin">Super Admin</option>
+                </select>
+              </div>
+
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setShowPasswordDialog(false)}
+                  className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-md"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmApproval}
+                  className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-md flex items-center gap-2"
+                >
+                  <Check className="h-4 w-4" />
+                  Approve & Generate Password
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

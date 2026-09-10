@@ -257,6 +257,86 @@ export class UsersService {
     return updatedUser;
   }
 
+  async approveUser(id: string, orgId: string, roles: string[], isSuperAdmin = false) {
+    const user = await this.prisma.user.findFirst({
+      where: isSuperAdmin ? { id } : { id, organizationId: orgId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Generate temporary password
+    const tempPassword = process.env.DEFAULT_TEMP_PASSWORD;
+    if (!tempPassword) {
+      throw new Error('DEFAULT_TEMP_PASSWORD environment variable must be set');
+    }
+    const hashedPassword = await bcrypt.hash(tempPassword, 12);
+
+    // Activate user and set temporary password
+    const updatedUser = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.user.update({
+        where: { id },
+        data: {
+          isActive: true,
+          mustChangePassword: true,
+          password: hashedPassword,
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          phone: true,
+          isActive: true,
+          mustChangePassword: true,
+          linkedClientId: true,
+          organizationId: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      // Remove existing roles
+      await tx.userRole.deleteMany({
+        where: { userId: id },
+      });
+
+      // Assign new roles
+      for (const roleName of roles) {
+        const role = await tx.role.findUnique({
+          where: { name: roleName },
+        });
+
+        if (role) {
+          await tx.userRole.create({
+            data: { userId: id, roleId: role.id },
+          });
+        }
+      }
+
+      return updated;
+    });
+
+    this.logger.log(
+      `[USER APPROVED] Email: ${user.email} | Roles: ${roles.join(', ')} | By Admin`,
+    );
+
+    return {
+      id: updatedUser.id,
+      email: updatedUser.email,
+      name: updatedUser.name,
+      phone: updatedUser.phone,
+      isActive: updatedUser.isActive,
+      mustChangePassword: updatedUser.mustChangePassword,
+      linkedClientId: updatedUser.linkedClientId,
+      organizationId: updatedUser.organizationId,
+      tempPassword: tempPassword, // Return temp password for admin to share with user
+      roles: roles,
+      createdAt: updatedUser.createdAt,
+      updatedAt: updatedUser.updatedAt,
+    };
+  }
+
   async deleteUser(id: string, orgId: string, isSuperAdmin = false) {
     const user = await this.prisma.user.findFirst({
       where: isSuperAdmin ? { id } : { id, organizationId: orgId },

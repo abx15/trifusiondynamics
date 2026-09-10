@@ -216,42 +216,18 @@ export class AuthService {
           name: dto.name,
           password: hashedPassword,
           organizationId: org.id,
-          isActive: true,
+          isActive: false, // User is inactive until admin approval
           mustChangePassword: false,
         },
       });
 
-      let adminRole = await tx.role.findUnique({ where: { name: 'admin' } });
-      if (!adminRole) {
-        adminRole = await tx.role.create({
-          data: { name: 'admin', description: 'Administrator' },
-        });
-      }
-
-      await tx.userRole.create({
-        data: { userId: user.id, roleId: adminRole.id },
-      });
-
-      const allPermissions = await tx.permission.findMany();
-      for (const perm of allPermissions) {
-        await tx.rolePermission.upsert({
-          where: {
-            roleId_permissionId: {
-              roleId: adminRole.id,
-              permissionId: perm.id,
-            },
-          },
-          update: {},
-          create: { roleId: adminRole.id, permissionId: perm.id },
-        });
-      }
-
-      const permissionsList = allPermissions.map((p) => p.action);
+      // Don't assign any roles initially - admin will assign roles after approval
+      const permissionsList: string[] = [];
       const jwtPayload: JwtPayload = {
         sub: user.id,
         email: user.email,
         orgId: user.organizationId,
-        roles: ['admin'],
+        roles: [],
         permissions: permissionsList,
       };
 
@@ -277,7 +253,7 @@ export class AuthService {
           isActive: user.isActive,
           mustChangePassword: user.mustChangePassword,
           organizationId: user.organizationId,
-          roles: ['admin'],
+          roles: [],
           permissions: permissionsList,
           createdAt: user.createdAt.toISOString(),
           updatedAt: user.updatedAt.toISOString(),
