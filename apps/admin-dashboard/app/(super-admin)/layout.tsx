@@ -55,7 +55,11 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
 
       if (currentUser) {
         const primary = getPrimaryRole(currentUser.roles);
+        console.log("Super Admin Layout - User roles:", currentUser.roles);
+        console.log("Super Admin Layout - Primary role:", primary);
+        
         if (primary !== "super_admin") {
+          console.log("Redirecting non-super admin to:", getRoleHomeRoute(primary));
           router.replace(getRoleHomeRoute(primary));
           return;
         }

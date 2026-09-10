@@ -170,7 +170,14 @@ export function LoginForm() {
       if (storedUser) {
         const primaryRole = getPrimaryRole(storedUser.roles);
         const homeRoute = callbackUrl || getRoleHomeRoute(primaryRole);
-        router.replace(homeRoute);
+        
+        console.log("Auto-redirect detected - User:", storedUser.name);
+        console.log("User roles:", storedUser.roles);
+        console.log("Primary role:", primaryRole);
+        console.log("Home route:", homeRoute);
+        
+        // Use window.location for full page reload to ensure proper routing
+        window.location.href = homeRoute;
       }
     } catch (err) {
       console.error("Auth check error:", err);
@@ -215,13 +222,21 @@ export function LoginForm() {
       const primaryRole = getPrimaryRole(loggedInUser.roles);
       const targetRoute = callbackUrl || getRoleHomeRoute(primaryRole);
 
+      console.log("Login successful - User:", loggedInUser);
+      console.log("User roles:", loggedInUser.roles);
+      console.log("Primary role:", primaryRole);
+      console.log("Target route:", targetRoute);
+      console.log("Callback URL:", callbackUrl);
+
       setSuccess(`Authenticated as ${loggedInUser.name}! Routing to ${targetRoute}...`);
       toast.success(`Welcome back, ${loggedInUser.name}!`);
 
       // Add a small delay to ensure cookies are set before redirect
       setTimeout(() => {
-        router.replace(targetRoute);
-      }, 500);
+        console.log("Executing redirect to:", targetRoute);
+        // Use window.location for full page reload to ensure cookies are properly set
+        window.location.href = targetRoute;
+      }, 1000);
     } catch (err: any) {
       const serverMsg = err?.response?.data?.message || err?.message || "Login failed";
       if (err?.response?.status === 429 || serverMsg.includes("Too many failed attempts")) {
