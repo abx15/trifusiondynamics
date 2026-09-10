@@ -58,7 +58,8 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
         console.log("Super Admin Layout - User roles:", currentUser.roles);
         console.log("Super Admin Layout - Primary role:", primary);
         
-        if (primary !== "super_admin") {
+        // Only redirect if not already on super-admin route and role doesn't match
+        if (primary !== "super_admin" && !pathname.includes("/super-admin")) {
           console.log("Redirecting non-super admin to:", getRoleHomeRoute(primary));
           router.replace(getRoleHomeRoute(primary));
           return;
@@ -68,7 +69,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
     }
 
     restoreSession();
-  }, [router]);
+  }, [router, pathname]);
 
 
   const navItems = [

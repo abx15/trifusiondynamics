@@ -7,8 +7,13 @@ import { Toaster } from "@/components/ui/toaster";
 import { useAuthStore } from "@/lib/auth-store";
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  const hasHydrated = React.useRef(false);
+
   React.useEffect(() => {
-    useAuthStore.getState().hydrateFromStorage();
+    if (!hasHydrated.current) {
+      useAuthStore.getState().hydrateFromStorage();
+      hasHydrated.current = true;
+    }
   }, []);
 
   return (

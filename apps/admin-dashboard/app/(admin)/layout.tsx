@@ -48,6 +48,10 @@ export default function AdminLayout({
         const primary = getPrimaryRole(currentUser.roles);
         const path = typeof window !== "undefined" ? window.location.pathname : "";
 
+        console.log("Admin Layout - User:", currentUser.name);
+        console.log("Admin Layout - Primary role:", primary);
+        console.log("Admin Layout - Current path:", path);
+
         // Super Admin and Admin have full access to all admin group routes
         if (primary === "super_admin" || primary === "admin") {
           setIsInitializing(false);
@@ -80,6 +84,7 @@ export default function AdminLayout({
 
         // Otherwise redirect to their role's dedicated home route
         const homeRoute = getRoleHomeRoute(primary);
+        console.log("Admin Layout - Redirecting to home route:", homeRoute);
         if (path !== homeRoute) {
           router.replace(homeRoute);
         }

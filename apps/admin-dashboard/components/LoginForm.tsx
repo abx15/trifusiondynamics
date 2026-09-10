@@ -176,8 +176,11 @@ export function LoginForm() {
         console.log("Primary role:", primaryRole);
         console.log("Home route:", homeRoute);
         
-        // Use window.location for full page reload to ensure proper routing
-        window.location.href = homeRoute;
+        // Only redirect if not already on login page (avoid redirect loops)
+        if (typeof window !== 'undefined' && window.location.pathname === '/login') {
+          console.log("Redirecting from login to dashboard...");
+          router.replace(homeRoute);
+        }
       }
     } catch (err) {
       console.error("Auth check error:", err);
