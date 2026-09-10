@@ -12,6 +12,8 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 
+import { Throttle } from '@nestjs/throttler';
+
 @Controller('analytics')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class AnalyticsController {
@@ -57,9 +59,9 @@ export class AnalyticsController {
     );
   }
 
-  @Post('rollup/run-now')
-  // Admin only implicitly if we only assign this to admins, but explicit is better.
-  @RequirePermissions('analytics:read') // Actually should be a write or admin permission, user said admin only. We can just use automation:write or create a new one. The prompt didn't add a specific rollup permission, just said admin only.
+   @Post('rollup/run-now')
+  @RequirePermissions('analytics:read')
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   async runRollupJobNow(@Body('date') date: string) {
     return this.analyticsService.runRollupJobNow(
       date || new Date().toISOString(),

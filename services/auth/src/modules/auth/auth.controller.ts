@@ -25,6 +25,12 @@ import { type Request, type Response, type CookieOptions } from 'express';
 import { Throttle } from '@nestjs/throttler';
 import * as jwt from 'jsonwebtoken';
 
+// Exchange-code endpoints are public and must be rate-limited to prevent
+// token enumeration / abuse. These are separate from the global ThrottlerGuard
+// limits and provide additional per-IP protection.
+const EXCHANGE_CODE_RATE_LIMIT = 10; // 10 requests per minute
+const EXCHANGE_CODE_RATE_TTL = 60000; // 60 seconds
+
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -215,6 +221,9 @@ export class AuthController {
   // Exchange Code Pattern for Cross-Domain Auth
   @Post('generate-exchange-code')
   @UseGuards(JwtAuthGuard)
+  @Throttle({
+    default: { limit: EXCHANGE_CODE_RATE_LIMIT, ttl: EXCHANGE_CODE_RATE_TTL },
+  })
   async generateExchangeCode(
     @CurrentUser() user: JwtPayload,
     @Body() dto: GenerateExchangeCodeDto,
@@ -230,6 +239,9 @@ export class AuthController {
   }
 
   @Post('exchange')
+  @Throttle({
+    default: { limit: EXCHANGE_CODE_RATE_LIMIT, ttl: EXCHANGE_CODE_RATE_TTL },
+  })
   async exchangeCode(@Body() dto: ExchangeCodeDto) {
     return this.authService.exchangeCode(dto.code);
   }

@@ -14,7 +14,7 @@ import { StubsModule } from './modules/stubs/stubs.module';
 import { UsersModule } from './modules/users/users.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD, APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
 import { ApiLoggingInterceptor } from './gateway/interceptors/api-logging.interceptor';
 import { AllExceptionsFilter } from './gateway/filters/http-exception.filter';
@@ -22,6 +22,8 @@ import { LoggerModule } from 'nestjs-pino';
 import { randomUUID } from 'crypto';
 import { RedisModule } from './modules/database/redis.module';
 import { RedisThrottlerStorage } from './modules/database/redis-throttler.storage';
+import { RateLimitModule } from './modules/database/rate-limit.module';
+import { UserThrottlerGuard } from './common/guards/user-throttler.guard';
 
 @Module({
   imports: [
@@ -49,6 +51,7 @@ import { RedisThrottlerStorage } from './modules/database/redis-throttler.storag
     }),
     // Redis-backed cache (replaces process-local memory store for multi-instance safety).
     RedisModule,
+    RateLimitModule,
     DatabaseModule,
     AuthModule,
     UsersModule,
@@ -66,7 +69,7 @@ import { RedisThrottlerStorage } from './modules/database/redis-throttler.storag
     AppService,
     {
       provide: APP_GUARD,
-      useClass: ThrottlerGuard,
+      useClass: UserThrottlerGuard,
     },
     {
       provide: APP_INTERCEPTOR,

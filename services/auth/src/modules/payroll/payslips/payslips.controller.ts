@@ -17,6 +17,7 @@ import { RequirePermission } from '../../../common/decorators/require-permission
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { type JwtPayload } from '@agency-os/types';
 import { PrismaService } from '../../database/prisma.service';
+import { Throttle } from '@nestjs/throttler';
 
 @Controller('payroll/payslips')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -28,6 +29,7 @@ export class PayslipsController {
 
   @Post('generate-bulk')
   @RequirePermission('payroll:write')
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   generateBulk(
     @Body('month') month: number,
     @Body('year') year: number,
