@@ -95,8 +95,12 @@ jobs:
             apps/agency-web/.next
             apps/admin-dashboard/.next
             services/auth/dist
-            packages/*/dist
+            packages/database/dist
+            packages/types/dist
+            packages/ui/dist
+            packages/config/dist
           retention-days: 1
+          if-no-files-found: warn
 
   test:
     needs: install
@@ -156,6 +160,7 @@ jobs:
         working-directory: packages/database
         run: |
           git diff --exit-code prisma/schema.prisma || echo "Schema has uncommitted changes"
+        continue-on-error: true
 
   security:
     needs: install

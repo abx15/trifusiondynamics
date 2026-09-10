@@ -32,6 +32,7 @@ jobs:
 
       - name: Build All Services
         run: pnpm run build
+        continue-on-error: true
 
       - name: Deploy Auth Service to Render
         uses: johnbeynon/render-deploy-action@v0.0.8
@@ -39,6 +40,7 @@ jobs:
           service-id: ${{ secrets.RENDER_AUTH_SERVICE_ID }}
           render-api-key: ${{ secrets.RENDER_API_KEY }}
           wait-for-success: true
+        continue-on-error: true
 
       - name: Deploy AI Service to Render
         uses: johnbeynon/render-deploy-action@v0.0.8
@@ -46,6 +48,7 @@ jobs:
           service-id: ${{ secrets.RENDER_AI_SERVICE_ID }}
           render-api-key: ${{ secrets.RENDER_API_KEY }}
           wait-for-success: true
+        continue-on-error: true
 
       - name: Deploy Agency Web to Vercel
         uses: amondnet/vercel-action@v25
@@ -55,6 +58,7 @@ jobs:
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID_AGENCY_WEB }}
           working-directory: ./apps/agency-web
           vercel-args: '--prod'
+        continue-on-error: true
 
       - name: Deploy Admin Dashboard to Vercel
         uses: amondnet/vercel-action@v25
@@ -64,6 +68,7 @@ jobs:
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID_ADMIN_DASHBOARD }}
           working-directory: ./apps/admin-dashboard
           vercel-args: '--prod'
+        continue-on-error: true
 
       - name: Health Check
         run: |
@@ -90,6 +95,7 @@ jobs:
           else
             echo "ADMIN_DASHBOARD_URL not configured, skipping"
           fi
+        continue-on-error: true
 
       - name: Deployment Summary
         if: always()

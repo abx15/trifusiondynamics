@@ -8,6 +8,7 @@ import { PrismaService } from '../database/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { RefreshDto } from './dto/refresh.dto';
+import { RateLimitService } from '../database/rate-limit.service';
 import * as bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
 import { JwtPayload, AuthResponse } from '@agency-os/types';
@@ -22,6 +23,7 @@ export class AuthService {
     private prisma: PrismaService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
     private redis: RedisService,
+    private rateLimit: RateLimitService,
   ) {}
 
   private getJwtSecret(): string {
@@ -55,9 +57,18 @@ export class AuthService {
     ipAddress?: string,
     userAgent?: string,
   ): Promise<AuthResponse> {
+    const inputIdentifier = dto.email.trim().toLowerCase();
+
+    // Brute-force protection: reject if the email is currently locked out.
+    const isLocked = await this.rateLimit.isLoginLocked(inputIdentifier);
+    if (isLocked) {
+      throw new HttpException(
+        'Too many failed login attempts. Please try again later.',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
     try {
-      const inputIdentifier = dto.email.trim().toLowerCase();
-      // 1. Find user by email or phone
       const user = await this.prisma.user.findFirst({
         where: {
           OR: [{ email: inputIdentifier }, { phone: inputIdentifier }],
@@ -94,16 +105,18 @@ export class AuthService {
         throw new UnauthorizedException('Your organization has been archived');
       }
 
-      // 2. Check brute force block (5+ failed logins in the last 15 minutes)
-      // Note: MongoDB-based activity logging removed, skipping brute force check
-
-      // 3. Verify password
+      // Verify password
       const isPasswordValid = await bcrypt.compare(dto.password, user.password);
       if (!isPasswordValid) {
+        // Record failed attempt for brute-force tracking.
+        await this.rateLimit.recordFailedLogin(inputIdentifier);
         throw new UnauthorizedException('Invalid credentials');
       }
 
-      // 4. Enforce password change if required
+      // Successful login — reset any previous failed attempts.
+      await this.rateLimit.resetLoginAttempts(inputIdentifier);
+
+      // Enforce password change if required
       if (user.mustChangePassword) {
         throw new HttpException(
           'You must change your password before continuing',

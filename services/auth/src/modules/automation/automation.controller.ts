@@ -15,6 +15,7 @@ import { UpdateWorkflowDto } from './dto/update-workflow.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
+import { Throttle } from '@nestjs/throttler';
 
 @Controller('automation')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -23,6 +24,7 @@ export class AutomationController {
 
   @Post('workflows')
   @RequirePermissions('automation:write')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   create(@Req() req, @Body() createWorkflowDto: CreateWorkflowDto) {
     return this.automationService.create(
       req.user.organizationId,
@@ -72,6 +74,7 @@ export class AutomationController {
 
   @Post('workflows/:id/trigger')
   @RequirePermissions('automation:write')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   triggerManual(@Req() req, @Param('id') id: string) {
     return this.automationService.triggerManual(req.user.organizationId, id);
   }

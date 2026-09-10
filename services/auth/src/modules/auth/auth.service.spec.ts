@@ -3,9 +3,11 @@ import { AuthService } from './auth.service';
 import { PrismaService } from '../database/prisma.service';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
 import { UnauthorizedException } from '@nestjs/common';
+import { HttpException } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import * as bcrypt from 'bcryptjs';
 import { RedisService } from '../database/redis.service';
+import { RateLimitService } from '../database/rate-limit.service';
 
 jest.mock('@agency-os/database', () => ({
   authActivityLogRepository: {
@@ -17,14 +19,20 @@ jest.mock('@agency-os/database', () => ({
 describe('AuthService', () => {
   let service: AuthService;
   let prismaMock: DeepMockProxy<PrismaService>;
+  let rateLimitMock: DeepMockProxy<RateLimitService>;
 
   beforeEach(async () => {
     prismaMock = mockDeep<PrismaService>();
+    rateLimitMock = mockDeep<RateLimitService>();
+    rateLimitMock.isLoginLocked.mockResolvedValue(false);
+    rateLimitMock.recordFailedLogin.mockResolvedValue(1);
+    rateLimitMock.resetLoginAttempts.mockResolvedValue(undefined);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
         { provide: PrismaService, useValue: prismaMock },
+        { provide: RateLimitService, useValue: rateLimitMock },
         {
           provide: CACHE_MANAGER,
           useValue: {
@@ -123,6 +131,70 @@ describe('AuthService', () => {
       await expect(
         service.login({ email: 'test@test.com', password: 'password123' }),
       ).rejects.toThrow(UnauthorizedException);
+    });
+  });
+
+  describe('brute-force protection', () => {
+    it('should reject login with 429 when account is locked', async () => {
+      rateLimitMock.isLoginLocked.mockResolvedValue(true);
+
+      await expect(
+        service.login({ email: 'locked@test.com', password: 'anything' }),
+      ).rejects.toThrow(HttpException);
+    });
+
+    it('should record failed login attempt on wrong password', async () => {
+      const hashedPassword = await bcrypt.hash('password123', 10);
+      prismaMock.user.findFirst.mockResolvedValue({
+        id: 'user-1',
+        email: 'test@test.com',
+        name: 'Test User',
+        password: hashedPassword,
+        organizationId: 'org-1',
+        isActive: true,
+        mustChangePassword: false,
+        organization: { isActive: true },
+        roles: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as any);
+
+      await expect(
+        service.login({ email: 'test@test.com', password: 'wrong' }),
+      ).rejects.toThrow(UnauthorizedException);
+
+      expect(rateLimitMock.recordFailedLogin).toHaveBeenCalledWith('test@test.com');
+    });
+
+    it('should reset login attempts on successful login', async () => {
+      const hashedPassword = await bcrypt.hash('password123', 10);
+      prismaMock.user.findFirst.mockResolvedValue({
+        id: 'user-1',
+        email: 'test@test.com',
+        name: 'Test User',
+        password: hashedPassword,
+        organizationId: 'org-1',
+        isActive: true,
+        mustChangePassword: false,
+        organization: { isActive: true },
+        roles: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as any);
+
+      await service.login({ email: 'test@test.com', password: 'password123' });
+
+      expect(rateLimitMock.resetLoginAttempts).toHaveBeenCalledWith('test@test.com');
+    });
+
+    it('should not call recordFailedLogin when user not found', async () => {
+      prismaMock.user.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.login({ email: 'test@test.com', password: 'wrong' }),
+      ).rejects.toThrow(UnauthorizedException);
+
+      expect(rateLimitMock.recordFailedLogin).not.toHaveBeenCalled();
     });
   });
 });

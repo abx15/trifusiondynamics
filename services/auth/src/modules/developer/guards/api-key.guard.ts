@@ -22,7 +22,11 @@ export class ApiKeyGuard implements CanActivate {
       throw new UnauthorizedException('Missing X-API-Key header');
     }
 
-    const keyRecord = await this.apiKeysService.validateKey(apiKeyHeader);
+    const ip = request.headers['x-forwarded-for'] || request.socket?.remoteAddress || '';
+    const keyRecord = await this.apiKeysService.validateKey(
+      apiKeyHeader as string,
+      Array.isArray(ip) ? ip[0] : ip,
+    );
     if (!keyRecord) {
       throw new UnauthorizedException('Invalid or expired API Key');
     }

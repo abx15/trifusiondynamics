@@ -14,6 +14,7 @@ import { CreateApiKeyDto } from './dto/create-api-key.dto';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { RequirePermissions } from '../../auth/decorators/permissions.decorator';
+import { Throttle } from '@nestjs/throttler';
 
 @Controller('developer/api-keys')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -22,6 +23,7 @@ export class ApiKeysController {
 
   @Post()
   @RequirePermissions('developer:write')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   create(@Req() req, @Body() createApiKeyDto: CreateApiKeyDto) {
     return this.apiKeysService.generateKey(
       req.user.organizationId,

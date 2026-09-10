@@ -5,7 +5,13 @@ import { AiService } from './ai.service';
 import { DatabaseModule } from '../database/database.module';
 
 @Module({
-  imports: [HttpModule, DatabaseModule],
+  imports: [
+    HttpModule.register({
+      timeout: 30000,
+      maxRedirects: 3,
+    }),
+    DatabaseModule,
+  ],
   controllers: [AiController],
   providers: [AiService],
   exports: [AiService],
