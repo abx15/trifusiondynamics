@@ -7,7 +7,6 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { useWorkflows, useToggleWorkflow, type Workflow } from "@/lib/hooks/useAutomation";
 import { toast } from "@/lib/toast";
-import { Button } from "@/components/ui/button";
 import { Plus, ToggleLeft, ToggleRight, Play, Cpu } from "lucide-react";
 
 export default function WorkflowsListPage() {
@@ -108,11 +107,12 @@ export default function WorkflowsListPage() {
           title="Workflow Automations"
           breadcrumbs={[{ label: "Technical Assets" }, { label: "Automations" }]}
         />
-        <Link href="/automation/new" passHref legacyBehavior>
-          <Button size="sm" className="gap-2">
-            <Plus className="h-4 w-4" />
-            Build Workflow
-          </Button>
+        <Link
+          href="/automation/new"
+          className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-xs font-medium transition-colors bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 h-8 px-3"
+        >
+          <Plus className="h-4 w-4" />
+          Build Workflow
         </Link>
       </div>
 

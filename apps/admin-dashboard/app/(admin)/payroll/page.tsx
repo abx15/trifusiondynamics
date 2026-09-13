@@ -165,11 +165,12 @@ export default function PayrollDashboardPage() {
           breadcrumbs={[{ label: "Operations" }, { label: "Payroll Management" }]}
         />
         <div className="flex items-center gap-3">
-          <Link href="/payroll/payslips" passHref legacyBehavior>
-            <Button variant="outline" size="sm" className="gap-2">
-              <Landmark className="h-4 w-4" />
-              View Payslips History
-            </Button>
+          <Link
+            href="/payroll/payslips"
+            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-xs font-medium transition-colors border border-input bg-background shadow-xs hover:bg-accent hover:text-accent-foreground h-8 px-3"
+          >
+            <Landmark className="h-4 w-4" />
+            View Payslips History
           </Link>
           <Button size="sm" onClick={() => setIsBulkOpen(true)} className="gap-2">
             <Play className="h-4 w-4" />
