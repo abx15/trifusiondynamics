@@ -34,7 +34,7 @@ export function useWorkflows() {
     queryKey: ["workflows"],
     queryFn: async () => {
       const { data } = await apiClient.get("/automation/workflows");
-      return data as Workflow[];
+      return (Array.isArray(data) ? data : (data as any)?.data ?? []) as Workflow[];
     },
   });
 }

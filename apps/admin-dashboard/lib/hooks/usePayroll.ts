@@ -66,7 +66,7 @@ export function usePayslips(employeeId?: string) {
     queryKey: ["payslips", { employeeId }],
     queryFn: async () => {
       const { data } = await apiClient.get("/payroll/payslips", { params: { employeeId } });
-      return data as Payslip[];
+      return (Array.isArray(data) ? data : (data as any)?.data ?? []) as Payslip[];
     },
   });
 }

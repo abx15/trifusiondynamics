@@ -145,7 +145,7 @@ export default function EmployeesListPage() {
 
       <DataTable
         columns={columns}
-        data={employees}
+        data={Array.isArray(employees) ? employees : (employees as any)?.data ?? []}
         isLoading={isLoading}
         emptyMessage="No employees matched the filters."
         onRowClick={(row) => router.push(`/hr/employees/${row.id}`)}

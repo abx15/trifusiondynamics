@@ -36,6 +36,14 @@ export function DataTable<T extends { id: string }>({
   emptyMessage = "No records found.",
   onRowClick,
 }: DataTableProps<T>) {
+  const rows: T[] = Array.isArray(data)
+    ? data
+    : Array.isArray((data as any)?.data)
+    ? (data as any).data
+    : Array.isArray((data as any)?.items)
+    ? (data as any).items
+    : [];
+
   return (
     <div className="w-full overflow-x-auto rounded-xl border border-border bg-card">
       <table className="w-full text-sm">
@@ -60,7 +68,7 @@ export function DataTable<T extends { id: string }>({
               <SkeletonRow cols={columns.length} />
               <SkeletonRow cols={columns.length} />
             </>
-          ) : data.length === 0 ? (
+          ) : rows.length === 0 ? (
             <tr>
               <td
                 colSpan={columns.length}
@@ -70,7 +78,7 @@ export function DataTable<T extends { id: string }>({
               </td>
             </tr>
           ) : (
-            data.map((row) => (
+            rows.map((row) => (
               <tr
                 key={row.id}
                 onClick={() => onRowClick?.(row)}

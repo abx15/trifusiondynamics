@@ -79,7 +79,7 @@ export function useEmployees(filters: { department?: string; status?: string } =
     queryKey: ["employees", filters],
     queryFn: async () => {
       const { data } = await apiClient.get("/hr/employees", { params: filters });
-      return data as Employee[];
+      return (Array.isArray(data) ? data : (data as any)?.data ?? []) as Employee[];
     },
   });
 }
@@ -138,7 +138,7 @@ export function useLeaves(employeeId?: string) {
     queryKey: ["leaves", { employeeId }],
     queryFn: async () => {
       const { data } = await apiClient.get("/hr/leaves", { params: { employeeId } });
-      return data as Leave[];
+      return (Array.isArray(data) ? data : (data as any)?.data ?? []) as Leave[];
     },
   });
 }
@@ -174,7 +174,7 @@ export function useCandidates() {
     queryKey: ["candidates"],
     queryFn: async () => {
       const { data } = await apiClient.get("/hr/recruitment");
-      return data as Candidate[];
+      return (Array.isArray(data) ? data : (data as any)?.data ?? []) as Candidate[];
     },
   });
 }

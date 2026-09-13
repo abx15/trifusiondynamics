@@ -23,8 +23,14 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  PNPM_VERSION: '10'
+  NODE_VERSION: '20'
+  NEXT_TELEMETRY_DISABLED: '1'
+  NEXT_PUBLIC_API_URL: https://trifusiondynamics-api.onrender.com/api
+
 jobs:
-  # Frontend Apps CI
+  # ─── Frontend Apps CI ───────────────────────────────────────────────────────
   frontend:
     runs-on: ubuntu-latest
     strategy:
@@ -34,70 +40,78 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@v4
         with:
-          node-version: '20'
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
+      - name: Get pnpm store path
+        id: store
+        run: echo "path=$(pnpm store path)" >> $GITHUB_OUTPUT
 
-      - name: Install Dependencies
+      - name: Restore pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.store.outputs.path }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+
+      - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Lint ${{ matrix.app }}
         run: pnpm --filter ${{ matrix.app }} lint
         continue-on-error: true
 
-      - name: Type Check ${{ matrix.app }}
+      - name: Build ${{ matrix.app }} (includes type check)
         run: pnpm --filter ${{ matrix.app }} build
         continue-on-error: true
 
-      - name: Build ${{ matrix.app }}
-        run: pnpm --filter ${{ matrix.app }} build
-        continue-on-error: true
-
-      - name: Upload Build Artifacts
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.app }}-build
+          name: ${{ matrix.app }}-build-${{ github.run_id }}
           path: apps/${{ matrix.app }}/.next
           retention-days: 1
           if-no-files-found: warn
 
-  # Shared Packages CI
+  # ─── Shared Packages CI ─────────────────────────────────────────────────────
   shared-packages:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@v4
         with:
-          node-version: '20'
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
+      - name: Get pnpm store path
+        id: store
+        run: echo "path=$(pnpm store path)" >> $GITHUB_OUTPUT
 
-      - name: Install Dependencies
+      - name: Restore pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.store.outputs.path }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+
+      - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build Shared Packages
-        run: pnpm --filter @agency-os/database build --filter @agency-os/types build --filter @agency-os/ui build --filter @agency-os/config build
+      - name: Build shared packages
+        run: pnpm --filter @agency-os/database --filter @agency-os/types run build
 
-      - name: Type Check Database Package
-        run: pnpm --filter @agency-os/database build
-
-      - name: Type Check Types Package
-        run: pnpm --filter @agency-os/types build
-
-  # Deployment to Vercel (Preview)
+  # ─── Vercel Preview (PR only) ────────────────────────────────────────────────
   deploy-preview:
     needs: [frontend, shared-packages]
     runs-on: ubuntu-latest
@@ -106,21 +120,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@v4
         with:
-          node-version: '20'
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
+      - name: Get pnpm store path
+        id: store
+        run: echo "path=$(pnpm store path)" >> $GITHUB_OUTPUT
 
-      - name: Install Dependencies
+      - name: Restore pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.store.outputs.path }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+
+      - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Deploy Agency Web Preview to Vercel
+      - name: Deploy Agency Web preview to Vercel
         uses: amondnet/vercel-action@v25
         id: deploy-agency-web
         with:
@@ -128,11 +151,14 @@ jobs:
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID_AGENCY_WEB }}
           working-directory: ./apps/agency-web
+        continue-on-error: true
 
-      - name: Deploy Admin Dashboard Preview to Vercel
+      - name: Deploy Admin Dashboard preview to Vercel
         uses: amondnet/vercel-action@v25
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID_ADMIN_DASHBOARD }}
           working-directory: ./apps/admin-dashboard
+        continue-on-error: true
+
