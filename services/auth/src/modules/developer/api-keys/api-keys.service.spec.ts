@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ApiKeysService } from './api-keys.service';
 import { PrismaService } from '../../database/prisma.service';
+import { RateLimitService } from '../../database/rate-limit.service';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
 import * as bcrypt from 'bcryptjs';
 
@@ -12,7 +13,14 @@ describe('ApiKeysService', () => {
     dbMock = mockDeep<PrismaService>();
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [ApiKeysService, { provide: PrismaService, useValue: dbMock }],
+      providers: [
+        ApiKeysService,
+        { provide: PrismaService, useValue: dbMock },
+        {
+          provide: RateLimitService,
+          useValue: { checkRateLimit: jest.fn().mockResolvedValue(true) },
+        },
+      ],
     }).compile();
 
     service = module.get<ApiKeysService>(ApiKeysService);

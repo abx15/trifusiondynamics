@@ -1,12 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserThrottlerGuard } from './user-throttler.guard';
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
-import { ThrottlerModuleOptions } from '@nestjs/throttler';
+import { Reflector } from '@nestjs/core';
+import { ThrottlerModuleOptions, ThrottlerStorage } from '@nestjs/throttler';
 
 describe('UserThrottlerGuard', () => {
   let guard: UserThrottlerGuard;
 
   beforeEach(async () => {
+    process.env.JWT_ACCESS_SECRET = 'test-secret-at-least-32-chars-long-here-1234567890';
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UserThrottlerGuard,
@@ -17,7 +19,7 @@ describe('UserThrottlerGuard', () => {
           } as ThrottlerModuleOptions,
         },
         {
-          provide: 'THROTTLER:STORAGE_SERVICE',
+          provide: ThrottlerStorage,
           useValue: {
             increment: jest.fn().mockResolvedValue({
               totalHits: 1,
@@ -26,6 +28,10 @@ describe('UserThrottlerGuard', () => {
               timeToBlockExpire: 0,
             }),
           },
+        },
+        {
+          provide: Reflector,
+          useValue: new Reflector(),
         },
       ],
     }).compile();
