@@ -85,11 +85,12 @@ export default function EmployeesListPage() {
           title="HR Directory"
           breadcrumbs={[{ label: "Operations" }, { label: "HR Portal", href: "/hr/employees" }, { label: "Employees" }]}
         />
-        <Link href="/hr/employees/new" passHref legacyBehavior>
-          <Button size="sm" className="gap-2">
-            <Plus className="h-4 w-4" />
-            Link New Employee
-          </Button>
+        <Link
+          href="/hr/employees/new"
+          className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-xs font-medium transition-colors bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 h-8 px-3"
+        >
+          <Plus className="h-4 w-4" />
+          Link New Employee
         </Link>
       </div>
 

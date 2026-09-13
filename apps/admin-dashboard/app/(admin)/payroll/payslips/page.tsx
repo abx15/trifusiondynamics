@@ -87,10 +87,11 @@ export default function AdminPayslipsListPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <Link href="/payroll" passHref legacyBehavior>
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+        <Link
+          href="/payroll"
+          className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground h-8 w-8 p-0"
+        >
+          <ArrowLeft className="h-4 w-4" />
         </Link>
         <PageHeader
           title="Payslip Directory"
