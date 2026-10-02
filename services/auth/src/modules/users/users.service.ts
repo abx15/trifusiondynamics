@@ -257,7 +257,12 @@ export class UsersService {
     return updatedUser;
   }
 
-  async approveUser(id: string, orgId: string, roles: string[], isSuperAdmin = false) {
+  async approveUser(
+    id: string,
+    orgId: string,
+    roles: string[],
+    isSuperAdmin = false,
+  ) {
     const user = await this.prisma.user.findFirst({
       where: isSuperAdmin ? { id } : { id, organizationId: orgId },
     });

@@ -42,6 +42,13 @@ export class AuthController {
     return { ip, userAgent };
   }
 
+  private getBearerToken(req: Request): string | undefined {
+    const authorization = req.headers.authorization;
+    if (!authorization) return undefined;
+    const [scheme, token] = authorization.split(' ');
+    return scheme === 'Bearer' && token ? token : undefined;
+  }
+
   private setAuthCookies(
     res: Response,
     accessToken: string,
@@ -141,13 +148,12 @@ export class AuthController {
   async logout(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
-    @Body() dto?: RefreshDto,
   ) {
-    const refreshTokenString = req.cookies?.refresh_token || dto?.refreshToken;
+    const refreshTokenString = req.cookies?.refresh_token;
+    const accessTokenString =
+      this.getBearerToken(req) || req.cookies?.access_token;
 
-    if (refreshTokenString) {
-      await this.authService.logout(refreshTokenString);
-    }
+    await this.authService.logout(refreshTokenString, accessTokenString);
 
     this.clearAuthCookies(res);
 

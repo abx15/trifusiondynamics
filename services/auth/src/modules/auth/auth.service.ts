@@ -16,6 +16,7 @@ import { Inject } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { RedisService } from '../database/redis.service';
+import { blockAccessToken } from './access-token-blocklist';
 
 @Injectable()
 export class AuthService {
@@ -262,21 +263,20 @@ export class AuthService {
     });
   }
 
-  async logout(refreshTokenString?: string): Promise<{ success: boolean }> {
-    if (!refreshTokenString) {
-      return { success: true };
-    }
-
+  async logout(
+    refreshTokenString?: string,
+    accessTokenString?: string,
+  ): Promise<{ success: boolean }> {
     try {
-      const dbToken = await this.prisma.refreshToken.findUnique({
-        where: { token: refreshTokenString },
-      });
-
-      if (dbToken) {
-        // Delete refresh token
-        await this.prisma.refreshToken.delete({
-          where: { id: dbToken.id },
+      if (refreshTokenString) {
+        await this.prisma.refreshToken.updateMany({
+          where: { token: refreshTokenString, revoked: false },
+          data: { revoked: true },
         });
+      }
+
+      if (accessTokenString) {
+        await blockAccessToken(accessTokenString, this.redis);
       }
     } catch (err) {
       console.warn('Error revoking token on logout:', err);

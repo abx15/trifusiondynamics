@@ -234,12 +234,10 @@ export function LoginForm() {
       setSuccess(`Authenticated as ${loggedInUser.name}! Routing to ${targetRoute}...`);
       toast.success(`Welcome back, ${loggedInUser.name}!`);
 
-      // Add a small delay to ensure cookies are set before redirect
-      setTimeout(() => {
-        console.log("Executing redirect to:", targetRoute);
-        // Use window.location for full page reload to ensure cookies are properly set
-        window.location.href = targetRoute;
-      }, 1000);
+      // Use router.replace for client-side navigation (more reliable than window.location.href)
+      // Cookies are already set by setAuth, so no delay needed
+      console.log("Executing redirect to:", targetRoute);
+      router.replace(targetRoute);
     } catch (err: any) {
       const serverMsg = err?.response?.data?.message || err?.message || "Login failed";
       if (err?.response?.status === 429 || serverMsg.includes("Too many failed attempts")) {
@@ -411,7 +409,7 @@ export function LoginForm() {
 
         <div className="flex items-center justify-between pt-1 relative z-10">
           <Link
-            href="/(auth)/register"
+            href="/register"
             className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
           >
             Don't have an account? Register here

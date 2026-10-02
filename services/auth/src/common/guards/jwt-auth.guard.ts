@@ -6,10 +6,12 @@ import {
 } from '@nestjs/common';
 import * as jwt from 'jsonwebtoken';
 import { JwtPayload } from '@agency-os/types';
+import { isAccessTokenBlocked } from '../../modules/auth/access-token-blocklist';
+import { redisService } from '../../modules/database/redis.service';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
 
     // 1. Try Bearer header first, then cookie
@@ -36,6 +38,9 @@ export class JwtAuthGuard implements CanActivate {
         throw new UnauthorizedException(
           'Server misconfigured: JWT_ACCESS_SECRET not set',
         );
+      }
+      if (await isAccessTokenBlocked(token, redisService)) {
+        throw new UnauthorizedException('Session has been logged out');
       }
       const decoded = jwt.verify(token, secret) as JwtPayload;
       request.user = decoded;

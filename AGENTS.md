@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Kilo engineering guidelines for the AgencyOS repository.
+engineering guidelines for the AgencyOS repository.
 
 ## Project Layout
 

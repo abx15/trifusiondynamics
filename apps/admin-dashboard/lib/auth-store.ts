@@ -135,8 +135,14 @@ export const useAuthStore = create<AuthState>((set) => ({
       sessionStorage.removeItem("accessToken");
       sessionStorage.removeItem("refreshToken");
       try {
+        // Remove cookies with multiple variations to ensure complete cleanup
         Cookies.remove("access_token", { path: "/" });
+        Cookies.remove("access_token", { path: "/", domain: window.location.hostname });
         Cookies.remove("refresh_token", { path: "/" });
+        Cookies.remove("refresh_token", { path: "/", domain: window.location.hostname });
+        // Also try removing without path
+        Cookies.remove("access_token");
+        Cookies.remove("refresh_token");
       } catch {
         // ignore cookie remove errors
       }
@@ -148,6 +154,18 @@ export const useAuthStore = create<AuthState>((set) => ({
       sessionStorage.setItem("user", JSON.stringify(user));
       if (accessToken) {
         sessionStorage.setItem("accessToken", accessToken);
+        // Also set cookie so Next.js proxy.ts can read it on navigation
+        try {
+          Cookies.set("access_token", accessToken, {
+            path: "/",
+            sameSite: "lax",
+            secure: window.location.protocol === "https:",
+            // Don't set httpOnly here (JS can't set httpOnly cookies),
+            // the backend also sets the HttpOnly version via Set-Cookie header
+          });
+        } catch {
+          // ignore cookie set errors
+        }
       }
     }
     set({ user, isAuthenticated: true, accessToken, isHydrating: false });

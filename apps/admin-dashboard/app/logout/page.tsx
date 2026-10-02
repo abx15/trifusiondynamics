@@ -9,12 +9,9 @@ export default function LogoutPage() {
   const { logout } = useLogout();
 
   useEffect(() => {
-    const performLogout = async () => {
-      await logout();
+    logout().then(() => {
       router.replace("/login");
-    };
-
-    performLogout();
+    });
   }, [logout, router]);
 
   return (

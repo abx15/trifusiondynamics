@@ -7,7 +7,7 @@ dotenv.config({
   path: path.resolve(__dirname, '../../../.env'),
   override: true,
 });
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../.env'), override: true });
 
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';

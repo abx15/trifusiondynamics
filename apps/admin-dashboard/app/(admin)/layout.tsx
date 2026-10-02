@@ -15,6 +15,7 @@ export default function AdminLayout({
 }) {
   const { user, setUser, clearAuth } = useAuthStore();
   const [collapsed, setCollapsed] = React.useState(false);
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [isInitializing, setIsInitializing] = React.useState(!user);
   const router = useRouter();
 
@@ -70,8 +71,8 @@ export default function AdminLayout({
           return;
         }
 
-        // HR Agent is allowed on Payroll
-        if (primary === "hr_agent" && path.startsWith("/payroll")) {
+        // HR Agent is allowed on HR and Payroll routes
+        if (primary === "hr_agent" && (path.startsWith("/hr") || path.startsWith("/payroll"))) {
           setIsInitializing(false);
           return;
         }
@@ -124,7 +125,7 @@ export default function AdminLayout({
 
       {/* Main Panel Content Container */}
       <div className="flex flex-col flex-1 overflow-hidden">
-        <Topbar sidebarOpen={false} setSidebarOpen={() => {}} />
+        <Topbar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
         <main className="flex-1 overflow-y-auto bg-slate-50/50 dark:bg-zinc-900/30 p-6 md:p-8">
           {children}
         </main>

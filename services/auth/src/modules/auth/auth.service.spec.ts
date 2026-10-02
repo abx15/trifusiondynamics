@@ -163,7 +163,9 @@ describe('AuthService', () => {
         service.login({ email: 'test@test.com', password: 'wrong' }),
       ).rejects.toThrow(UnauthorizedException);
 
-      expect(rateLimitMock.recordFailedLogin).toHaveBeenCalledWith('test@test.com');
+      expect(rateLimitMock.recordFailedLogin).toHaveBeenCalledWith(
+        'test@test.com',
+      );
     });
 
     it('should reset login attempts on successful login', async () => {
@@ -184,7 +186,9 @@ describe('AuthService', () => {
 
       await service.login({ email: 'test@test.com', password: 'password123' });
 
-      expect(rateLimitMock.resetLoginAttempts).toHaveBeenCalledWith('test@test.com');
+      expect(rateLimitMock.resetLoginAttempts).toHaveBeenCalledWith(
+        'test@test.com',
+      );
     });
 
     it('should not call recordFailedLogin when user not found', async () => {

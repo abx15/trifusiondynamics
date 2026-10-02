@@ -8,7 +8,8 @@ describe('UserThrottlerGuard', () => {
   let guard: UserThrottlerGuard;
 
   beforeEach(async () => {
-    process.env.JWT_ACCESS_SECRET = 'test-secret-at-least-32-chars-long-here-1234567890';
+    process.env.JWT_ACCESS_SECRET =
+      'test-secret-at-least-32-chars-long-here-1234567890';
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UserThrottlerGuard,
@@ -39,12 +40,14 @@ describe('UserThrottlerGuard', () => {
     guard = module.get<UserThrottlerGuard>(UserThrottlerGuard);
   });
 
-  function createMockContext(overrides: Partial<{
-    headers: Record<string, string>;
-    cookies: Record<string, string>;
-    ip: string;
-    user: any;
-  }> = {}): ExecutionContext {
+  function createMockContext(
+    overrides: Partial<{
+      headers: Record<string, string>;
+      cookies: Record<string, string>;
+      ip: string;
+      user: any;
+    }> = {},
+  ): ExecutionContext {
     const req: any = {
       headers: overrides.headers || {},
       cookies: overrides.cookies || {},

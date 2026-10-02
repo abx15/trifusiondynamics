@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateApiKeyDto } from './dto/create-api-key.dto';
 import * as bcrypt from 'bcryptjs';

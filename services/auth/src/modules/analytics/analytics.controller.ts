@@ -59,7 +59,7 @@ export class AnalyticsController {
     );
   }
 
-   @Post('rollup/run-now')
+  @Post('rollup/run-now')
   @RequirePermissions('analytics:read')
   @Throttle({ default: { limit: 3, ttl: 60000 } })
   async runRollupJobNow(@Body('date') date: string) {

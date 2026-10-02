@@ -1,4 +1,8 @@
-import { ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ExecutionContext,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import * as jwt from 'jsonwebtoken';
 import { JwtPayload } from '@agency-os/types';
@@ -23,10 +27,16 @@ import { JwtPayload } from '@agency-os/types';
  */
 @Injectable()
 export class UserThrottlerGuard extends ThrottlerGuard {
-  protected override async getTracker(req: Record<string, any>): Promise<string> {
+  protected override async getTracker(
+    req: Record<string, any>,
+  ): Promise<string> {
     // Try Bearer token
     const authHeader = req.headers?.authorization;
-    if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+    if (
+      authHeader &&
+      typeof authHeader === 'string' &&
+      authHeader.startsWith('Bearer ')
+    ) {
       const token = authHeader.substring(7);
       try {
         const secret = process.env.JWT_ACCESS_SECRET;
@@ -46,7 +56,10 @@ export class UserThrottlerGuard extends ThrottlerGuard {
       try {
         const secret = process.env.JWT_ACCESS_SECRET;
         if (secret) {
-          const decoded = jwt.verify(req.cookies.access_token, secret) as JwtPayload;
+          const decoded = jwt.verify(
+            req.cookies.access_token,
+            secret,
+          ) as JwtPayload;
           if (decoded && decoded.sub) {
             return `user:${decoded.sub}`;
           }

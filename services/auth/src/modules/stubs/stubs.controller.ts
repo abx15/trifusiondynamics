@@ -18,6 +18,8 @@ import { PayslipsService } from './payslips.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { type JwtPayload } from '@agency-os/types';
 
 @Controller()
 export class StubsController {
@@ -32,18 +34,23 @@ export class StubsController {
   @Post('crm/leads')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @RequirePermissions('crm:write')
-  createLead(@Body() body: any) {
-    return this.leadsService.createLead(body);
+  createLead(@Body() body: any, @CurrentUser() user: JwtPayload) {
+    return this.leadsService.createLead(body, user.orgId);
   }
 
   @Post('crm/leads/from-submission/:submissionId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @RequirePermissions('crm:write')
-  promoteSubmissionToLead(@Param('submissionId') submissionId: string) {
-    return this.leadsService.promoteSubmissionToLead(submissionId);
+  promoteSubmissionToLead(
+    @Param('submissionId') submissionId: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.leadsService.promoteSubmissionToLead(submissionId, user.orgId);
   }
 
   @Get('crm/contact-submissions')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermissions('crm:read')
   getContactSubmissions(@Query() query: any) {
     return this.leadsService.getSubmissions(query);
   }
@@ -102,6 +109,8 @@ export class StubsController {
   }
 
   @Get('cms/leads')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermissions('crm:read')
   getCmsLeads(@Query() query: any) {
     return this.leadsService.getSubmissions(query);
   }
@@ -177,7 +186,7 @@ export class StubsController {
   @Get('crm/leads')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @RequirePermissions('crm:read')
-  getLeads() {
-    return this.leadsService.getLeads();
+  getLeads(@Query() query: any, @CurrentUser() user: JwtPayload) {
+    return this.leadsService.getLeads(user.orgId, query);
   }
 }
