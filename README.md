@@ -137,18 +137,31 @@ The project is organized as a **pnpm workspace + Turborepo** monorepo:
 - `packages/types` — Shared TypeScript types
 - `packages/config` — Shared configuration
 
-### Tech Stack
+### 💻 Tech Stack & Infrastructure
 
-|| Layer | Technology |
-||-------|------------|
-|| Frontend | Next.js 15, React, TypeScript |
-|| Backend API | NestJS, TypeScript |
-|| AI Service | FastAPI, Python |
-|| Database | PostgreSQL (Prisma ORM) |
-|| Analytics | MongoDB |
-|| Cache | Redis |
-|| Monorepo | pnpm workspaces, Turborepo |
-|| Deployment | Vercel (frontend), Render (backend Docker) |
+<p align="left">
+  <img src="https://img.shields.io/badge/Next.js%2016-000000?style=flat-square&logo=nextdotjs&logoColor=white" alt="Next.js" />
+  <img src="https://img.shields.io/badge/React%2019-20232A?style=flat-square&logo=react&logoColor=61DAFB" alt="React" />
+  <img src="https://img.shields.io/badge/TypeScript%205-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/NestJS%2011-E0234E?style=flat-square&logo=nestjs&logoColor=white" alt="NestJS" />
+  <img src="https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white" alt="FastAPI" />
+  <img src="https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql&logoColor=white" alt="PostgreSQL" />
+  <img src="https://img.shields.io/badge/Prisma%205-2D3748?style=flat-square&logo=prisma&logoColor=white" alt="Prisma" />
+  <img src="https://img.shields.io/badge/Redis-DC382D?style=flat-square&logo=redis&logoColor=white" alt="Redis" />
+  <img src="https://img.shields.io/badge/Turborepo-EF4444?style=flat-square&logo=turborepo&logoColor=white" alt="Turborepo" />
+  <img src="https://img.shields.io/badge/Tailwind_CSS%204-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white" alt="Tailwind CSS" />
+  <img src="https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker" />
+</p>
+
+| Layer | Primary Technologies | Key Libraries & Ecosystem | Purpose & Architectural Scope |
+|:---|:---|:---|:---|
+| **🎨 Web Frontends** | **Next.js 16** • **React 19** • **TypeScript** | `Turbopack`, `Tailwind CSS 4`, `Zustand`, `TanStack Query v5`, `Lucide Icons` | Multi-role portal (`admin-dashboard`) supporting 8 RBAC views, client portal, and marketing hub (`agency-web`) with fast SSR/SSG. |
+| **⚙️ Backend API Gateway** | **NestJS 11** • **Node.js 20+** • **TypeScript** | `Express`, `Pino Logger`, `Passport`, `Helmet`, `Throttler`, `Sentry Node` | High-throughput REST API with distributed rate limiting, token blocklist, session-level GUC timeouts, and unified RBAC guards. |
+| **🤖 AI Microservice** | **FastAPI** • **Python 3.11+** • **Uvicorn** | `Pydantic v2`, `OpenAI API`, `Anthropic SDK`, `Google Gemini` | Automated agentic workflows, SEO audit analyzer, meeting transcript summarizer, email writer, and smart proposal generator. |
+| **🗄️ Primary Database** | **PostgreSQL (Neon Serverless)** | `Prisma ORM 5`, `Postgres Multi-Schema (12 Schemas)`, `pgvector` | Segregated multi-domain architecture (auth, crm, hr, billing, projects, ai, etc.) with atomic transactions and direct/pooled hosts. |
+| **⚡ Cache & Token Store** | **Redis Cloud** | `ioredis`, `redis 4.7`, `cache-manager` | Instant JWT revocation blocklist, distributed rate limiting storage, and response caching with fallback in-memory stores. |
+| **📦 Monorepo Architecture** | **Turborepo** • **pnpm v10 Workspaces** | `TypeScript 5`, `ESLint 9`, `Prettier` | Blazing-fast dependency graph caching, zero code duplication, and shared packages (`@agency-os/database`, `@agency-os/types`). |
+| **🚀 CI/CD & Deployment** | **GitHub Actions** • **Vercel** • **Render** | `Docker`, `Cloudflare Edge`, `Sentry APM` | Automated multi-stage test/lint/build pipelines, Edge-optimized frontend deployments, and containerized backend services. |
 
 ## ⚡ Key Features
 
