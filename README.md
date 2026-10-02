@@ -301,20 +301,114 @@ Services will be available at:
 
 ## 🌐 Production Deployment
 
-### Infrastructure
+### Infrastructure Overview
 
-|| Component | Platform |
-||-----------|----------|
-|| Admin Dashboard (all role portals) | Vercel |
-|| Agency Website | Vercel |
-|| Auth API (NestJS) | Render |
-|| AI Service (FastAPI) | Render |
-|| PostgreSQL | Neon |
-|| Redis | Upstash |
+| Component | Platform | Role & Architecture | Production URL / Host |
+| :--- | :--- | :--- | :--- |
+| **Admin Dashboard** | **Vercel** | Multi-role portal (Admin, Employee, Client, Agent, HR, Sales, Super-Admin) | `https://trifusiondynamicsadmin.vercel.app` |
+| **Agency Website** | **Vercel** | Public marketing website & CMS | `https://trifusiondynamics.vercel.app` |
+| **Auth API Gateway** | **Render** | NestJS REST API, WebSocket server, Business Logic | `https://trifusiondynamics-api.onrender.com` |
+| **AI Microservice** | **Render** | FastAPI Python engine for AI agent workflows & summaries | `https://trifusiondynamics-ai-api.onrender.com` |
+| **PostgreSQL** | **Neon** | Serverless PostgreSQL with connection pooling & direct migration access | Neon Cloud (`ep-*.neon.tech`) |
+| **Redis** | **Upstash** | Serverless Redis for distributed rate-limiting, cache, & JWT token blocklist | Upstash Cloud |
 
-### Backend Docker Build
+---
 
-The auth service builds from the repository root context with the Dockerfile at `services/auth/Dockerfile`. The build installs dependencies, generates Prisma client, and compiles the NestJS application.
+### 1. Database & Cache Provisioning
+
+#### PostgreSQL (Neon)
+1. Create a database project in [Neon](https://neon.tech).
+2. Retrieve both the **pooled connection string** (for standard queries) and the **direct connection string** (for Prisma migrations):
+   - `DATABASE_URL`: `postgresql://<user>:<password>@ep-xyz-pooler.region.aws.neon.tech/neondb?sslmode=require`
+   - `DIRECT_URL`: `postgresql://<user>:<password>@ep-xyz.region.aws.neon.tech/neondb?sslmode=require`
+3. Run safe migration deploy from CI or deployment runner:
+   ```bash
+   pnpm --filter database exec -- prisma migrate deploy
+   ```
+   > ⚠️ **Rule:** Never use `prisma db push` in production. Always apply verified schema migrations.
+
+#### Redis (Upstash)
+1. Create a serverless Redis database in [Upstash](https://upstash.com).
+2. Configure eviction policy as `allkeys-lru`.
+3. Obtain the connection string:
+   - `REDIS_URL`: `rediss://default:<password>@<endpoint>.upstash.io:6379`
+
+---
+
+### 2. Backend Services Deployment (Render)
+
+#### Auth Service (NestJS API Gateway)
+- **Deployment Type:** Docker or Web Service (Repo Root Context)
+- **Dockerfile:** `services/auth/Dockerfile`
+- **Health Check Path:** `/health`
+- **Port:** `8000`
+- **Essential Environment Variables:**
+  ```env
+  NODE_ENV=production
+  PORT=8000
+  DATABASE_URL=postgresql://<user>:<password>@<neon-pooler>/neondb?sslmode=require
+  DIRECT_URL=postgresql://<user>:<password>@<neon-direct>/neondb?sslmode=require
+  REDIS_URL=rediss://default:<password>@<upstash-endpoint>:6379
+  JWT_ACCESS_SECRET=<64-char-random-secret>
+  JWT_REFRESH_SECRET=<64-char-random-secret>
+  ADMIN_EMAIL=admin@trifusiondynamics.com
+  ADMIN_PASSWORD=<secure-admin-password>
+  CORS_ALLOWED_ORIGINS=https://trifusiondynamicsadmin.vercel.app,https://trifusiondynamics.vercel.app
+  COOKIE_DOMAIN=
+  AI_SERVICE_URL=https://trifusiondynamics-ai-api.onrender.com
+  AI_SERVICE_SECRET=<shared-internal-secret>
+  ```
+
+#### AI Microservice (FastAPI)
+- **Deployment Type:** Docker or Web Service
+- **Root Directory:** `services/ai-service`
+- **Health Check Path:** `/health`
+- **Port:** `8001`
+- **Essential Environment Variables:**
+  ```env
+  PORT=8001
+  INTERNAL_API_SECRET=<shared-internal-secret>
+  OPENAI_API_KEY=<sk-...>
+  ANTHROPIC_API_KEY=<sk-ant-...>
+  GEMINI_API_KEY=<gemini-key>
+  ```
+
+---
+
+### 3. Frontend Applications Deployment (Vercel)
+
+Both frontend applications deploy independently from the monorepo root:
+
+#### Admin Dashboard (`apps/admin-dashboard`)
+1. Import repository on [Vercel](https://vercel.com).
+2. Set **Root Directory** to `apps/admin-dashboard`.
+3. Framework Preset: **Next.js**.
+4. Configure Environment Variables:
+   - `NEXT_PUBLIC_API_URL`: `https://trifusiondynamics-api.onrender.com`
+   - `NEXT_PUBLIC_WS_URL`: `wss://trifusiondynamics-api.onrender.com`
+
+#### Agency Website (`apps/agency-web`)
+1. Import repository on [Vercel](https://vercel.com).
+2. Set **Root Directory** to `apps/agency-web`.
+3. Framework Preset: **Next.js**.
+4. Configure Environment Variables:
+   - `NEXT_PUBLIC_API_URL`: `https://trifusiondynamics-api.onrender.com`
+
+---
+
+### 4. Verification & Health Checks
+
+Once deployed, verify that the services and integrations are healthy:
+- **Auth API Health Check:** `https://trifusiondynamics-api.onrender.com/health` (returns `{"status":"ok"}`)
+- **AI Service Health Check:** `https://trifusiondynamics-ai-api.onrender.com/health`
+- **Admin Portal Access:** `https://trifusiondynamicsadmin.vercel.app/login`
+- **Public Site Access:** `https://trifusiondynamics.vercel.app`
+
+For in-depth deployment documentation, refer to:
+- [Production Setup Guide](docs/deployment/production-setup.md)
+- [Simplified Deployment Guide](docs/deployment/simplified-deployment-guide.md)
+- [PostgreSQL Hardening Report](docs/POSTGRESQL_PRODUCTION_HARDENING_REPORT.md)
+- [Redis Production Hardening Report](docs/REDIS_PRODUCTION_HARDENING_REPORT.md)
 
 ## 🧪 Testing
 
