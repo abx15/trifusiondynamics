@@ -182,7 +182,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${outfit.variable} h-full antialiased`}
+      className={`${inter.variable} ${outfit.variable} h-screen antialiased`}
     >
       <head>
         {/* ✅ Google Analytics GA4 — set NEXT_PUBLIC_GA_ID in .env */}
@@ -212,10 +212,10 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
         />
       </head>
-      <body className="min-h-full flex flex-col bg-[#070a13] text-slate-100 font-sans pb-16 lg:pb-0">
+      <body className="h-full flex flex-col bg-[#070a13] text-slate-100 font-sans pb-16 lg:pb-0">
         <ServiceWorkerRegistration />
         <Header />
-        <main className="flex-1 flex flex-col">{children}</main>
+        <main className="flex-1 flex flex-col min-h-0">{children}</main>
         <Footer />
         <StickyMobileCTA />
       </body>

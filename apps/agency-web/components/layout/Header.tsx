@@ -1,10 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Menu, X, ArrowRight } from "lucide-react";
+import {
+  Menu,
+  X,
+  ArrowRight,
+  ExternalLink,
+} from "lucide-react";
 
 const NAV_LINKS = [
   { href: "/services", label: "Services" },
@@ -13,139 +18,349 @@ const NAV_LINKS = [
   { href: "/about", label: "About Us" },
 ];
 
+const ADMIN_URL =
+  process.env.NEXT_PUBLIC_ADMIN_DASHBOARD_URL ||
+  (process.env.NODE_ENV === "production"
+    ? "https://trifusiondynamicsadmin.vercel.app"
+    : "http://localhost:3001");
+
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
 
-  // Close drawer on route change
+  // Close menu when route changes
   useEffect(() => {
-    const id = requestAnimationFrame(() => setIsOpen(false));
-    return () => cancelAnimationFrame(id);
+    setIsOpen(false);
   }, [pathname]);
 
-  // Prevent body scroll when mobile menu is open
+  // Prevent body scroll while menu is open
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
+    if (!isOpen) {
       document.body.style.overflow = "";
+      return;
     }
+
+    document.body.style.overflow = "hidden";
+
     return () => {
       document.body.style.overflow = "";
     };
   }, [isOpen]);
 
-  const isActive = (path: string) => pathname?.startsWith(path);
+  // Close with Escape
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
+
+  const isActive = (path: string) => {
+    if (path === "/") return pathname === "/";
+    return pathname === path || pathname.startsWith(`${path}/`);
+  };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-white/5 bg-[#070a13]/85 backdrop-blur-md">
-      <div className="mx-auto flex h-16 sm:h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2.5 shrink-0">
-          <div className="relative flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl overflow-hidden">
-            <Image 
-              src="/logo.png" 
-              alt="Trifusion Dynamics Logo" 
-              width={40} 
-              height={40}
-              className="object-contain"
-              priority
-            />
-          </div>
-          <span className="font-display font-bold tracking-tight text-white text-lg sm:text-xl">
-            Trifusion<span className="text-primary font-normal">Dynamics</span>
-          </span>
-        </Link>
+    <>
+      {/* =========================
+          HEADER
+      ========================== */}
+      <header className="sticky top-0 z-50 w-full border-b border-white/5 bg-[#070a13]/85 backdrop-blur-xl">
+        <div className="mx-auto flex h-16 sm:h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
 
-        {/* Desktop Nav — visible lg+ only */}
-        <nav className="hidden lg:flex items-center gap-8">
-          {NAV_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={`text-sm font-medium transition-colors hover:text-primary ${
-                isActive(link.href) ? "text-primary font-semibold" : "text-slate-300"
-              }`}
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
-
-        {/* Desktop Call to Action — visible lg+ only */}
-        <div className="hidden lg:flex items-center gap-5">
-          <a
-            href={`${process.env.NEXT_PUBLIC_ADMIN_DASHBOARD_URL || (process.env.NODE_ENV === "production" ? "https://trifusiondynamicsadmin.vercel.app" : "http://localhost:3001")}/login`}
-            className="text-xs font-semibold text-slate-300 hover:text-white transition-colors"
-          >
-            Login
-          </a>
+          {/* Logo */}
           <Link
-            href="/contact"
-            className="group relative inline-flex items-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-primary to-secondary px-5 py-2.5 text-sm font-semibold text-black transition-all hover:opacity-90 active:scale-95"
+            href="/"
+            className="group flex shrink-0 items-center gap-2.5"
+            aria-label="TriFusion Dynamics Home"
           >
-            Book Consultation
-            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            <div className="relative flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center overflow-hidden rounded-xl">
+              <Image
+                src="/logo.png"
+                alt="TriFusion Dynamics Logo"
+                width={40}
+                height={40}
+                className="object-contain transition-transform duration-300 group-hover:scale-105"
+                priority
+              />
+            </div>
+
+            <span className="font-display text-lg font-bold tracking-tight text-white sm:text-xl">
+              Trifusion
+              <span className="font-normal text-primary">
+                Dynamics
+              </span>
+            </span>
           </Link>
-        </div>
 
-        {/* Mobile hamburger button — hidden lg+ */}
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="flex lg:hidden h-11 w-11 items-center justify-center rounded-lg border border-white/10 text-white hover:bg-white/5 transition-colors"
-          aria-label={isOpen ? "Close menu" : "Open menu"}
-          aria-expanded={isOpen}
-          aria-controls="mobile-nav"
-        >
-          {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
-      </div>
-
-      {/* Mobile Drawer — full-screen overlay, hidden lg+ */}
-      <div
-        id="mobile-nav"
-        className={`fixed inset-x-0 top-[64px] sm:top-[80px] bottom-0 z-40 bg-[#070a13]/97 backdrop-blur-xl lg:hidden transition-all duration-300 ease-in-out ${
-          isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-        }`}
-        aria-hidden={!isOpen}
-      >
-        <div className="flex flex-col h-full p-6 sm:p-8 border-t border-white/5 overflow-y-auto">
-          <nav className="flex flex-col gap-2 flex-1">
+          {/* =========================
+              DESKTOP NAV
+          ========================== */}
+          <nav
+            aria-label="Primary navigation"
+            className="hidden items-center gap-8 lg:flex"
+          >
             {NAV_LINKS.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                onClick={() => setIsOpen(false)}
-                className={`flex items-center text-lg font-medium transition-colors border-b border-white/5 py-4 min-h-[56px] ${
-                  isActive(link.href) ? "text-primary font-semibold" : "text-slate-300 hover:text-white"
+                className={`relative py-2 text-sm font-medium transition-colors ${
+                  isActive(link.href)
+                    ? "text-primary"
+                    : "text-slate-300 hover:text-white"
                 }`}
               >
                 {link.label}
+
+                {isActive(link.href) && (
+                  <span className="absolute -bottom-0.5 left-0 h-0.5 w-full rounded-full bg-primary" />
+                )}
               </Link>
             ))}
+          </nav>
+
+          {/* =========================
+              DESKTOP CTA
+          ========================== */}
+          <div className="hidden items-center gap-5 lg:flex">
             <a
-              href={`${process.env.NEXT_PUBLIC_ADMIN_DASHBOARD_URL || (process.env.NODE_ENV === "production" ? "https://trifusiondynamicsadmin.vercel.app" : "http://localhost:3001")}/login`}
-              onClick={() => setIsOpen(false)}
-              className="flex items-center text-lg font-medium text-slate-400 hover:text-white transition-colors border-b border-white/5 py-4 min-h-[56px]"
+              href={`${ADMIN_URL}/login`}
+              className="text-xs font-semibold text-slate-300 transition-colors hover:text-white"
             >
               Login
             </a>
+
+            <Link
+              href="/contact"
+              className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-secondary px-5 py-2.5 text-sm font-semibold text-black transition-all hover:opacity-90 active:scale-95"
+            >
+              Book Consultation
+
+              <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+            </Link>
+          </div>
+
+          {/* =========================
+              MOBILE MENU BUTTON
+          ========================== */}
+          <button
+            type="button"
+            onClick={() => setIsOpen(true)}
+            className="group flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-white transition-all duration-300 hover:border-primary/30 hover:bg-primary/10 lg:hidden"
+            aria-label="Open navigation menu"
+            aria-expanded={isOpen}
+            aria-controls="mobile-navigation"
+          >
+            <Menu className="h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
+          </button>
+        </div>
+      </header>
+
+      {/* =========================
+          MOBILE MENU
+      ========================== */}
+
+      {/* Backdrop */}
+      <div
+        className={`fixed inset-0 z-[60] bg-black/70 backdrop-blur-md transition-all duration-300 lg:hidden ${
+          isOpen
+            ? "pointer-events-auto opacity-100"
+            : "pointer-events-none opacity-0"
+        }`}
+        onClick={() => setIsOpen(false)}
+        aria-hidden="true"
+      />
+
+      {/* Drawer */}
+      <aside
+        id="mobile-navigation"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Mobile navigation"
+        className={`fixed right-0 top-0 z-[70] flex h-[100dvh] w-[88%] max-w-md flex-col overflow-hidden border-l border-white/10 bg-[#070a13] shadow-2xl shadow-black/50 transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] lg:hidden ${
+          isOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
+        {/* Decorative background */}
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute -right-32 -top-32 h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
+          <div className="absolute -bottom-32 -left-32 h-72 w-72 rounded-full bg-secondary/10 blur-3xl" />
+
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.06),transparent_35%)]" />
+        </div>
+
+        {/* Drawer Content */}
+        <div className="relative flex h-full flex-col">
+
+          {/* =========================
+              DRAWER HEADER
+          ========================== */}
+          <div className="flex items-center justify-between border-b border-white/10 px-5 py-5 sm:px-6">
+            <Link
+              href="/"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-3"
+            >
+              <div className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-white/[0.04]">
+                <Image
+                  src="/logo.png"
+                  alt="TriFusion Dynamics Logo"
+                  width={40}
+                  height={40}
+                  className="object-contain"
+                />
+              </div>
+
+              <div>
+                <p className="font-display text-base font-bold tracking-tight text-white">
+                  Trifusion
+                  <span className="font-normal text-primary">
+                    Dynamics
+                  </span>
+                </p>
+
+                <p className="mt-0.5 text-[10px] uppercase tracking-[0.2em] text-slate-500">
+                  Digital Engineering
+                </p>
+              </div>
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => setIsOpen(false)}
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-slate-300 transition-all duration-300 hover:border-white/20 hover:bg-white/[0.07] hover:text-white"
+              aria-label="Close navigation menu"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* =========================
+              NAVIGATION
+          ========================== */}
+          <nav
+            aria-label="Mobile navigation"
+            className="flex-1 overflow-y-auto px-4 py-6 sm:px-6"
+          >
+            <div className="mb-5 px-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-slate-500">
+                Explore
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              {NAV_LINKS.map((link, index) => {
+                const active = isActive(link.href);
+
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setIsOpen(false)}
+                    className={`group relative flex items-center justify-between overflow-hidden rounded-2xl border px-4 py-4 transition-all duration-300 ${
+                      active
+                        ? "border-primary/20 bg-primary/[0.08]"
+                        : "border-transparent hover:border-white/10 hover:bg-white/[0.04]"
+                    }`}
+                  >
+                    {/* Active glow */}
+                    {active && (
+                      <span className="absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r-full bg-primary shadow-[0_0_18px_rgba(255,255,255,0.25)]" />
+                    )}
+
+                    <div className="flex items-center gap-4">
+                      <span
+                        className={`font-mono text-[10px] ${
+                          active
+                            ? "text-primary"
+                            : "text-slate-600 group-hover:text-slate-400"
+                        }`}
+                      >
+                        0{index + 1}
+                      </span>
+
+                      <span
+                        className={`text-lg font-medium transition-colors ${
+                          active
+                            ? "text-white"
+                            : "text-slate-300 group-hover:text-white"
+                        }`}
+                      >
+                        {link.label}
+                      </span>
+                    </div>
+
+                    <ArrowRight
+                      className={`h-4 w-4 transition-all duration-300 ${
+                        active
+                          ? "translate-x-0 text-primary"
+                          : "translate-x-[-4px] text-slate-600 opacity-0 group-hover:translate-x-0 group-hover:text-slate-300 group-hover:opacity-100"
+                      }`}
+                    />
+                  </Link>
+                );
+              })}
+            </div>
+
+            {/* Divider */}
+            <div className="my-6 h-px bg-white/10" />
+
+            {/* Login */}
+            <a
+              href={`${ADMIN_URL}/login`}
+              onClick={() => setIsOpen(false)}
+              className="group flex items-center justify-between rounded-2xl border border-white/5 px-4 py-4 transition-all duration-300 hover:border-white/10 hover:bg-white/[0.04]"
+            >
+              <div className="flex items-center gap-4">
+                <span className="font-mono text-[10px] text-slate-600">
+                  05
+                </span>
+
+                <span className="text-base font-medium text-slate-300 transition-colors group-hover:text-white">
+                  Client Login
+                </span>
+              </div>
+
+              <ExternalLink className="h-4 w-4 text-slate-600 transition-colors group-hover:text-primary" />
+            </a>
           </nav>
 
+          {/* =========================
+              BOTTOM CTA
+          ========================== */}
+          <div className="border-t border-white/10 bg-[#0b101d]/80 p-5 sm:p-6">
+            <div className="mb-4">
+              <p className="text-xs font-medium text-slate-500">
+                Have a project in mind?
+              </p>
 
-          {/* Mobile CTA at bottom of drawer */}
-          <div className="pt-6 pb-safe">
+              <p className="mt-1 text-sm text-slate-300">
+                Let's build something{" "}
+                <span className="text-white">great together.</span>
+              </p>
+            </div>
+
             <Link
               href="/contact"
               onClick={() => setIsOpen(false)}
-              className="flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-primary to-secondary py-4 text-center font-semibold text-black min-h-[56px] active:scale-95 transition-transform"
+              className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-primary to-secondary py-4 text-sm font-bold text-black transition-all duration-300 hover:opacity-90 active:scale-[0.98]"
             >
               Book Consultation
-              <ArrowRight className="h-5 w-5" />
+
+              <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
             </Link>
           </div>
         </div>
-      </div>
-    </header>
+      </aside>
+    </>
   );
 }
