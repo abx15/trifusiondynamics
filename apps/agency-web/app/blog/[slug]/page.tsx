@@ -102,7 +102,7 @@ export default async function BlogPostDetailPage({ params }: Props) {
   };
 
   return (
-    <div className="bg-[#070a13] py-20 relative">
+    <div className="bg-[#070a13] py-20">
       {/* Dynamic structured data script */}
       <script
         type="application/ld+json"

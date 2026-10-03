@@ -70,7 +70,7 @@ export default function PricingSection() {
   const [annual, setAnnual] = useState(true);
 
   return (
-    <section className="py-24 px-6 relative bg-zinc-950 text-white overflow-hidden" id="pricing">
+    <section className="py-24 px-6 relative bg-zinc-950 text-white" id="pricing">
       {/* Glow Backdrop */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-purple-600/10 blur-[140px] pointer-events-none rounded-full" />
 

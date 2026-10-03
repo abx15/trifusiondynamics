@@ -29,7 +29,7 @@ export default function TestimonialCarousel({ testimonials }: TestimonialsProps)
   }, [emblaApi]);
 
   return (
-    <section className="py-16 sm:py-24 bg-[#090d19] relative overflow-hidden">
+    <section className="py-16 sm:py-24 bg-[#090d19] relative">
       {/* Decorative Glow */}
       <div className="absolute top-1/2 left-0 h-[250px] w-[250px] rounded-full bg-secondary/5 blur-[90px] pointer-events-none" />
 

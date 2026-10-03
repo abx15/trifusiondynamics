@@ -62,7 +62,7 @@ const TECH_STACK = [
 
 export default function TechStackSection() {
   return (
-    <section className="w-full py-20 lg:py-28 bg-[#070a13] relative overflow-hidden border-t border-white/5">
+    <section className="w-full py-20 lg:py-28 bg-[#070a13] relative border-t border-white/5">
       {/* Glow Effects */}
       <div className="absolute top-1/2 right-1/4 h-[400px] w-[400px] rounded-full bg-cyan-500/5 blur-[140px] pointer-events-none" />
       <div className="absolute bottom-10 left-10 h-[300px] w-[300px] rounded-full bg-purple-500/5 blur-[120px] pointer-events-none" />

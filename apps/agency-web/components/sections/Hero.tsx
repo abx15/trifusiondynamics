@@ -3,7 +3,7 @@ import { ArrowRight, Sparkles, Code2, Database, Bot } from "lucide-react";
 
 export default function Hero() {
   return (
-    <section className="relative overflow-hidden pt-32 pb-24 lg:pt-40 lg:pb-32 bg-[#070a13]">
+    <section className="relative pt-16 pb-24 lg:pt-20 lg:pb-32 bg-[#070a13]">
       {/* Glow Effects */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[350px] w-[350px] rounded-full bg-primary/10 blur-[120px] pointer-events-none" />
       <div className="absolute top-1/3 left-1/4 -translate-y-1/2 h-[250px] w-[250px] rounded-full bg-secondary/15 blur-[100px] pointer-events-none" />

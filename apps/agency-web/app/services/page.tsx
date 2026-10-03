@@ -52,7 +52,7 @@ export default async function ServicesPage() {
   };
 
   return (
-    <div className="bg-[#070a13] py-20 relative">
+    <div className="bg-[#070a13] py-20">
       {/* Decorative Glow */}
       <div className="absolute top-40 right-10 h-[300px] w-[300px] rounded-full bg-primary/5 blur-[120px] pointer-events-none" />
 

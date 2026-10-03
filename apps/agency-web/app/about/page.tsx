@@ -36,7 +36,7 @@ export default async function AboutPage() {
   };
 
   return (
-    <div className="bg-[#070a13] py-20 relative">
+    <div className="bg-[#070a13] py-20">
       {/* Decorative Glow */}
       <div className="absolute top-20 right-10 h-[300px] w-[300px] rounded-full bg-secondary/5 blur-[120px] pointer-events-none" />
 

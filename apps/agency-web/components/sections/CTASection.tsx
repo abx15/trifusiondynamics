@@ -3,7 +3,7 @@ import { ArrowRight } from "lucide-react";
 
 export default function CTASection() {
   return (
-    <section className="py-20 bg-[#070a13] relative overflow-hidden">
+    <section className="py-20 bg-[#070a13] relative">
       {/* Decorative Glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[350px] w-[500px] rounded-full bg-primary/5 blur-[120px] pointer-events-none" />
 

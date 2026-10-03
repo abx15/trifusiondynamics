@@ -29,7 +29,7 @@ export default async function Home() {
   ]);
 
   return (
-    <div className="flex flex-col w-full min-h-screen bg-[#070a13] text-slate-100 overflow-x-hidden">
+    <div className="flex flex-col w-full bg-[#070a13] text-slate-100">
       <Hero />
       <ServicesGrid services={services} />
       <TechStackSection />
