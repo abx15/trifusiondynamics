@@ -45,11 +45,85 @@ export default async function PortfolioDetailPage({ params }: Props) {
 
   const allItems = await getPortfolioItems();
   const nextItem = allItems.find((p) => p.slug !== slug);
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://trifusiondynamics.vercel.app/";
+
+  // JSON-LD Structured Data for Case Study (CreativeWork)
+  const caseStudyJsonLd: any = {
+    "@context": "https://schema.org",
+    "@type": "CreativeWork",
+    "name": item.title,
+    "description": item.seoDescription || item.summary,
+    "image": item.coverImage,
+    "author": {
+      "@type": "Organization",
+      "name": "Trifusion Dynamics",
+      "url": siteUrl,
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "Trifusion Dynamics",
+      "logo": `${siteUrl}/logo.png`,
+    },
+    "datePublished": item.year,
+    "about": {
+      "@type": "Thing",
+      "name": item.category,
+    },
+  };
+
+  // Add Review/Testimonial if exists
+  if (item.testimonial) {
+    caseStudyJsonLd.review = {
+      "@type": "Review",
+      "reviewBody": item.testimonial.quote,
+      "author": {
+        "@type": "Person",
+        "name": item.testimonial.author,
+        "jobTitle": item.testimonial.role,
+      },
+    };
+  }
+
+  // Breadcrumb JSON-LD
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": siteUrl,
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": "Portfolio",
+        "item": `${siteUrl}/portfolio`,
+      },
+      {
+        "@type": "ListItem",
+        "position": 3,
+        "name": item.title,
+        "item": `${siteUrl}/portfolio/${slug}`,
+      },
+    ],
+  };
 
   return (
     <div className="bg-[#070a13] py-20 relative">
       {/* Decorative Glow */}
       <div className="absolute top-1/4 right-10 h-[350px] w-[350px] rounded-full bg-primary/5 blur-[120px] pointer-events-none" />
+
+      {/* JSON-LD Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(caseStudyJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
 
       <div className="mx-auto max-w-5xl px-6 sm:px-8">
         {/* Back Link */}

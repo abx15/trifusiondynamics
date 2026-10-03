@@ -46,6 +46,7 @@ export default async function BlogPostDetailPage({ params }: Props) {
 
   const allPosts = await getBlogPosts();
   const nextPost = allPosts.find((p) => p.slug !== slug);
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://trifusiondynamics.vercel.app/";
 
   // Article JSON-LD Structured Data
   const articleJsonLd = {
@@ -54,12 +55,50 @@ export default async function BlogPostDetailPage({ params }: Props) {
     "headline": post.title,
     "image": post.coverImage,
     "datePublished": new Date(post.date).toISOString(),
+    "dateModified": new Date(post.date).toISOString(),
     "author": {
       "@type": "Person",
       "name": post.author.name,
       "jobTitle": post.author.role,
+      "image": post.author.avatar,
     },
-    "description": post.summary,
+    "publisher": {
+      "@type": "Organization",
+      "name": "Trifusion Dynamics",
+      "logo": `${siteUrl}/logo.png`,
+      "url": siteUrl,
+    },
+    "description": post.seoDescription || post.summary,
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": `${siteUrl}/blog/${slug}`,
+    },
+  };
+
+  // Breadcrumb JSON-LD
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": siteUrl,
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": "Blog",
+        "item": `${siteUrl}/blog`,
+      },
+      {
+        "@type": "ListItem",
+        "position": 3,
+        "name": post.title,
+        "item": `${siteUrl}/blog/${slug}`,
+      },
+    ],
   };
 
   return (
@@ -68,6 +107,10 @@ export default async function BlogPostDetailPage({ params }: Props) {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
 
       {/* Decorative Glow */}
