@@ -88,24 +88,94 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://trifusiondynamics.vercel.app";
+
   const orgJsonLd = {
     "@context": "https://schema.org",
     "@type": "Organization",
     "name": "Trifusion Dynamics",
-    "url": "https://trifusiondynamics.com",
-    "logo": "https://trifusiondynamics.com/logo.png",
-    "description": "Premium Full-Stack and AI-powered SaaS agency targeting high-growth startups and enterprises.",
-    "contactPoint": {
-      "@type": "ContactPoint",
-      "telephone": "+91-98765-43210",
-      "contactType": "sales",
-      "email": "trifusiondynamics@gmail.com",
-      "areaServed": "IN",
-      "availableLanguage": "en"
+    "url": siteUrl,
+    "logo": `${siteUrl}/logo.png`,
+    "description": "Premium Full-Stack and AI-powered SaaS agency targeting high-growth startups and enterprises. We specialize in AI integration, SaaS development, mobile engineering, cloud infrastructure, and custom ERP/CRM solutions.",
+    "foundingDate": "2024",
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": "New Ashok Nagar, East Delhi",
+      "addressLocality": "Delhi",
+      "postalCode": "110096",
+      "addressCountry": "IN",
+      "addressRegion": "Delhi"
     },
+    "contactPoint": [
+      {
+        "@type": "ContactPoint",
+        "telephone": "+91-8745883950",
+        "contactType": "sales",
+        "email": "support.trifusion@gmail.com",
+        "areaServed": "IN",
+        "availableLanguage": ["en", "hi"],
+        "hoursAvailable": {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+          "opens": "10:30",
+          "closes": "18:30"
+        }
+      },
+      {
+        "@type": "ContactPoint",
+        "contactType": "customer support",
+        "email": "support.trifusion@gmail.com",
+        "areaServed": "IN",
+        "availableLanguage": ["en", "hi"],
+        "hoursAvailable": {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+          "opens": "00:00",
+          "closes": "23:59"
+        }
+      }
+    ],
+    "areaServed": [
+      {
+        "@type": "Country",
+        "name": "India"
+      },
+      {
+        "@type": "GeoCircle",
+        "geoMidpoint": {
+          "@type": "GeoCoordinates",
+          "latitude": "28.6139",
+          "longitude": "77.2090"
+        },
+        "geoRadius": "1000"
+      }
+    ],
     "sameAs": [
       "https://twitter.com/trifusion",
-      "https://linkedin.com/company/trifusion-dynamics"
+      "https://linkedin.com/company/trifusion-dynamics",
+      "https://github.com/abx15"
+    ],
+    "serviceType": [
+      "AI Integration Services",
+      "SaaS Development",
+      "Mobile App Development",
+      "Cloud Infrastructure",
+      "Custom ERP & CRM",
+      "Cybersecurity Consulting",
+      "UI/UX Design"
+    ],
+    "priceRange": "$$",
+    "knowsAbout": [
+      "Next.js",
+      "React Native",
+      "NestJS",
+      "PostgreSQL",
+      "pgvector",
+      "RAG",
+      "AI Integration",
+      "Microservices",
+      "Kubernetes",
+      "Docker"
     ]
   };
 
