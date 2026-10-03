@@ -25,6 +25,9 @@ export const viewport: Viewport = {
   maximumScale: 5,
 };
 
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL || "https://trifusiondynamics.com";
+
 export const metadata: Metadata = {
   title: {
     default: "Trifusion Dynamics | Full-Stack & AI-Powered SaaS Development",
@@ -41,24 +44,26 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
-      { url: "/favicon.png", sizes: "512x512", type: "image/png" }
+      { url: "/favicon.png", sizes: "512x512", type: "image/png" },
     ],
     apple: "/icons/icon-192.png",
     shortcut: "/favicon.png",
   },
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL || "https://trifusiondynamics.com"
-  ),
+  metadataBase: new URL(SITE_URL),
+  // ✅ Canonical URL for root
+  alternates: {
+    canonical: "/",
+  },
   // ✅ Google Search Console Verification
   verification: {
     google: "googlea691be4bf549d308",
   },
-  // ✅ Open Graph (Social Sharing with Logo)
+  // ✅ Open Graph (Social Sharing — 1200×630 preferred)
   openGraph: {
     title: "Trifusion Dynamics | Full-Stack & AI-Powered SaaS Development",
     description:
       "We build modern, resilient full-stack applications and integrate bespoke AI automations to transform operations for Indian SMBs and startups.",
-    url: "https://trifusiondynamics.com",
+    url: SITE_URL,
     siteName: "Trifusion Dynamics",
     images: [
       {
@@ -71,13 +76,15 @@ export const metadata: Metadata = {
     locale: "en_IN",
     type: "website",
   },
-  // ✅ Twitter Card with Logo
+  // ✅ Twitter / X Card
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "Trifusion Dynamics | Full-Stack & AI-Powered SaaS",
     description:
       "We build modern, resilient full-stack applications and integrate bespoke AI automations.",
     images: ["/logo.png"],
+    creator: "@trifusiondyn",
+    site: "@trifusiondyn",
   },
 };
 
@@ -88,7 +95,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://trifusiondynamics.vercel.app";
+  const siteUrl = SITE_URL;
 
   const orgJsonLd = {
     "@context": "https://schema.org",
@@ -206,10 +213,32 @@ export default function RootLayout({
             />
           </>
         )}
-        {/* ✅ JSON-LD Structured Data for SEO */}
+        {/* ✅ Organization JSON-LD */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
+        />
+        {/* ✅ WebSite JSON-LD (enables Sitelinks Search Box in Google) */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebSite",
+              name: "Trifusion Dynamics",
+              url: siteUrl,
+              description:
+                "Premium Full-Stack and AI-powered SaaS agency for Indian SMBs and startups.",
+              potentialAction: {
+                "@type": "SearchAction",
+                target: {
+                  "@type": "EntryPoint",
+                  urlTemplate: `${siteUrl}/search?q={search_term_string}`,
+                },
+                "query-input": "required name=search_term_string",
+              },
+            }),
+          }}
         />
       </head>
       <body className="min-h-screen flex flex-col bg-[#070a13] text-slate-100 font-sans pb-16 lg:pb-0">

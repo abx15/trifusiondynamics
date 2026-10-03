@@ -20,6 +20,46 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      // Redirect old /home to root
+      {
+        source: "/home",
+        destination: "/",
+        permanent: true,
+      },
+      // Redirect /work to /portfolio
+      {
+        source: "/work",
+        destination: "/portfolio",
+        permanent: true,
+      },
+      // Redirect /work/:slug to /portfolio/:slug
+      {
+        source: "/work/:slug",
+        destination: "/portfolio/:slug",
+        permanent: true,
+      },
+      // Redirect /service (singular) to /services
+      {
+        source: "/service",
+        destination: "/services",
+        permanent: true,
+      },
+      // Redirect /service/:slug to /services/:slug
+      {
+        source: "/service/:slug",
+        destination: "/services/:slug",
+        permanent: true,
+      },
+      // Redirect /blog/posts/:slug to /blog/:slug
+      {
+        source: "/blog/posts/:slug",
+        destination: "/blog/:slug",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {

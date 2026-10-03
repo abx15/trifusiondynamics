@@ -13,7 +13,9 @@ export const metadata: Metadata = constructMetadata({
 
 export default async function AboutPage() {
   const pageData = await getCmsPage("about-us");
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://trifusiondynamics.vercel.app/";
+  const siteUrl = (
+    process.env.NEXT_PUBLIC_SITE_URL || "https://trifusiondynamics.vercel.app/"
+  ).replace(/\/$/, "");
 
   // Breadcrumb JSON-LD
   const breadcrumbJsonLd = {
@@ -36,7 +38,7 @@ export default async function AboutPage() {
   };
 
   return (
-    <div className="bg-[#070a13] py-20">
+    <div className="bg-[#070a13] py-12 sm:py-20">
       {/* Decorative Glow */}
       <div className="absolute top-20 right-10 h-[300px] w-[300px] rounded-full bg-secondary/5 blur-[120px] pointer-events-none" />
 
@@ -46,54 +48,54 @@ export default async function AboutPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
 
-      <div className="mx-auto max-w-7xl px-6 sm:px-8">
-        
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+
         {/* Page Header */}
-        <div className="max-w-3xl mb-16">
-          <span className="text-xs font-semibold uppercase tracking-wider text-primary">About Trifusion</span>
-          <h1 className="text-4xl sm:text-5xl font-display font-extrabold text-white mt-3 mb-6 tracking-tight">
+        <div className="max-w-3xl mb-12 sm:mb-16">
+          <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-primary">About Trifusion</span>
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-display font-extrabold text-white mt-3 mb-4 sm:mb-6 tracking-tight">
             {pageData.title === "Home" ? "About Us" : pageData.title}
           </h1>
-          <p className="text-lg text-slate-300 leading-relaxed">
+          <p className="text-base sm:text-lg text-slate-300 leading-relaxed">
             We are a dedicated team of engineers, cloud architects, and AI researchers. We focus on transforming complex backend requirements into highly responsive, premium products.
           </p>
         </div>
 
         {/* Dynamic CMS Copy */}
         {pageData.content && (
-          <div className="glass-panel rounded-3xl p-8 border border-white/5 mb-16 text-slate-300 text-sm sm:text-base leading-relaxed max-w-4xl">
-            <p className="font-mono text-xs text-primary mb-3">CMS Backend Copy</p>
+          <div className="glass-panel rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-white/5 mb-12 sm:mb-16 text-slate-300 text-sm sm:text-base leading-relaxed max-w-4xl">
+            <p className="font-mono text-[10px] sm:text-xs text-primary mb-3">CMS Backend Copy</p>
             {pageData.content}
           </div>
         )}
 
         {/* Vision & Core Methodology */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20">
-          <div className="glass-panel rounded-3xl p-8 border border-white/5 bg-[#0f172a]/30">
-            <div className="h-10 w-10 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 mb-16 sm:mb-20">
+          <div className="glass-panel rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-white/5 bg-[#0f172a]/30">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center mb-4 sm:mb-6">
               <Target className="h-5 w-5" />
             </div>
-            <h3 className="font-display font-bold text-white text-lg mb-3">Our Objective</h3>
+            <h3 className="font-display font-bold text-white text-base sm:text-lg mb-2 sm:mb-3">Our Objective</h3>
             <p className="text-slate-400 text-xs sm:text-sm leading-relaxed">
               To strip away complex software layers and build fast, responsive, and robust applications that solve core business constraints.
             </p>
           </div>
 
-          <div className="glass-panel rounded-3xl p-8 border border-white/5 bg-[#0f172a]/30">
-            <div className="h-10 w-10 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center mb-6">
+          <div className="glass-panel rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-white/5 bg-[#0f172a]/30">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center mb-4 sm:mb-6">
               <Zap className="h-5 w-5" />
             </div>
-            <h3 className="font-display font-bold text-white text-lg mb-3">Performance Focus</h3>
+            <h3 className="font-display font-bold text-white text-base sm:text-lg mb-2 sm:mb-3">Performance Focus</h3>
             <p className="text-slate-400 text-xs sm:text-sm leading-relaxed">
               Uptime, sub-second API latencies, and high compression rates. We believe performance is the most critical feature of any product.
             </p>
           </div>
 
-          <div className="glass-panel rounded-3xl p-8 border border-white/5 bg-[#0f172a]/30">
-            <div className="h-10 w-10 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center mb-6">
+          <div className="glass-panel rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-white/5 bg-[#0f172a]/30 sm:col-span-2 lg:col-span-1">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center mb-4 sm:mb-6">
               <Shield className="h-5 w-5" />
             </div>
-            <h3 className="font-display font-bold text-white text-lg mb-3">Security & Trust</h3>
+            <h3 className="font-display font-bold text-white text-base sm:text-lg mb-2 sm:mb-3">Security & Trust</h3>
             <p className="text-slate-400 text-xs sm:text-sm leading-relaxed">
               We design multi-tenant architectures, secure API keys, and RAG document flows ensuring enterprise compliance and absolute data privacy.
             </p>
@@ -101,12 +103,12 @@ export default async function AboutPage() {
         </div>
 
         {/* Brand Showcase Section */}
-        <div className="glass-panel rounded-3xl p-10 sm:p-16 border border-white/10 bg-gradient-to-br from-[#0c1220] via-[#0f172a]/60 to-[#070a13] text-center max-w-4xl mx-auto">
-          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1 text-xs font-semibold text-primary mb-6">
+        <div className="glass-panel rounded-2xl sm:rounded-3xl p-6 sm:p-10 lg:p-16 border border-white/10 bg-gradient-to-br from-[#0c1220] via-[#0f172a]/60 to-[#070a13] text-center max-w-4xl mx-auto">
+          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 sm:px-4 py-1 text-[10px] sm:text-xs font-semibold text-primary mb-4 sm:mb-6">
             <Sparkles className="h-3.5 w-3.5" />
             Trifusion Dynamics Core
           </div>
-          <h2 className="text-2xl sm:text-3xl font-display font-extrabold text-white mb-4">
+          <h2 className="text-xl sm:text-2xl lg:text-3xl font-display font-extrabold text-white mb-3 sm:mb-4">
             Custom Software, Built for Results
           </h2>
           <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-2xl mx-auto">

@@ -46,7 +46,9 @@ export default async function BlogPostDetailPage({ params }: Props) {
 
   const allPosts = await getBlogPosts();
   const nextPost = allPosts.find((p) => p.slug !== slug);
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://trifusiondynamics.vercel.app/";
+  const siteUrl = (
+    process.env.NEXT_PUBLIC_SITE_URL || "https://trifusiondynamics.vercel.app/"
+  ).replace(/\/$/, "");
 
   // Article JSON-LD Structured Data
   const articleJsonLd = {

@@ -11,7 +11,7 @@ interface MetadataProps {
 export function constructMetadata({
   title,
   description,
-  image = "/og-image.jpg",
+  image = "/logo.png",
   noIndex = false,
   slug = "",
 }: MetadataProps = {}): Metadata {
@@ -19,23 +19,31 @@ export function constructMetadata({
   const defaultDescription =
     "We build modern, resilient full-stack applications and integrate bespoke AI automation pipelines to transform business operations for Indian SMBs and startups.";
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://trifusiondynamics.com";
-  const currentUrl = `${siteUrl}/${slug}`;
+  const siteUrl = (
+    process.env.NEXT_PUBLIC_SITE_URL || "https://trifusiondynamics.vercel.app/"
+  ).replace(/\/$/, "");
+
+  // Build absolute canonical URL: siteUrl/slug (slug may be "" for root)
+  const canonicalPath = slug ? `/${slug}` : "/";
+  const canonicalUrl = `${siteUrl}${canonicalPath}`;
+
+  // Resolve image to absolute URL
+  const ogImage = image.startsWith("http") ? image : `${siteUrl}${image}`;
 
   return {
     title: title ? `${title} | Trifusion Dynamics` : defaultTitle,
     description: description || defaultDescription,
     alternates: {
-      canonical: currentUrl,
+      canonical: canonicalUrl,
     },
     openGraph: {
       title: title ? `${title} | Trifusion Dynamics` : defaultTitle,
       description: description || defaultDescription,
-      url: currentUrl,
+      url: canonicalUrl,
       siteName: "Trifusion Dynamics",
       images: [
         {
-          url: image.startsWith("http") ? image : `${siteUrl}${image}`,
+          url: ogImage,
           width: 1200,
           height: 630,
           alt: title || defaultTitle,
@@ -48,8 +56,9 @@ export function constructMetadata({
       card: "summary_large_image",
       title: title ? `${title} | Trifusion Dynamics` : defaultTitle,
       description: description || defaultDescription,
-      images: [image.startsWith("http") ? image : `${siteUrl}${image}`],
-      creator: "@trifusion",
+      images: [ogImage],
+      creator: "@trifusiondyn",
+      site: "@trifusiondyn",
     },
     robots: {
       index: !noIndex,

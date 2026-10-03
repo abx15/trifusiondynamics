@@ -2,7 +2,10 @@ import { MetadataRoute } from "next";
 import { getCmsServices, getPortfolioItems, getBlogPosts } from "@/lib/api";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://trifusiondynamics.vercel.app/";
+  // Strip trailing slash to keep URLs clean
+  const siteUrl = (
+    process.env.NEXT_PUBLIC_SITE_URL || "https://trifusiondynamics.vercel.app/"
+  ).replace(/\/$/, "");
   const currentDate = new Date();
 
   // Base static paths with appropriate priorities and change frequencies

@@ -57,7 +57,9 @@ export default async function ServiceDetailPage({ params }: Props) {
   }
 
   const otherServices = (await getCmsServices()).filter((s) => s.slug !== slug);
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://trifusiondynamics.vercel.app/";
+  const siteUrl = (
+    process.env.NEXT_PUBLIC_SITE_URL || "https://trifusiondynamics.vercel.app/"
+  ).replace(/\/$/, "");
 
   // JSON-LD Structured Data for Service
   const serviceJsonLd = {
