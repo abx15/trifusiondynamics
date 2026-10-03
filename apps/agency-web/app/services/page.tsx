@@ -29,11 +29,38 @@ function ServiceIcon({ name, className }: { name: string; className?: string }) 
 
 export default async function ServicesPage() {
   const services = await getCmsServices();
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://trifusiondynamics.vercel.app/";
+
+  // Breadcrumb JSON-LD
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": siteUrl,
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": "Services",
+        "item": `${siteUrl}/services`,
+      },
+    ],
+  };
 
   return (
     <div className="bg-[#070a13] py-20 relative">
       {/* Decorative Glow */}
       <div className="absolute top-40 right-10 h-[300px] w-[300px] rounded-full bg-primary/5 blur-[120px] pointer-events-none" />
+
+      {/* JSON-LD Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
 
       <div className="mx-auto max-w-7xl px-6 sm:px-8">
         

@@ -13,11 +13,38 @@ export const metadata: Metadata = constructMetadata({
 
 export default async function PortfolioPage() {
   const items = await getPortfolioItems();
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://trifusiondynamics.vercel.app/";
+
+  // Breadcrumb JSON-LD
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": siteUrl,
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": "Portfolio",
+        "item": `${siteUrl}/portfolio`,
+      },
+    ],
+  };
 
   return (
     <div className="bg-[#070a13] py-20 relative">
       {/* Decorative Glow */}
       <div className="absolute top-20 left-10 h-[250px] w-[250px] rounded-full bg-secondary/5 blur-[120px] pointer-events-none" />
+
+      {/* JSON-LD Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
 
       <div className="mx-auto max-w-7xl px-6 sm:px-8">
         

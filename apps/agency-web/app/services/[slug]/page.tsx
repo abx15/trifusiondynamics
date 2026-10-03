@@ -57,11 +57,71 @@ export default async function ServiceDetailPage({ params }: Props) {
   }
 
   const otherServices = (await getCmsServices()).filter((s) => s.slug !== slug);
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://trifusiondynamics.vercel.app/";
+
+  // JSON-LD Structured Data for Service
+  const serviceJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    "name": service.name,
+    "description": service.seoDescription || service.description,
+    "provider": {
+      "@type": "Organization",
+      "name": "Trifusion Dynamics",
+      "url": siteUrl,
+      "logo": `${siteUrl}/logo.png`,
+    },
+    "areaServed": {
+      "@type": "Country",
+      "name": "India",
+    },
+    "offers": {
+      "@type": "Offer",
+      "availability": "https://schema.org/InStock",
+      "priceCurrency": "INR",
+    },
+  };
+
+  // Breadcrumb JSON-LD
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": siteUrl,
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": "Services",
+        "item": `${siteUrl}/services`,
+      },
+      {
+        "@type": "ListItem",
+        "position": 3,
+        "name": service.name,
+        "item": `${siteUrl}/services/${slug}`,
+      },
+    ],
+  };
 
   return (
     <div className="bg-[#070a13] py-20 relative">
       {/* Decorative Glow */}
       <div className="absolute top-1/4 left-1/4 h-[300px] w-[300px] rounded-full bg-primary/5 blur-[120px] pointer-events-none" />
+
+      {/* JSON-LD Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
 
       <div className="mx-auto max-w-7xl px-6 sm:px-8">
         
