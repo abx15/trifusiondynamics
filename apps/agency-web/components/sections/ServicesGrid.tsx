@@ -56,7 +56,7 @@ export default function ServicesGrid({ services }: ServicesGridProps) {
           </div>
           <Link
             href="/services"
-            className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-white transition-colors min-h-[44px] sm:min-h-0"
+            className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-white transition-colors py-3 min-h-[44px]"
           >
             View All Services
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -64,7 +64,7 @@ export default function ServicesGrid({ services }: ServicesGridProps) {
         </div>
 
         {/* Services Cards Grid: 1 column mobile -> 2 column tablet/desktop -> 4 column xl */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 sm:gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6 md:gap-8">
           {services.map((service) => (
             <div
               key={service.id}
@@ -97,7 +97,7 @@ export default function ServicesGrid({ services }: ServicesGridProps) {
 
               <Link
                 href={`/services/${service.slug}`}
-                className="group inline-flex items-center gap-1.5 text-xs font-semibold text-white hover:text-primary transition-colors py-2 min-h-[44px] sm:min-h-0"
+                className="group inline-flex items-center gap-1.5 text-xs font-semibold text-white hover:text-primary transition-colors py-3 min-h-[44px]"
               >
                 Learn More
                 <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />

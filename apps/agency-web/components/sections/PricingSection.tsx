@@ -90,7 +90,7 @@ export default function PricingSection() {
           <div className="mt-8 inline-flex items-center p-1 rounded-xl bg-zinc-900 border border-zinc-800">
             <button
               onClick={() => setAnnual(false)}
-              className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${
+              className={`px-4 sm:px-5 py-2.5 sm:py-2 rounded-lg text-sm font-medium transition-all min-h-[44px] ${
                 !annual ? "bg-purple-600 text-white shadow-lg" : "text-zinc-400 hover:text-white"
               }`}
             >
@@ -98,7 +98,7 @@ export default function PricingSection() {
             </button>
             <button
               onClick={() => setAnnual(true)}
-              className={`px-5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+              className={`px-4 sm:px-5 py-2.5 sm:py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 min-h-[44px] ${
                 annual ? "bg-purple-600 text-white shadow-lg" : "text-zinc-400 hover:text-white"
               }`}
             >
@@ -111,7 +111,7 @@ export default function PricingSection() {
         </div>
 
         {/* Pricing Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 items-stretch">
           {PLANS.map((plan) => {
             const price = annual ? plan.annualPrice : plan.monthlyPrice;
             return (
@@ -153,7 +153,7 @@ export default function PricingSection() {
                 <div className="mt-8 pt-6">
                   <Link
                     href="/contact"
-                    className={`w-full flex items-center justify-center gap-2 py-3.5 px-6 rounded-xl font-semibold transition-all ${
+                    className={`w-full flex items-center justify-center gap-2 py-4 sm:py-3.5 px-6 rounded-xl font-semibold transition-all min-h-[48px] ${
                       plan.popular
                         ? "bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-600/30"
                         : "bg-zinc-800 hover:bg-zinc-700 text-white"

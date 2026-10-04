@@ -22,7 +22,7 @@ export default function BlogPreview({ posts }: BlogPreviewProps) {
           </div>
           <Link
             href="/blog"
-            className="group flex items-center gap-2 text-sm font-semibold text-primary hover:text-white transition-colors"
+            className="group flex items-center gap-2 text-sm font-semibold text-primary hover:text-white transition-colors py-3 min-h-[44px]"
           >
             Read All Articles
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -30,7 +30,7 @@ export default function BlogPreview({ posts }: BlogPreviewProps) {
         </div>
 
         {/* Blog Post List */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
           {posts.slice(0, 2).map((post) => (
             <Link
               key={post.id}

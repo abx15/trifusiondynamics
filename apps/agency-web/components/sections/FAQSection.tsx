@@ -57,7 +57,7 @@ export default function FAQSection() {
           </p>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {FAQS.map((faq, idx) => {
             const isOpen = openIdx === idx;
             return (
@@ -67,7 +67,7 @@ export default function FAQSection() {
               >
                 <button
                   onClick={() => toggle(idx)}
-                  className="w-full p-6 text-left flex items-center justify-between gap-4 font-semibold text-lg text-white hover:text-purple-400 transition-colors"
+                  className="w-full p-4 sm:p-6 text-left flex items-center justify-between gap-4 font-semibold text-base sm:text-lg text-white hover:text-purple-400 transition-colors min-h-[48px]"
                 >
                   <span>{faq.question}</span>
                   <ChevronDown
@@ -78,7 +78,7 @@ export default function FAQSection() {
                 </button>
 
                 {isOpen && (
-                  <div className="px-6 pb-6 text-zinc-300 leading-relaxed border-t border-zinc-800/40 pt-4">
+                  <div className="px-4 sm:px-6 pb-4 sm:pb-6 text-zinc-300 leading-relaxed border-t border-zinc-800/40 pt-3 sm:pt-4 text-sm sm:text-base">
                     {faq.answer}
                   </div>
                 )}

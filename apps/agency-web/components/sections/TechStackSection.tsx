@@ -86,7 +86,7 @@ export default function TechStackSection() {
         </div>
 
         {/* 6 Tech Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {TECH_STACK.map((item, index) => {
             const Icon = item.icon;
             return (

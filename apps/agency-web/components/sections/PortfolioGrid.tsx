@@ -22,7 +22,7 @@ export default function PortfolioGrid({ items }: PortfolioGridProps) {
           </div>
           <Link
             href="/portfolio"
-            className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-white transition-colors min-h-[44px] sm:min-h-0"
+            className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-white transition-colors py-3 min-h-[44px]"
           >
             View All Work
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -30,7 +30,7 @@ export default function PortfolioGrid({ items }: PortfolioGridProps) {
         </div>
 
         {/* Case Studies Grid: 1 col mobile -> 2 col sm/md -> 3 col lg+ */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
           {items.slice(0, 3).map((item) => (
             <Link
               key={item.id}

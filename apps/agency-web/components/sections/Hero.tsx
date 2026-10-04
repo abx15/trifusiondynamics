@@ -21,12 +21,12 @@ export default function Hero() {
               AI-Native Software Agency
             </div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-extrabold tracking-tight text-white leading-[1.1] mb-6">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-display font-extrabold tracking-tight text-white leading-[1.15] sm:leading-[1.1] mb-6">
               AI-Native SaaS Platforms, <br />
               <span className="text-gradient-cyan-blue">Engineered for Scale.</span>
             </h1>
 
-            <p className="text-lg sm:text-xl text-slate-300 max-w-2xl lg:max-w-xl leading-relaxed mb-8">
+            <p className="text-base sm:text-lg md:text-xl text-slate-300 max-w-2xl lg:max-w-xl leading-relaxed mb-8">
               We design and construct high-performance full-stack web applications and integrate custom RAG pipelines to accelerate operations for Indian startups and SMBs.
             </p>
 

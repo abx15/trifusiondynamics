@@ -125,7 +125,7 @@ export default function TestimonialCarousel({ testimonials }: TestimonialsProps)
           <div className="flex items-center justify-between mt-6 px-2">
             <button
               onClick={scrollPrev}
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white active:scale-95 transition-transform"
+              className="flex h-12 w-12 min-h-[48px] items-center justify-center rounded-full border border-white/10 bg-white/5 text-white active:scale-95 transition-transform"
               aria-label="Previous testimonial"
             >
               <ChevronLeft className="h-5 w-5" />
@@ -136,8 +136,8 @@ export default function TestimonialCarousel({ testimonials }: TestimonialsProps)
                 <button
                   key={idx}
                   onClick={() => emblaApi?.scrollTo(idx)}
-                  className={`h-2.5 rounded-full transition-all ${
-                    idx === selectedIndex ? "w-6 bg-primary" : "w-2.5 bg-white/20"
+                  className={`h-3 w-3 sm:h-2.5 sm:w-2.5 rounded-full transition-all ${
+                    idx === selectedIndex ? "w-8 sm:w-6 bg-primary" : "w-3 sm:w-2.5 bg-white/20"
                   }`}
                   aria-label={`Go to slide ${idx + 1}`}
                 />
@@ -146,7 +146,7 @@ export default function TestimonialCarousel({ testimonials }: TestimonialsProps)
 
             <button
               onClick={scrollNext}
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white active:scale-95 transition-transform"
+              className="flex h-12 w-12 min-h-[48px] items-center justify-center rounded-full border border-white/10 bg-white/5 text-white active:scale-95 transition-transform"
               aria-label="Next testimonial"
             >
               <ChevronRight className="h-5 w-5" />

@@ -54,10 +54,10 @@ export default function Footer() {
           <div className="flex flex-col gap-4">
             <h3 className="font-display font-semibold text-white text-sm uppercase tracking-wider">Solutions</h3>
             <ul className="flex flex-col gap-2.5 text-sm">
-              <li><Link href="/services" className="hover:text-white transition-colors py-0.5 block">AI Integration &amp; RAG</Link></li>
-              <li><Link href="/services" className="hover:text-white transition-colors py-0.5 block">Full-Stack SaaS Development</Link></li>
-              <li><Link href="/services" className="hover:text-white transition-colors py-0.5 block">Mobile App Engineering</Link></li>
-              <li><Link href="/services" className="hover:text-white transition-colors py-0.5 block">Cloud Infrastructure &amp; Scale</Link></li>
+              <li><Link href="/services" className="hover:text-white transition-colors py-2 block min-h-[44px] flex items-center">AI Integration &amp; RAG</Link></li>
+              <li><Link href="/services" className="hover:text-white transition-colors py-2 block min-h-[44px] flex items-center">Full-Stack SaaS Development</Link></li>
+              <li><Link href="/services" className="hover:text-white transition-colors py-2 block min-h-[44px] flex items-center">Mobile App Engineering</Link></li>
+              <li><Link href="/services" className="hover:text-white transition-colors py-2 block min-h-[44px] flex items-center">Cloud Infrastructure &amp; Scale</Link></li>
             </ul>
           </div>
 
@@ -65,10 +65,10 @@ export default function Footer() {
           <div className="flex flex-col gap-4">
             <h3 className="font-display font-semibold text-white text-sm uppercase tracking-wider">Company</h3>
             <ul className="flex flex-col gap-2.5 text-sm">
-              <li><Link href="/about" className="hover:text-white transition-colors py-0.5 block">About Us</Link></li>
-              <li><Link href="/portfolio" className="hover:text-white transition-colors py-0.5 block">Case Studies</Link></li>
-              <li><Link href="/blog" className="hover:text-white transition-colors py-0.5 block">Insights Blog</Link></li>
-              <li><Link href="/privacy-policy" className="hover:text-white transition-colors py-0.5 block">Privacy Policy</Link></li>
+              <li><Link href="/about" className="hover:text-white transition-colors py-2 block min-h-[44px] flex items-center">About Us</Link></li>
+              <li><Link href="/portfolio" className="hover:text-white transition-colors py-2 block min-h-[44px] flex items-center">Case Studies</Link></li>
+              <li><Link href="/blog" className="hover:text-white transition-colors py-2 block min-h-[44px] flex items-center">Insights Blog</Link></li>
+              <li><Link href="/privacy-policy" className="hover:text-white transition-colors py-2 block min-h-[44px] flex items-center">Privacy Policy</Link></li>
             </ul>
           </div>
 

@@ -21,14 +21,14 @@ export default function CTASection() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Link
               href="/contact"
-              className="group inline-flex items-center justify-center gap-2 w-full sm:w-auto rounded-full bg-gradient-to-r from-primary to-secondary px-8 py-4 text-base font-semibold text-black transition-all hover:opacity-90 active:scale-98"
+              className="group inline-flex items-center justify-center gap-2 w-full sm:w-auto rounded-full bg-gradient-to-r from-primary to-secondary px-8 py-4 sm:py-4 text-base font-semibold text-black transition-all hover:opacity-90 active:scale-98 min-h-[52px]"
             >
               Book a Free Consultation
               <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
             </Link>
             <Link
               href="/portfolio"
-              className="inline-flex items-center justify-center gap-2 w-full sm:w-auto rounded-full border border-white/10 bg-white/5 px-8 py-4 text-base font-semibold text-white transition-colors hover:bg-white/10 active:scale-98"
+              className="inline-flex items-center justify-center gap-2 w-full sm:w-auto rounded-full border border-white/10 bg-white/5 px-8 py-4 sm:py-4 text-base font-semibold text-white transition-colors hover:bg-white/10 active:scale-98 min-h-[52px]"
             >
               Explore Our Work
             </Link>
