@@ -22,12 +22,12 @@ export default function Hero() {
             </div>
 
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-display font-extrabold tracking-tight text-white leading-[1.15] sm:leading-[1.1] mb-6">
-              AI-Native SaaS Platforms, <br />
-              <span className="text-gradient-cyan-blue">Engineered for Scale.</span>
+              Building Intelligent Software<br />
+              <span className="text-gradient-cyan-blue">for Modern Businesses</span>
             </h1>
 
             <p className="text-base sm:text-lg md:text-xl text-slate-300 max-w-2xl lg:max-w-xl leading-relaxed mb-8">
-              We design and construct high-performance full-stack web applications and integrate custom RAG pipelines to accelerate operations for Indian startups and SMBs.
+              We build scalable SaaS platforms, AI-powered applications, APIs, and custom business systems for growing businesses worldwide.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
@@ -46,23 +46,23 @@ export default function Hero() {
               </Link>
             </div>
 
-            {/* Micro Stats */}
+            {/* What We Focus On */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 border-t border-white/5 pt-10 mt-12 w-full max-w-lg">
               <div>
-                <p className="text-2xl sm:text-3xl font-display font-bold text-white">50+</p>
-                <p className="text-xs text-slate-500 uppercase tracking-wider mt-1">Enterprise Apps</p>
+                <p className="text-2xl sm:text-3xl font-display font-bold text-white">SaaS</p>
+                <p className="text-xs text-slate-500 uppercase tracking-wider mt-1">Platforms</p>
               </div>
               <div>
-                <p className="text-2xl sm:text-3xl font-display font-bold text-white">99.9%</p>
-                <p className="text-xs text-slate-500 uppercase tracking-wider mt-1">SLA Uptime</p>
+                <p className="text-2xl sm:text-3xl font-display font-bold text-white">AI</p>
+                <p className="text-xs text-slate-500 uppercase tracking-wider mt-1">Applications</p>
               </div>
               <div>
-                <p className="text-2xl sm:text-3xl font-display font-bold text-white">10k+</p>
-                <p className="text-xs text-slate-500 uppercase tracking-wider mt-1">Concurrent Users</p>
+                <p className="text-2xl sm:text-3xl font-display font-bold text-white">API</p>
+                <p className="text-xs text-slate-500 uppercase tracking-wider mt-1">Development</p>
               </div>
               <div>
-                <p className="text-2xl sm:text-3xl font-display font-bold text-white">&lt;30ms</p>
-                <p className="text-xs text-slate-500 uppercase tracking-wider mt-1">API Latency</p>
+                <p className="text-2xl sm:text-3xl font-display font-bold text-white">Custom</p>
+                <p className="text-xs text-slate-500 uppercase tracking-wider mt-1">Systems</p>
               </div>
             </div>
 

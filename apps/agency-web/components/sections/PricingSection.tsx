@@ -44,7 +44,7 @@ const PLANS: Plan[] = [
       "Multi-Tenant Client & Employee Portals",
       "Automated CRM & HR Payroll Engine",
       "Docker & Kubernetes CI/CD Pipeline",
-      "24/7 Priority SLA Support",
+      "Priority Support",
     ],
     cta: "Scale Your Business",
   },

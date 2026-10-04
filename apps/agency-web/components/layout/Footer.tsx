@@ -29,7 +29,7 @@ export default function Footer() {
               </span>
             </Link>
             <p className="text-sm text-slate-400 max-w-xs mt-2 leading-relaxed">
-              Engineering high-performance SaaS platforms, full-stack web applications, and AI-native automation pipelines for Indian startups and SMBs.
+              TriFusion Dynamics builds scalable software, SaaS platforms, AI-powered applications, APIs, and custom business systems for growing businesses worldwide.
             </p>
             <div className="flex gap-4 mt-2">
               <a href="#" className="hover:text-primary transition-colors p-1" aria-label="LinkedIn">
@@ -80,6 +80,9 @@ export default function Footer() {
                 <Mail className="h-4 w-4 text-primary shrink-0" />
                 <a href="mailto:support.trifusion@gmail.com" className="hover:text-white transition-colors break-all">
                   support.trifusion@gmail.com
+                </a>
+                <a href="mailto:trifusiondynamics@gmail.com" className="hover:text-white transition-colors break-all">
+                 trifusiondynamics@gmail.com
                 </a>
               </li>
               <li className="flex items-center gap-3">

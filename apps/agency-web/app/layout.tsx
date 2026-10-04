@@ -103,43 +103,25 @@ export default function RootLayout({
     "name": "Trifusion Dynamics",
     "url": siteUrl,
     "logo": `${siteUrl}/logo.png`,
-    "description": "Premium Full-Stack and AI-powered SaaS agency targeting high-growth startups and enterprises. We specialize in AI integration, SaaS development, mobile engineering, cloud infrastructure, and custom ERP/CRM solutions.",
-    "foundingDate": "2024",
-    "address": {
-      "@type": "PostalAddress",
-      "streetAddress": "New Ashok Nagar, East Delhi",
-      "addressLocality": "Delhi",
-      "postalCode": "110096",
-      "addressCountry": "IN",
-      "addressRegion": "Delhi"
-    },
+    "description": "TriFusion Dynamics builds scalable software, SaaS platforms, AI-powered applications, APIs, and custom business systems for growing businesses worldwide.",
     "contactPoint": [
       {
         "@type": "ContactPoint",
-        "telephone": "+91-8745883950",
         "contactType": "sales",
-        "email": "support.trifusion@gmail.com",
-        "areaServed": "IN",
-        "availableLanguage": ["en", "hi"],
-        "hoursAvailable": {
-          "@type": "OpeningHoursSpecification",
-          "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
-          "opens": "10:30",
-          "closes": "18:30"
-        }
+        "email": "sales.trifusion@gmail.com",
+        "availableLanguage": ["en", "hi"]
       },
       {
         "@type": "ContactPoint",
         "contactType": "customer support",
         "email": "support.trifusion@gmail.com",
-        "areaServed": "IN",
-        "availableLanguage": ["en", "hi"],
-        "hoursAvailable": {
-          "@type": "OpeningHoursSpecification",
-          "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
-          "opens": "00:00",
-          "closes": "23:59"
-        }
+        "availableLanguage": ["en", "hi"]
+      },
+      {
+        "@type": "ContactPoint",
+        "contactType": "general",
+        "email": "trifusiondynamics@gmail.com",
+        "availableLanguage": ["en", "hi"]
       }
     ],
     "areaServed": [

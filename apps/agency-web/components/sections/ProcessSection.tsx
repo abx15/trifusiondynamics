@@ -30,10 +30,10 @@ const STEPS = [
   },
   {
     step: "04",
-    title: "24/7 SLA Monitoring & Support",
-    description: "Continuous health tracking, automated backup policies, Dedicated Client Portal access, and fast SLA support response guarantees.",
+    title: "Monitoring & Support",
+    description: "Continuous health tracking, automated backup policies, dedicated client portal access, and responsive support.",
     icon: ShieldCheck,
-    highlights: ["99.9% Uptime SLA", "Dedicated Client Portal", "Fast Ticket SLA"],
+    highlights: ["Health Monitoring", "Dedicated Client Portal", "Responsive Support"],
     gradient: "from-amber-500/20 to-orange-500/10",
   },
 ];
