@@ -2,7 +2,7 @@ datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
-  schemas   = ["auth", "cms", "clients", "crm", "projects", "billing", "hr", "payroll", "ai", "analytics", "automation", "developer"]
+  schemas   = ["auth", "cms", "clients", "crm", "projects", "billing", "hr", "payroll", "ai", "analytics", "automation", "developer", "helpdesk", "audit", "outbox"]
 }
 
 generator client {
@@ -11,13 +11,19 @@ generator client {
 }
 
 model Organization {
-  id        String   @id @default(uuid())
-  name      String
-  slug      String   @unique
-  isActive  Boolean  @default(true)
-  users     User[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String         @id @default(uuid())
+  name          String
+  slug          String         @unique
+  isActive      Boolean        @default(true)
+  users         User[]
+  departments   Department[]
+  tickets       Ticket[]
+  slaPolicies   SLAPolicy[]
+  routingRules  RoutingRule[]
+  notifications Notification[]
+  auditLogs     AuditLog[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
   @@schema("auth")
 }
@@ -37,6 +43,24 @@ model User {
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
   linkedClientId     String?       // for CLIENT role users only, references clients.Client.id
+
+  // --- helpdesk relations ---
+  employeeProfile          Employee?         @relation("EmployeeUser")
+  requestedTickets         Ticket[]          @relation("TicketRequester")
+  createdTickets           Ticket[]          @relation("TicketCreator")
+  assignedTickets          Ticket[]          @relation("TicketAssignedAgent")
+  verifiedTickets          Ticket[]          @relation("TicketVerifier")
+  closedTickets            Ticket[]          @relation("TicketClosedBy")
+  escalatedTickets         Ticket[]          @relation("TicketEscalatedBy")
+  ticketComments           TicketComment[]
+  ticketAttachments        TicketAttachment[]
+  ticketActivities         TicketActivity[]
+  ticketAssignmentsMade    TicketAssignment[] @relation("AssignmentAssigner")
+  ticketAssignmentsRemoved TicketAssignment[] @relation("AssignmentUnassignedBy")
+  ticketEscalationsRaised  TicketEscalation[] @relation("EscalationActor")
+  ticketEscalationsCleared TicketEscalation[] @relation("EscalationClearer")
+  routingRulesAsDefault    RoutingRule[]      @relation("RoutingDefaultAgent")
+  notifications            Notification[]
 
   @@index([organizationId])
   @@schema("auth")
@@ -133,6 +157,7 @@ model Client {
   organizationId String
   contacts       ClientContact[]
   leadId         String?   @unique
+  tickets        Ticket[]
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -267,6 +292,7 @@ model Project {
   tasks          Task[]
   milestones     Milestone[]
   members        ProjectMember[]
+  tickets        Ticket[]
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
@@ -523,11 +549,44 @@ model ExpenseRecord {
 
 // --- schema: "hr" ---
 
+// Department is ORGANIZATION-SCOPED. Uniqueness is (organizationId, code) and
+// (organizationId, name) — never globally unique, because two tenants must be
+// able to define their own "IT", "HR" or "Finance" departments.
+model Department {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  code           String
+  description    String?
+  isActive       Boolean      @default(true)
+  isHelpdesk     Boolean      @default(true) // may own tickets / routing rules
+  employees      Employee[]
+  slaPolicies    SLAPolicy[]
+  routingRules   RoutingRule[] // rules that route INTO this department
+  tickets        Ticket[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([organizationId, code])
+  @@unique([organizationId, name])
+  @@index([organizationId, isActive])
+  @@schema("hr")
+}
+
 model Employee {
   id             String    @id @default(uuid())
+  // Canonical employment identity. Every employee is backed by exactly one
+  // authenticated User; the FK is what makes "assigned employee" and
+  // "authenticated actor" reconcilable for authorization.
   userId         String    @unique
+  user           User      @relation("EmployeeUser", fields: [userId], references: [id], onDelete: Restrict)
   employeeCode   String    @unique
-  department     String?
+  // departmentLegacy preserves the pre-migration free-text department string
+  // column. It is NEVER overwritten and only cleared after a verified backfill.
+  departmentId   String?
+  department     Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  departmentLegacy String?
   designation    String?
   joiningDate    DateTime
   employmentType EmploymentType @default(FULL_TIME)
@@ -536,13 +595,16 @@ model Employee {
   organizationId String
   leaves         Leave[]
   documents      EmployeeDocument[]
+  ticketAssignments TicketAssignment[]
+  requestedTickets  Ticket[]          @relation("TicketRequesterEmployee")
+  autoAssignRoutingRules RoutingRule[] @relation("RoutingAutoEmployee")
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
   @@index([organizationId])
   @@index([status])
-  @@index([department])
-  @@index([organizationId, status, department])
+  @@index([departmentId])
+  @@index([organizationId, status, departmentId])
   @@schema("hr")
 }
 
@@ -907,8 +969,516 @@ model WebhookDelivery {
   statusCode Int?
   success    Boolean  @default(false)
   attempt    Int      @default(1)
+  // Outbox event that produced this delivery. NULL for the legacy
+  // EventEmitter2 path. The partial unique index on (webhookId,
+  // outboxEventId) makes outbox-driven delivery exactly-once:
+  // a re-claimed event hits P2002 and is skipped, never resent.
+  outboxEventId String?
   createdAt  DateTime @default(now())
 
   @@index([webhookId, createdAt])
   @@schema("developer")
+}
+
+// --- schema: "helpdesk" ---
+
+// ONE unified ticket domain for every support flow (client + internal + HR +
+// IT + billing + security). Deliberately NO ClientTicket/EmployeeTicket/
+// SupportTicket tables: duplicating the domain is what forces duplicated
+// permission, SLA and analytics logic.
+enum TicketType {
+  CLIENT_SUPPORT // raised by a client, requires client confirmation to close
+  INTERNAL       // raised by an employee/agent, closes on verification
+
+  @@schema("helpdesk")
+}
+
+// Escalation is NOT a lifecycle status. Keeping it out of TicketStatus means an
+// escalation can never destroy the ticket's real position in the workflow.
+enum EscalationLevel {
+  NONE
+  ADMIN
+  SUPER_ADMIN
+
+  @@schema("helpdesk")
+}
+
+enum EscalationTrigger {
+  SLA_WARNING
+  SLA_BREACH
+  SLA_CRITICAL_BREACH
+  MANUAL
+  REOPENED
+  CRITICAL_PRIORITY
+  SECURITY
+  SYSTEM_CRITICAL
+
+  @@schema("helpdesk")
+}
+
+// Lifecycle states only. There is no ESCALATED here on purpose: an escalated
+// ticket is still, for example, IN_PROGRESS with an active escalation record.
+enum TicketStatus {
+  OPEN
+  ASSIGNED
+  IN_PROGRESS
+  WAITING_FOR_CLIENT
+  WAITING_FOR_EMPLOYEE
+  RESOLUTION_SUBMITTED
+  UNDER_VERIFICATION
+  REOPENED
+  RESOLVED
+  CLOSED
+  CANCELLED
+
+  @@schema("helpdesk")
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+  CRITICAL
+
+  @@schema("helpdesk")
+}
+
+enum TicketCategory {
+  TECHNICAL
+  BILLING
+  ACCOUNT
+  FEATURE_REQUEST
+  BUG_REPORT
+  SECURITY
+  PERFORMANCE
+  IT_SUPPORT
+  HR
+  PAYROLL
+  GENERAL
+
+  @@schema("helpdesk")
+}
+
+enum TicketSource {
+  CLIENT_PORTAL
+  EMAIL
+  API
+  INTERNAL
+  PHONE
+  SYSTEM
+
+  @@schema("helpdesk")
+}
+
+enum AssignmentType {
+  PRIMARY
+  SUPPORTING
+
+  @@schema("helpdesk")
+}
+
+model Ticket {
+  id            String         @id @default(uuid())
+  ticketNumber  String         @unique
+  type          TicketType     @default(CLIENT_SUPPORT)
+  title         String
+  description   String         @db.Text
+  status        TicketStatus   @default(OPEN)
+  priority      TicketPriority @default(MEDIUM)
+  category      TicketCategory @default(TECHNICAL)
+  source        TicketSource   @default(CLIENT_PORTAL)
+
+  // --- tenant + requester ---
+  // organizationId is the authoritative tenant key. Every read/write derives it
+  // from the authenticated JWT (orgId), never from the request body.
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Canonical requester: always an authenticated auth.User. There is NO
+  // polymorphic requesterType/requesterId pair, so referential integrity and
+  // authorization stay intact. A system-generated ticket is created by a real
+  // service account User, never by a fake id.
+  requesterId       String
+  requester         User     @relation("TicketRequester", fields: [requesterId], references: [id], onDelete: Restrict)
+  requesterEmployeeId String?
+  requesterEmployee Employee? @relation("TicketRequesterEmployee", fields: [requesterEmployeeId], references: [id], onDelete: SetNull)
+  // Denormalized for display/audit only. NEVER an authorization source:
+  // authorization always uses the caller's live roles/permissions + ownership.
+  requesterRoleSnapshot String
+
+  // --- scope ---
+  clientId String?
+  client   Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  projectId String?
+  project  Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  assignedAgentId String?
+  assignedAgent   User?    @relation("TicketAssignedAgent", fields: [assignedAgentId], references: [id], onDelete: SetNull)
+
+  // --- SLA: two independent clocks, never one generic deadline ---
+  slaPolicyId String?
+  slaPolicy   SLAPolicy? @relation(fields: [slaPolicyId], references: [id], onDelete: SetNull)
+
+  // Response clock: starts at creation, stops at firstRespondedAt.
+  firstResponseDeadline DateTime?
+  firstRespondedAt      DateTime?
+  slaResponseWarnedAt  DateTime?
+  slaResponseBreachedAt DateTime?
+
+  // Resolution clock: starts at creation, stops at resolvedAt (or closedAt).
+  resolutionDeadline      DateTime?
+  slaResolutionWarnedAt   DateTime?
+  slaResolutionBreachedAt DateTime?
+
+  // Pause bookkeeping. Invariant: while slaPausedAt IS NOT NULL the pause has
+  // NOT yet been added to totalPausedDurationMs. The elapsed window is only
+  // folded in exactly once, on resume.
+  slaPausedAt           DateTime?
+  slaPausedReason       String?
+  totalPausedDurationMs BigInt @default(0)
+
+  // --- workflow outcome ---
+  resolution        String?    @db.Text
+  resolutionSubmittedAt DateTime?
+  resolutionSubmittedById String?
+  verifiedById      String?
+  verifiedBy        User?      @relation("TicketVerifier", fields: [verifiedById], references: [id], onDelete: SetNull)
+  verifiedAt        DateTime?
+  resolvedAt        DateTime?
+  closedAt          DateTime?
+  closedById        String?
+  closedBy          User?      @relation("TicketClosedBy", fields: [closedById], references: [id], onDelete: SetNull)
+  closeOverride     Boolean    @default(false)
+  closeOverrideReason String?
+  clientConfirmed   Boolean    @default(false)
+  clientConfirmedAt DateTime?
+  reopenCount       Int        @default(0)
+  cancelledAt       DateTime?
+
+  // --- escalation, independent of lifecycle status ---
+  escalationLevel   EscalationLevel @default(NONE)
+  escalatedAt       DateTime?
+  escalatedById     String?
+  escalatedBy       User?      @relation("TicketEscalatedBy", fields: [escalatedById], references: [id], onDelete: SetNull)
+  escalationReason  String?    @db.Text
+  escalationClearedAt DateTime?
+
+  createdBy   String
+  creator     User     @relation("TicketCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  lastActivityAt DateTime @default(now())
+
+  comments     TicketComment[]
+  attachments  TicketAttachment[]
+  assignments  TicketAssignment[]
+  activities   TicketActivity[]
+  escalations  TicketEscalation[]
+
+  @@index([organizationId])
+  @@index([clientId])
+  @@index([projectId])
+  @@index([departmentId])
+  @@index([status])
+  @@index([priority])
+  @@index([type])
+  @@index([category])
+  @@index([assignedAgentId])
+  @@index([requesterId])
+  @@index([requesterEmployeeId])
+  @@index([firstResponseDeadline])
+  @@index([resolutionDeadline])
+  @@index([organizationId, status, createdAt])
+  @@index([organizationId, clientId, status])
+  @@index([organizationId, departmentId, status])
+  @@index([organizationId, type, status])
+  @@index([resolutionDeadline, status])
+  @@index([firstResponseDeadline, status])
+  @@index([organizationId, escalationLevel])
+  @@schema("helpdesk")
+}
+
+model TicketComment {
+  id        String   @id @default(uuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String   @db.Text
+  isInternal Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([ticketId, createdAt])
+  @@index([userId])
+  @@schema("helpdesk")
+}
+
+model TicketAttachment {
+  id        String   @id @default(uuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  uploadedBy String
+  uploader  User     @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
+  fileName  String
+  fileUrl   String
+  fileSize  Int
+  mimeType  String
+  createdAt DateTime @default(now())
+
+  @@index([ticketId])
+  @@schema("helpdesk")
+}
+
+// Assignment history is append-only: unassigning sets isActive=false +
+// unassignedAt instead of deleting, so "employee A assigned -> unassigned ->
+// employee B assigned -> A reassigned" is fully reconstructable.
+// Exactly-one-active-PRIMARY is enforced by a PostgreSQL PARTIAL UNIQUE index
+// created in the migration (Prisma cannot express partial indexes), and the
+// active-employee pairing is likewise protected by a second partial index.
+model TicketAssignment {
+  id             String         @id @default(uuid())
+  ticketId       String
+  ticket         Ticket         @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  employeeId     String
+  employee       Employee       @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  type           AssignmentType @default(PRIMARY)
+  assignedBy     String
+  assigner       User           @relation("AssignmentAssigner", fields: [assignedBy], references: [id], onDelete: Restrict)
+  assignedAt     DateTime       @default(now())
+  unassignedAt   DateTime?
+  unassignedById String?
+  unassignedBy   User?          @relation("AssignmentUnassignedBy", fields: [unassignedById], references: [id], onDelete: SetNull)
+  unassignReason String?
+  isActive       Boolean        @default(true)
+  sequence       Int            @default(1)
+
+  @@index([ticketId, assignedAt])
+  @@index([employeeId, isActive])
+  @@index([ticketId, isActive])
+  @@index([employeeId, assignedAt])
+  @@schema("helpdesk")
+}
+
+// Append-only operational timeline for a ticket (the user-visible history).
+model TicketActivity {
+  id          String   @id @default(uuid())
+  ticketId    String
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  action      String
+  description String   @db.Text
+  metadata    Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([ticketId, createdAt])
+  @@index([userId])
+  @@index([action])
+  @@schema("helpdesk")
+}
+
+// Escalation history, kept separate from TicketActivity because it has its own
+// lifecycle (raised -> cleared) and its own audience (Admin / Super Admin).
+model TicketEscalation {
+  id           String           @id @default(uuid())
+  ticketId     String
+  ticket       Ticket           @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  level        EscalationLevel
+  trigger      EscalationTrigger
+  reason       String           @db.Text
+  // Null when the escalation was raised by a background job (system actor).
+  escalatedById String?
+  escalatedBy User?            @relation("EscalationActor", fields: [escalatedById], references: [id], onDelete: SetNull)
+  escalatedAt DateTime         @default(now())
+  clearedAt    DateTime?
+  clearedById  String?
+  clearedBy    User?            @relation("EscalationClearer", fields: [clearedById], references: [id], onDelete: SetNull)
+  notifiedAdmin      Boolean @default(false)
+  notifiedSuperAdmin Boolean @default(false)
+
+  @@index([ticketId, escalatedAt])
+  @@index([level, clearedAt])
+  @@index([trigger])
+  @@schema("helpdesk")
+}
+
+// Configurable SLA policy. Selection is deterministic by specificity (see
+// SlaPolicyMatcher): organization+department+type+category+priority first, then
+// progressively less specific, with `priority` as the tie-break inside a tier.
+model SLAPolicy {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  description    String?
+  departmentId   String?
+  department     Department?  @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  ticketType     TicketType
+  category       TicketCategory?
+  priority       TicketPriority
+  responseTimeMins   Int
+  resolutionTimeMins Int
+  // Percent of the elapsed window after which a warning is emitted (80 = 80%).
+  warningThresholdPercent Int      @default(80)
+  // Fallback policy for an organization when no specific rule matches.
+  isDefault      Boolean      @default(false)
+  // Tie-break within one specificity tier; higher wins.
+  policyOrder    Int          @default(0)
+  isActive       Boolean      @default(true)
+  tickets        Ticket[]
+  routingRules   RoutingRule[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([organizationId, name])
+  @@index([organizationId, isActive])
+  @@index([organizationId, ticketType, priority])
+  @@index([departmentId])
+  @@schema("helpdesk")
+}
+
+// Database-backed routing. Nothing in business logic hardcodes "CLIENT_SUPPORT
+// goes to Support" — the mapping is data, editable per organization.
+model RoutingRule {
+  id                  String       @id @default(uuid())
+  organizationId      String
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name                String
+  // NULL criterion = "any". Matching specificity counts non-null criteria.
+  ticketType          TicketType?
+  category            TicketCategory?
+  priority            TicketPriority?
+  departmentId        String?
+  department          Department?  @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  defaultAgentId      String?
+  defaultAgent        User?        @relation("RoutingDefaultAgent", fields: [defaultAgentId], references: [id], onDelete: SetNull)
+  autoAssignEmployeeId String?
+  autoAssignEmployee  Employee?    @relation("RoutingAutoEmployee", fields: [autoAssignEmployeeId], references: [id], onDelete: SetNull)
+  slaPolicyId         String?
+  slaPolicy           SLAPolicy?   @relation(fields: [slaPolicyId], references: [id], onDelete: SetNull)
+  // Higher wins when several rules match at the same specificity.
+  ruleOrder           Int          @default(0)
+  // Exactly one catch-all rule per organization may be active.
+  isDefault           Boolean      @default(false)
+  isActive            Boolean      @default(true)
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  @@unique([organizationId, name])
+  @@index([organizationId, isActive, ruleOrder])
+  @@index([organizationId, ticketType, category, priority])
+  @@index([departmentId])
+  @@schema("helpdesk")
+}
+
+// Durable notification. Persistence is the source of truth; realtime delivery
+// is a separate concern and a failed socket never loses the record.
+model Notification {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type           String
+  severity       String       @default("info")
+  title          String
+  message        String       @db.Text
+  // Generic entity reference by design (tickets, invoices, projects, ...).
+  // Deliberately NOT a foreign key: one polymorphic pointer cannot safely
+  // reference several tables, and authorization is enforced in the service
+  // layer before the notification is created.
+  entityType     String?
+  entityId       String?
+  actionUrl      String?
+  isRead         Boolean      @default(false)
+  readAt         DateTime?
+  createdAt      DateTime     @default(now())
+
+  // Idempotency: replaying the same outbox event must not create duplicates.
+  dedupeKey      String?
+
+  @@unique([userId, dedupeKey])
+  @@index([userId, isRead, createdAt])
+  @@index([organizationId, createdAt])
+  @@index([type])
+  @@index([entityType, entityId])
+  @@schema("helpdesk")
+}
+
+// --- schema: "audit" ---
+
+// APPEND-ONLY. No update path, no delete endpoint, no Prisma client method in
+// this codebase calls update/delete on it. actorType 'SYSTEM' is the
+// authoritative representation of automated actions, so no fake User row is
+// required. entityType/entityId are intentionally generic and carry no FK.
+model AuditLog {
+  id             String        @id @default(uuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  // 'USER' | 'SYSTEM'
+  actorType      String
+  actorId        String?
+  actorLabel     String?
+  action         String
+  entityType     String
+  entityId       String
+  before         Json?
+  after          Json?
+  metadata       Json?
+  ipAddress      String?
+  userAgent      String?
+  requestId      String?
+  createdAt      DateTime      @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([actorId])
+  @@index([entityType, entityId])
+  @@index([action])
+  @@index([createdAt])
+  @@schema("audit")
+}
+
+// --- schema: "outbox" ---
+
+enum OutboxStatus {
+  PENDING
+  PROCESSING
+  PROCESSED
+  FAILED
+  DEAD
+
+  @@schema("outbox")
+}
+
+// Transactional outbox. The event row is written in the SAME Prisma
+// transaction as the business mutation, so a committed mutation always has its
+// event and a rolled-back mutation never leaves an orphan event.
+// Processing claims rows with FOR UPDATE SKIP LOCKED so two workers cannot
+// process the same event concurrently.
+model OutboxEvent {
+  id             String       @id @default(uuid())
+  eventType      String
+  payload        Json
+  status         OutboxStatus @default(PENDING)
+  attempts       Int          @default(0)
+  maxAttempts    Int          @default(10)
+  nextAttemptAt  DateTime     @default(now())
+  lockedAt       DateTime?
+  lockedBy       String?
+  processedAt    DateTime?
+  lastError      String?      @db.Text
+  organizationId String?
+  // Producer-supplied idempotency key (e.g. "ticket.assigned:<ticketId>:<assignmentId>:<recipientId>").
+  idempotencyKey String?
+  createdAt      DateTime     @default(now())
+
+  @@unique([eventType, idempotencyKey])
+  @@index([status, nextAttemptAt])
+  @@index([organizationId, createdAt])
+  @@index([eventType, createdAt])
+  @@schema("outbox")
 }

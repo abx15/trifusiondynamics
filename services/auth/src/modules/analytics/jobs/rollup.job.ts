@@ -24,12 +24,22 @@ export class RollupJob {
     }
 
     try {
-      this.logger.debug('Running daily analytics rollup...');
+      this.logger.log('Running daily analytics rollup...');
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
 
-      await this.analyticsService.runRollupJobNow(yesterday.toISOString());
-      this.logger.debug('Daily rollup completed.');
+      const result = await this.analyticsService.runRollupJobNow(
+        yesterday.toISOString(),
+      );
+      this.logger.log(
+        `Daily rollup completed: ${result.processed}/${result.total} organizations`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Daily rollup failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
     } finally {
       await this.redis.releaseLock(lockKey, lockToken);
     }

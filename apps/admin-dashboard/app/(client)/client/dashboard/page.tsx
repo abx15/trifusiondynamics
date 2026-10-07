@@ -1,9 +1,25 @@
 "use client";
 
-import { FolderKanban, Receipt, Ticket, Clock, CheckCircle2, ArrowUpRight } from "lucide-react";
+import { FolderKanban, Receipt, Ticket as TicketIcon, Clock, CheckCircle2, ArrowUpRight, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { useProjects, type Project } from "@/lib/hooks/useProjects";
+import { useInvoices, type Invoice } from "@/lib/hooks/useInvoices";
+import { useTickets, type Ticket } from "@/lib/hooks/useTickets";
 
 export default function ClientDashboardPage() {
+  const { data: projectsData, isLoading: projectsLoading } = useProjects({ limit: 10 });
+  const { data: invoicesData, isLoading: invoicesLoading } = useInvoices({ status: "SENT", limit: 10 });
+  const { data: ticketsData, isLoading: ticketsLoading } = useTickets({ limit: 10 });
+
+  const projects = projectsData?.data || [];
+  const invoices = invoicesData?.data || [];
+  const tickets = ticketsData?.data || [];
+
+  const activeProjects = projects.filter((p: Project) => p.status === "ACTIVE");
+  const openTickets = tickets.filter((t: Ticket) => t.status === "OPEN" || t.status === "ASSIGNED" || t.status === "IN_PROGRESS");
+  const pendingInvoices = invoices.filter((i: Invoice) => i.status === "SENT" || i.status === "VIEWED");
+
+  const totalPendingAmount = pendingInvoices.reduce((sum: number, inv: Invoice) => sum + inv.total, 0);
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
       {/* Header Banner */}
@@ -26,17 +42,29 @@ export default function ClientDashboardPage() {
             <span className="text-xs font-semibold uppercase">Active Projects</span>
             <FolderKanban className="w-5 h-5 text-purple-400" />
           </div>
-          <p className="text-3xl font-extrabold text-white mt-3">2</p>
-          <p className="text-xs text-emerald-400 mt-1">Sprint 4 in progress</p>
+          {projectsLoading ? (
+            <Loader2 className="w-6 h-6 text-zinc-400 animate-spin mt-3" />
+          ) : (
+            <>
+              <p className="text-3xl font-extrabold text-white mt-3">{activeProjects.length}</p>
+              <p className="text-xs text-emerald-400 mt-1">Total projects: {projects.length}</p>
+            </>
+          )}
         </div>
 
         <div className="p-6 rounded-2xl bg-zinc-900/60 border border-zinc-800">
           <div className="flex items-center justify-between text-zinc-400">
             <span className="text-xs font-semibold uppercase">Open Tickets</span>
-            <Ticket className="w-5 h-5 text-amber-400" />
+            <TicketIcon className="w-5 h-5 text-amber-400" />
           </div>
-          <p className="text-3xl font-extrabold text-white mt-3">1</p>
-          <p className="text-xs text-zinc-400 mt-1">1 High Priority under review</p>
+          {ticketsLoading ? (
+            <Loader2 className="w-6 h-6 text-zinc-400 animate-spin mt-3" />
+          ) : (
+            <>
+              <p className="text-3xl font-extrabold text-white mt-3">{openTickets.length}</p>
+              <p className="text-xs text-zinc-400 mt-1">{tickets.filter((t: Ticket) => t.priority === "HIGH" || t.priority === "URGENT").length} High Priority</p>
+            </>
+          )}
         </div>
 
         <div className="p-6 rounded-2xl bg-zinc-900/60 border border-zinc-800">
@@ -44,17 +72,29 @@ export default function ClientDashboardPage() {
             <span className="text-xs font-semibold uppercase">Pending Invoices</span>
             <Receipt className="w-5 h-5 text-blue-400" />
           </div>
-          <p className="text-3xl font-extrabold text-white mt-3">$4,500</p>
-          <p className="text-xs text-amber-400 mt-1">Due in 5 days</p>
+          {invoicesLoading ? (
+            <Loader2 className="w-6 h-6 text-zinc-400 animate-spin mt-3" />
+          ) : (
+            <>
+              <p className="text-3xl font-extrabold text-white mt-3">${totalPendingAmount.toLocaleString()}</p>
+              <p className="text-xs text-amber-400 mt-1">{pendingInvoices.length} invoices pending</p>
+            </>
+          )}
         </div>
 
         <div className="p-6 rounded-2xl bg-zinc-900/60 border border-zinc-800">
           <div className="flex items-center justify-between text-zinc-400">
-            <span className="text-xs font-semibold uppercase">SLA Uptime</span>
+            <span className="text-xs font-semibold uppercase">Total Tickets</span>
             <CheckCircle2 className="w-5 h-5 text-emerald-400" />
           </div>
-          <p className="text-3xl font-extrabold text-white mt-3">99.98%</p>
-          <p className="text-xs text-emerald-400 mt-1">SLA Target Met</p>
+          {ticketsLoading ? (
+            <Loader2 className="w-6 h-6 text-zinc-400 animate-spin mt-3" />
+          ) : (
+            <>
+              <p className="text-3xl font-extrabold text-white mt-3">{tickets.length}</p>
+              <p className="text-xs text-emerald-400 mt-1">{tickets.filter((t: Ticket) => t.status === "RESOLVED").length} Resolved</p>
+            </>
+          )}
         </div>
       </div>
 
@@ -67,53 +107,52 @@ export default function ClientDashboardPage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="p-6 rounded-2xl bg-zinc-900/50 border border-zinc-800 space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-semibold">
-                On Schedule
-              </span>
-              <span className="text-xs text-zinc-400">Deadline: Aug 25, 2026</span>
-            </div>
-            <h3 className="text-lg font-bold text-white">Triflow SaaS Portal & Mobile App</h3>
-            <p className="text-xs text-zinc-400">
-              Next.js 15 web application with NestJS auth gateway and React Native mobile release.
-            </p>
-
-            <div>
-              <div className="flex justify-between text-xs text-zinc-400 mb-1">
-                <span>Milestone Progress</span>
-                <span className="font-semibold text-white">75%</span>
-              </div>
-              <div className="w-full h-2 rounded-full bg-zinc-800 overflow-hidden">
-                <div className="h-full bg-purple-600 rounded-full w-[75%]" />
-              </div>
-            </div>
+        {projectsLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-6 h-6 text-zinc-400 animate-spin" />
           </div>
+        ) : activeProjects.length === 0 ? (
+          <div className="text-center text-zinc-400 text-sm py-8">No active projects</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {activeProjects.slice(0, 2).map((project: Project) => {
+              const completedMilestones = project.milestones?.filter((m) => m.completed).length || 0;
+              const totalMilestones = project.milestones?.length || 1;
+              const progress = totalMilestones > 0 ? Math.round((completedMilestones / totalMilestones) * 100) : 0;
 
-          <div className="p-6 rounded-2xl bg-zinc-900/50 border border-zinc-800 space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="px-3 py-1 rounded-full bg-purple-500/10 text-purple-400 text-xs font-semibold">
-                AI Fine-tuning Phase
-              </span>
-              <span className="text-xs text-zinc-400">Deadline: Sep 10, 2026</span>
-            </div>
-            <h3 className="text-lg font-bold text-white">Enterprise RAG & Document Pipeline</h3>
-            <p className="text-xs text-zinc-400">
-              PostgreSQL pgvector database setup with Python FastAPI microservices.
-            </p>
+              return (
+                <div key={project.id} className="p-6 rounded-2xl bg-zinc-900/50 border border-zinc-800 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                      project.status === "ACTIVE" ? "bg-emerald-500/10 text-emerald-400" :
+                      project.status === "ON_HOLD" ? "bg-amber-500/10 text-amber-400" :
+                      "bg-purple-500/10 text-purple-400"
+                    }`}>
+                      {project.status.replace(/_/g, " ")}
+                    </span>
+                    {project.dueDate && (
+                      <span className="text-xs text-zinc-400">Deadline: {new Date(project.dueDate).toLocaleDateString()}</span>
+                    )}
+                  </div>
+                  <h3 className="text-lg font-bold text-white">{project.name}</h3>
+                  <p className="text-xs text-zinc-400">
+                    {project.description || "No description available"}
+                  </p>
 
-            <div>
-              <div className="flex justify-between text-xs text-zinc-400 mb-1">
-                <span>Milestone Progress</span>
-                <span className="font-semibold text-white">40%</span>
-              </div>
-              <div className="w-full h-2 rounded-full bg-zinc-800 overflow-hidden">
-                <div className="h-full bg-indigo-500 rounded-full w-[40%]" />
-              </div>
-            </div>
+                  <div>
+                    <div className="flex justify-between text-xs text-zinc-400 mb-1">
+                      <span>Milestone Progress</span>
+                      <span className="font-semibold text-white">{progress}%</span>
+                    </div>
+                    <div className="w-full h-2 rounded-full bg-zinc-800 overflow-hidden">
+                      <div className="h-full bg-purple-600 rounded-full" style={{ width: `${progress}%` }} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

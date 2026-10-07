@@ -2,11 +2,17 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Ticket, Clock, CheckCircle2, AlertTriangle, ShieldCheck, KeyRound } from "lucide-react";
+import { Ticket as TicketIcon, Clock, CheckCircle2, AlertTriangle, ShieldCheck, KeyRound, Loader2 } from "lucide-react";
 import { useAuthStore } from "@/lib/auth-store";
+import { useTicketSummary, useTickets, type Ticket } from "@/lib/hooks/useTickets";
 
 export default function AgentDashboardPage() {
   const { user } = useAuthStore();
+  const { data: summary, isLoading: summaryLoading } = useTicketSummary();
+  const { data: ticketsData, isLoading: ticketsLoading } = useTickets({ assignedToMe: true, limit: 5 });
+
+  const tickets = ticketsData?.data || [];
+  const recentTickets = tickets.slice(0, 2);
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -39,9 +45,13 @@ export default function AgentDashboardPage() {
         <div className="p-5 rounded-2xl bg-zinc-900/60 border border-zinc-800">
           <div className="flex justify-between text-zinc-400 text-xs font-semibold uppercase">
             <span>Assigned Tickets</span>
-            <Ticket className="w-4 h-4 text-blue-400" />
+            <TicketIcon className="w-4 h-4 text-blue-400" />
           </div>
-          <p className="text-3xl font-black text-white mt-2">5</p>
+          {summaryLoading ? (
+            <Loader2 className="w-6 h-6 text-zinc-400 animate-spin mt-2" />
+          ) : (
+            <p className="text-3xl font-black text-white mt-2">{summary?.assigned || 0}</p>
+          )}
         </div>
 
         <div className="p-5 rounded-2xl bg-zinc-900/60 border border-zinc-800">
@@ -49,57 +59,66 @@ export default function AgentDashboardPage() {
             <span>Pending Action</span>
             <Clock className="w-4 h-4 text-amber-400" />
           </div>
-          <p className="text-3xl font-black text-amber-400 mt-2">2</p>
+          {summaryLoading ? (
+            <Loader2 className="w-6 h-6 text-zinc-400 animate-spin mt-2" />
+          ) : (
+            <p className="text-3xl font-black text-amber-400 mt-2">{(summary?.open || 0) + (summary?.inProgress || 0)}</p>
+          )}
         </div>
 
         <div className="p-5 rounded-2xl bg-zinc-900/60 border border-zinc-800">
           <div className="flex justify-between text-zinc-400 text-xs font-semibold uppercase">
-            <span>Resolved Today</span>
+            <span>Resolved</span>
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
           </div>
-          <p className="text-3xl font-black text-emerald-400 mt-2">3</p>
+          {summaryLoading ? (
+            <Loader2 className="w-6 h-6 text-zinc-400 animate-spin mt-2" />
+          ) : (
+            <p className="text-3xl font-black text-emerald-400 mt-2">{summary?.resolved || 0}</p>
+          )}
         </div>
 
         <div className="p-5 rounded-2xl bg-zinc-900/60 border border-zinc-800">
           <div className="flex justify-between text-zinc-400 text-xs font-semibold uppercase">
-            <span>SLA Health</span>
+            <span>SLA Breached</span>
             <ShieldCheck className="w-4 h-4 text-purple-400" />
           </div>
-          <p className="text-3xl font-black text-purple-400 mt-2">100%</p>
+          {summaryLoading ? (
+            <Loader2 className="w-6 h-6 text-zinc-400 animate-spin mt-2" />
+          ) : (
+            <p className="text-3xl font-black text-purple-400 mt-2">{summary?.slaBreached || 0}</p>
+          )}
         </div>
       </div>
 
       {/* Quick Action Card */}
       <div className="p-6 rounded-3xl bg-zinc-900/60 border border-zinc-800 space-y-4">
         <h2 className="text-lg font-bold text-white">Recent Ticket Queue</h2>
-        <div className="space-y-3">
-          <div className="p-4 rounded-xl bg-zinc-950/60 border border-zinc-800 flex items-center justify-between">
-            <div>
-              <span className="font-mono text-xs font-bold text-blue-400">TCK-8821</span>
-              <p className="text-sm font-semibold text-white">Webhook delivery timeout for invoice events</p>
-              <p className="text-xs text-zinc-400">Client: Apex Retail Solutions · Priority: High</p>
-            </div>
-            <Link
-              href="/agent/tickets"
-              className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold text-white transition-colors"
-            >
-              Respond
-            </Link>
+        {ticketsLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-6 h-6 text-zinc-400 animate-spin" />
           </div>
-          <div className="p-4 rounded-xl bg-zinc-950/60 border border-zinc-800 flex items-center justify-between">
-            <div>
-              <span className="font-mono text-xs font-bold text-amber-400">TCK-9042</span>
-              <p className="text-sm font-semibold text-white">PDF Extraction OCR table format alignment issue</p>
-              <p className="text-xs text-zinc-400">Client: Vishwa Ventures · Priority: Urgent</p>
-            </div>
-            <Link
-              href="/agent/tickets"
-              className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold text-white transition-colors"
-            >
-              Respond
-            </Link>
+        ) : recentTickets.length === 0 ? (
+          <div className="text-center text-zinc-400 text-sm py-8">No assigned tickets</div>
+        ) : (
+          <div className="space-y-3">
+            {recentTickets.map((ticket: Ticket) => (
+              <div key={ticket.id} className="p-4 rounded-xl bg-zinc-950/60 border border-zinc-800 flex items-center justify-between">
+                <div>
+                  <span className="font-mono text-xs font-bold text-blue-400">{ticket.ticketNumber}</span>
+                  <p className="text-sm font-semibold text-white">{ticket.title}</p>
+                  <p className="text-xs text-zinc-400">Client: {ticket.clientName || "N/A"} · Priority: {ticket.priority}</p>
+                </div>
+                <Link
+                  href="/agent/tickets"
+                  className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold text-white transition-colors"
+                >
+                  Respond
+                </Link>
+              </div>
+            ))}
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

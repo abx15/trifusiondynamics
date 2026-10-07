@@ -104,6 +104,20 @@ async function main() {
     'clients:read', 'clients:write',
     'payroll:read', 'payroll:write',
     'helpdesk:read', 'helpdesk:write',
+    // Granular ticket permissions. Every ticket endpoint authorizes with one of
+    // these; `helpdesk:read`/`helpdesk:write` remain as coarse umbrella grants
+    // for existing roles.
+    'helpdesk:assign',
+    'helpdesk:comment_internal',
+    'helpdesk:submit_resolution',
+    'helpdesk:verify_resolution',
+    'helpdesk:reopen',
+    'helpdesk:close',
+    'helpdesk:close_override',
+    'helpdesk:escalate',
+    'helpdesk:manage_sla',
+    'helpdesk:manage_routing',
+    'helpdesk:read_audit',
     'documents:read', 'documents:write',
     'ai:read', 'ai:write',
     'analytics:read', 'automation:read', 'automation:write',
@@ -157,7 +171,13 @@ async function main() {
     );
   }
 
-  const supportPermissions = ['helpdesk:read', 'helpdesk:write', 'documents:read'];
+  const supportPermissions = [
+    'helpdesk:read', 'helpdesk:write', 'documents:read',
+    'helpdesk:assign', 'helpdesk:comment_internal',
+    'helpdesk:submit_resolution', 'helpdesk:verify_resolution',
+    'helpdesk:reopen', 'helpdesk:close', 'helpdesk:escalate',
+    'helpdesk:read_audit',
+  ];
   for (const action of supportPermissions) {
     await safeRun(`Assign ${action} to support_agent`, () =>
       prisma.rolePermission.upsert({
@@ -168,13 +188,65 @@ async function main() {
     );
   }
 
-  const hrPermissions = ['hr:read', 'hr:write', 'payroll:read'];
+  const hrPermissions = [
+    'hr:read', 'hr:write', 'payroll:read',
+    'helpdesk:read', 'helpdesk:write',
+    'helpdesk:assign', 'helpdesk:comment_internal',
+    'helpdesk:submit_resolution', 'helpdesk:verify_resolution',
+    'helpdesk:reopen', 'helpdesk:close', 'helpdesk:escalate',
+  ];
   for (const action of hrPermissions) {
     await safeRun(`Assign ${action} to hr_agent`, () =>
       prisma.rolePermission.upsert({
         where: { roleId_permissionId: { roleId: dbRoles.hr_agent.id, permissionId: dbPermissions[action].id } },
         update: {},
         create: { roleId: dbRoles.hr_agent.id, permissionId: dbPermissions[action].id },
+      })
+    );
+  }
+
+  // `agent` coordinates tickets end to end and `employee` only works the tickets
+  // assigned to them. Neither role previously received any permission at all,
+  // which made the helpdesk unusable for them.
+  const agentPermissions = [
+    'helpdesk:read', 'helpdesk:write', 'helpdesk:assign',
+    'helpdesk:comment_internal', 'helpdesk:submit_resolution',
+    'helpdesk:verify_resolution', 'helpdesk:reopen', 'helpdesk:close',
+    'helpdesk:escalate', 'projects:read', 'clients:read',
+  ];
+  for (const action of agentPermissions) {
+    await safeRun(`Assign ${action} to agent`, () =>
+      prisma.rolePermission.upsert({
+        where: { roleId_permissionId: { roleId: dbRoles.agent.id, permissionId: dbPermissions[action].id } },
+        update: {},
+        create: { roleId: dbRoles.agent.id, permissionId: dbPermissions[action].id },
+      })
+    );
+  }
+
+  // Employees may read/act on their own assignments only — that scope is
+  // enforced in the ticket authorization service, not by the permission string.
+  const employeePermissions = [
+    'helpdesk:read', 'helpdesk:write', 'helpdesk:submit_resolution',
+  ];
+  for (const action of employeePermissions) {
+    await safeRun(`Assign ${action} to employee`, () =>
+      prisma.rolePermission.upsert({
+        where: { roleId_permissionId: { roleId: dbRoles.employee.id, permissionId: dbPermissions[action].id } },
+        update: {},
+        create: { roleId: dbRoles.employee.id, permissionId: dbPermissions[action].id },
+      })
+    );
+  }
+
+  // Clients may raise tickets and converse on their own client's tickets.
+  const clientPermissions = ['helpdesk:read', 'helpdesk:write', 'projects:read'];
+  for (const action of clientPermissions) {
+    await safeRun(`Assign ${action} to client`, () =>
+      prisma.rolePermission.upsert({
+        where: { roleId_permissionId: { roleId: dbRoles.client.id, permissionId: dbPermissions[action].id } },
+        update: {},
+        create: { roleId: dbRoles.client.id, permissionId: dbPermissions[action].id },
       })
     );
   }
@@ -1496,6 +1568,201 @@ async function main() {
     })
   );
 
+  // Seed Departments (organization-scoped configuration, NOT demo business data).
+  // Departments are what routing rules and SLA policies attach to, so they must
+  // exist before employees or any ticket can be routed.
+  const departmentDefinitions = [
+    { code: 'IT', name: 'It', description: 'Internal IT and infrastructure support' },
+    { code: 'SUPPORT', name: 'Support', description: 'Client-facing technical support' },
+    { code: 'HR', name: 'Hr', description: 'People operations' },
+    { code: 'FINANCE', name: 'Finance', description: 'Billing and payroll support' },
+    { code: 'ENGINEERING', name: 'Engineering', description: 'Product engineering' },
+    { code: 'DESIGN', name: 'Design', description: 'Design and creative' },
+    { code: 'MANAGEMENT', name: 'Management', description: 'Leadership and operations' },
+  ];
+
+  const dbDepartments: Record<string, any> = {};
+  for (const dept of departmentDefinitions) {
+    const department = await safeRun(`Upsert Department: ${dept.code}`, () =>
+      prisma.department.upsert({
+        where: { organizationId_code: { organizationId: org.id, code: dept.code } },
+        update: { description: dept.description },
+        create: {
+          organizationId: org.id,
+          code: dept.code,
+          name: dept.name,
+          description: dept.description,
+        },
+      })
+    );
+    dbDepartments[dept.code] = department;
+  }
+
+  // ---- Helpdesk CONFIGURATION -------------------------------------------------
+  // SLA policies and routing rules are operational configuration (timings and
+  // org policy), not demo business records. They are required for routing to
+  // work at all. No tickets, clients, projects or employees are faked here.
+  const slaPolicyDefinitions = [
+    {
+      name: 'Client Support - Critical',
+      ticketType: 'CLIENT_SUPPORT' as const,
+      priority: 'CRITICAL' as const,
+      responseTimeMins: 15,
+      resolutionTimeMins: 240,
+    },
+    {
+      name: 'Client Support - Urgent',
+      ticketType: 'CLIENT_SUPPORT' as const,
+      priority: 'URGENT' as const,
+      responseTimeMins: 30,
+      resolutionTimeMins: 480,
+    },
+    {
+      name: 'Client Support - High',
+      ticketType: 'CLIENT_SUPPORT' as const,
+      priority: 'HIGH' as const,
+      responseTimeMins: 120,
+      resolutionTimeMins: 1440,
+    },
+    {
+      name: 'Client Support - Standard',
+      ticketType: 'CLIENT_SUPPORT' as const,
+      priority: 'MEDIUM' as const,
+      responseTimeMins: 240,
+      resolutionTimeMins: 4320,
+    },
+    {
+      name: 'Client Support - Low',
+      ticketType: 'CLIENT_SUPPORT' as const,
+      priority: 'LOW' as const,
+      responseTimeMins: 480,
+      resolutionTimeMins: 10080,
+    },
+    {
+      name: 'Internal - Urgent',
+      ticketType: 'INTERNAL' as const,
+      priority: 'URGENT' as const,
+      responseTimeMins: 60,
+      resolutionTimeMins: 480,
+    },
+    {
+      name: 'Internal - Standard',
+      ticketType: 'INTERNAL' as const,
+      priority: 'MEDIUM' as const,
+      responseTimeMins: 480,
+      resolutionTimeMins: 2880,
+    },
+    {
+      name: 'Internal - Low',
+      ticketType: 'INTERNAL' as const,
+      priority: 'LOW' as const,
+      responseTimeMins: 1440,
+      resolutionTimeMins: 7200,
+    },
+  ];
+
+  const dbSlaPolicies: Record<string, any> = {};
+  for (const policy of slaPolicyDefinitions) {
+    const created = await safeRun(`Upsert SLA Policy: ${policy.name}`, () =>
+      prisma.sLAPolicy.upsert({
+        where: { organizationId_name: { organizationId: org.id, name: policy.name } },
+        update: {
+          responseTimeMins: policy.responseTimeMins,
+          resolutionTimeMins: policy.resolutionTimeMins,
+        },
+        create: {
+          organizationId: org.id,
+          name: policy.name,
+          ticketType: policy.ticketType,
+          priority: policy.priority,
+          responseTimeMins: policy.responseTimeMins,
+          resolutionTimeMins: policy.resolutionTimeMins,
+        },
+      })
+    );
+    dbSlaPolicies[policy.name] = created;
+  }
+
+  const routingRuleDefinitions = [
+    {
+      name: 'Client technical -> Support',
+      ticketType: 'CLIENT_SUPPORT' as const,
+      category: 'TECHNICAL' as const,
+      departmentCode: 'SUPPORT',
+      slaPolicyName: 'Client Support - Standard',
+      ruleOrder: 100,
+    },
+    {
+      name: 'Client billing -> Finance',
+      ticketType: 'CLIENT_SUPPORT' as const,
+      category: 'BILLING' as const,
+      departmentCode: 'FINANCE',
+      slaPolicyName: 'Client Support - Standard',
+      ruleOrder: 100,
+    },
+    {
+      name: 'Internal HR -> Hr',
+      ticketType: 'INTERNAL' as const,
+      category: 'HR' as const,
+      departmentCode: 'HR',
+      slaPolicyName: 'Internal - Standard',
+      ruleOrder: 100,
+    },
+    {
+      name: 'Internal IT support -> It',
+      ticketType: 'INTERNAL' as const,
+      category: 'IT_SUPPORT' as const,
+      departmentCode: 'IT',
+      slaPolicyName: 'Internal - Standard',
+      ruleOrder: 100,
+    },
+    {
+      name: 'Internal payroll -> Finance',
+      ticketType: 'INTERNAL' as const,
+      category: 'PAYROLL' as const,
+      departmentCode: 'FINANCE',
+      slaPolicyName: 'Internal - Standard',
+      ruleOrder: 100,
+    },
+  ];
+
+  for (const rule of routingRuleDefinitions) {
+    await safeRun(`Upsert Routing Rule: ${rule.name}`, () =>
+      prisma.routingRule.upsert({
+        where: { organizationId_name: { organizationId: org.id, name: rule.name } },
+        update: {
+          departmentId: dbDepartments[rule.departmentCode]?.id ?? null,
+          slaPolicyId: dbSlaPolicies[rule.slaPolicyName]?.id ?? null,
+          ruleOrder: rule.ruleOrder,
+        },
+        create: {
+          organizationId: org.id,
+          name: rule.name,
+          ticketType: rule.ticketType,
+          category: rule.category,
+          departmentId: dbDepartments[rule.departmentCode]?.id ?? null,
+          slaPolicyId: dbSlaPolicies[rule.slaPolicyName]?.id ?? null,
+          ruleOrder: rule.ruleOrder,
+        },
+      })
+    );
+  }
+
+  // Exactly one catch-all rule per organization (partial unique index
+  // RoutingRule_one_default_per_org enforces this).
+  await safeRun('Upsert Routing Rule: Organization default', () =>
+    prisma.routingRule.upsert({
+      where: { organizationId_name: { organizationId: org.id, name: 'Organization default' } },
+      update: {},
+      create: {
+        organizationId: org.id,
+        name: 'Organization default',
+        isDefault: true,
+        ruleOrder: -1000,
+      },
+    })
+  );
+
   // Seed 4 Employee records
   const empJane = await safeRun('Upsert Employee: Jane', () =>
     prisma.employee.upsert({
@@ -1504,7 +1771,8 @@ async function main() {
       create: {
         userId: employeeUser.id,
         employeeCode: 'TFX-EMP-001',
-        department: 'Engineering',
+        departmentId: dbDepartments.ENGINEERING.id,
+        departmentLegacy: 'Engineering',
         designation: 'Senior Developer',
         joiningDate: new Date('2025-01-15T00:00:00Z'),
         employmentType: 'FULL_TIME',
@@ -1521,7 +1789,8 @@ async function main() {
       create: {
         userId: bobUser.id,
         employeeCode: 'TFX-EMP-002',
-        department: 'Engineering',
+        departmentId: dbDepartments.ENGINEERING.id,
+        departmentLegacy: 'Engineering',
         designation: 'Frontend Engineer',
         joiningDate: new Date('2025-06-01T00:00:00Z'),
         employmentType: 'FULL_TIME',
@@ -1539,7 +1808,8 @@ async function main() {
       create: {
         userId: aliceUser.id,
         employeeCode: 'TFX-EMP-003',
-        department: 'Design',
+        departmentId: dbDepartments.DESIGN.id,
+        departmentLegacy: 'Design',
         designation: 'UI Designer',
         joiningDate: new Date('2025-09-01T00:00:00Z'),
         employmentType: 'CONTRACT',
@@ -1556,7 +1826,8 @@ async function main() {
       create: {
         userId: charlieUser.id,
         employeeCode: 'TFX-EMP-004',
-        department: 'Engineering',
+        departmentId: dbDepartments.ENGINEERING.id,
+        departmentLegacy: 'Engineering',
         designation: 'Backend Intern',
         joiningDate: new Date('2026-03-01T00:00:00Z'),
         employmentType: 'INTERN',
@@ -1884,6 +2155,327 @@ async function main() {
   );
 
   console.log('Analytics & Automation seeded successfully!');
+
+  // ============================================================
+  // 14. Seed Helpdesk — Departments, SLA Policies, Routing Rules
+  // ============================================================
+  console.log('Seeding Helpdesk configuration (departments, SLA, routing)...');
+
+  const supportUserRecord = await prisma.user.findFirst({
+    where: { email: 'support.trifusion@gmail.com' },
+    select: { id: true },
+  });
+  const supportEmployee = supportUserRecord
+    ? await prisma.employee.findFirst({
+        where: { userId: supportUserRecord.id },
+        select: { id: true },
+      })
+    : null;
+
+  // ---- Departments ----
+  const deptSeed = [
+    { code: 'IT', name: 'IT Support', description: 'Technical support, infrastructure, access issues' },
+    { code: 'SUPPORT', name: 'Client Support', description: 'General client assistance and service delivery' },
+    { code: 'BILLING', name: 'Billing & Finance', description: 'Invoices, payments, refunds, subscriptions' },
+    { code: 'HR', name: 'Human Resources', description: 'Internal HR tickets, onboarding, policies' },
+    { code: 'SALES', name: 'Sales & Partnerships', description: 'Pre-sales, quotes, new client requests' },
+  ];
+
+  const deptByName: Record<string, { id: string }> = {};
+  for (const d of deptSeed) {
+    const code = d.name
+      .trim()
+      .replace(/[^A-Za-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .toUpperCase()
+      .slice(0, 32);
+    const dept = await safeRun(`Upsert Department: ${d.name}`, () =>
+      prisma.department.upsert({
+        where: { organizationId_code: { organizationId: org.id, code: d.code || code } },
+        update: {},
+        create: {
+          organizationId: org.id,
+          code: d.code || code,
+          name: d.name,
+          description: d.description,
+          isHelpdesk: true,
+        },
+      })
+    );
+    deptByName[d.name] = { id: dept.id };
+  }
+  console.log(`  Seeded ${Object.keys(deptByName).length} helpdesk departments.`);
+
+  // ---- SLA Policies ----
+  const itDeptId = deptByName['IT Support']?.id;
+  const billingDeptId = deptByName['Billing & Finance']?.id;
+  const hrDeptId = deptByName['Human Resources']?.id;
+
+  const slaSeed = [
+    {
+      name: 'Standard Client Support',
+      ticketType: 'CLIENT_SUPPORT',
+      priority: 'MEDIUM',
+      responseTimeMins: 120,
+      resolutionTimeMins: 1440,
+      policyOrder: 0,
+      isDefault: true,
+    },
+    {
+      name: 'Urgent Client Support',
+      ticketType: 'CLIENT_SUPPORT',
+      priority: 'URGENT',
+      responseTimeMins: 15,
+      resolutionTimeMins: 240,
+      policyOrder: 10,
+    },
+    {
+      name: 'Critical Client Emergency',
+      ticketType: 'CLIENT_SUPPORT',
+      priority: 'CRITICAL',
+      responseTimeMins: 5,
+      resolutionTimeMins: 60,
+      policyOrder: 20,
+    },
+    {
+      name: 'IT Internal Request',
+      ticketType: 'INTERNAL',
+      category: 'IT_SUPPORT',
+      priority: 'MEDIUM',
+      departmentId: itDeptId,
+      responseTimeMins: 240,
+      resolutionTimeMins: 4320,
+      policyOrder: 5,
+    },
+    {
+      name: 'Billing Dispute SLA',
+      ticketType: 'CLIENT_SUPPORT',
+      category: 'BILLING',
+      priority: 'HIGH',
+      departmentId: billingDeptId,
+      responseTimeMins: 60,
+      resolutionTimeMins: 720,
+      policyOrder: 15,
+    },
+    {
+      name: 'HR Internal Ticket',
+      ticketType: 'INTERNAL',
+      category: 'HR',
+      priority: 'MEDIUM',
+      departmentId: hrDeptId,
+      responseTimeMins: 480,
+      resolutionTimeMins: 2880,
+      policyOrder: 5,
+    },
+    {
+      name: 'Low Priority General',
+      ticketType: 'CLIENT_SUPPORT',
+      priority: 'LOW',
+      responseTimeMins: 480,
+      resolutionTimeMins: 4320,
+      policyOrder: 0,
+    },
+  ];
+
+  let slaCount = 0;
+  for (const s of slaSeed) {
+    await safeRun(`Upsert SLA Policy: ${s.name}`, () =>
+      prisma.sLAPolicy.upsert({
+        where: { organizationId_name: { organizationId: org.id, name: s.name } },
+        update: s.isDefault
+          ? {}
+          : { responseTimeMins: s.responseTimeMins, resolutionTimeMins: s.resolutionTimeMins },
+        create: {
+          organizationId: org.id,
+          name: s.name,
+          ticketType: s.ticketType as any,
+          category: (s as any).category ?? null,
+          priority: s.priority as any,
+          departmentId: (s as any).departmentId ?? null,
+          responseTimeMins: s.responseTimeMins,
+          resolutionTimeMins: s.resolutionTimeMins,
+          warningThresholdPercent: 80,
+          policyOrder: s.policyOrder,
+          isDefault: (s as any).isDefault ?? false,
+          isActive: true,
+        },
+      })
+    );
+    slaCount++;
+  }
+  console.log(`  Seeded ${slaCount} SLA policies.`);
+
+  // ---- Routing Rules ----
+  const standardSla = await prisma.sLAPolicy.findFirst({
+    where: { organizationId: org.id, name: 'Standard Client Support' },
+    select: { id: true },
+  });
+  const urgentSla = await prisma.sLAPolicy.findFirst({
+    where: { organizationId: org.id, name: 'Urgent Client Support' },
+    select: { id: true },
+  });
+  const criticalSla = await prisma.sLAPolicy.findFirst({
+    where: { organizationId: org.id, name: 'Critical Client Emergency' },
+    select: { id: true },
+  });
+  const billingSla = await prisma.sLAPolicy.findFirst({
+    where: { organizationId: org.id, name: 'Billing Dispute SLA' },
+    select: { id: true },
+  });
+  const itSla = await prisma.sLAPolicy.findFirst({
+    where: { organizationId: org.id, name: 'IT Internal Request' },
+    select: { id: true },
+  });
+  const hrSla = await prisma.sLAPolicy.findFirst({
+    where: { organizationId: org.id, name: 'HR Internal Ticket' },
+    select: { id: true },
+  });
+
+  const supportDeptId = deptByName['Client Support']?.id;
+  const salesDeptId = deptByName['Sales & Partnerships']?.id;
+
+  const routingSeed: Array<{
+    name: string;
+    ticketType?: string;
+    category?: string;
+    priority?: string;
+    departmentId?: string;
+    slaPolicyId?: string | null;
+    defaultAgentId?: string | null;
+    autoAssignEmployeeId?: string | null;
+    ruleOrder: number;
+    isDefault?: boolean;
+  }> = [
+    {
+      name: 'Catch-all Default',
+      departmentId: supportDeptId,
+      slaPolicyId: standardSla?.id ?? null,
+      defaultAgentId: supportUser?.id ?? null,
+      autoAssignEmployeeId: supportEmployee?.id ?? null,
+      ruleOrder: 0,
+      isDefault: true,
+    },
+    {
+      name: 'Billing Category → Billing Dept',
+      ticketType: 'CLIENT_SUPPORT',
+      category: 'BILLING',
+      departmentId: billingDeptId,
+      slaPolicyId: billingSla?.id ?? null,
+      ruleOrder: 50,
+    },
+    {
+      name: 'Account Category → Billing Dept',
+      ticketType: 'CLIENT_SUPPORT',
+      category: 'ACCOUNT',
+      departmentId: billingDeptId,
+      slaPolicyId: standardSla?.id ?? null,
+      ruleOrder: 50,
+    },
+    {
+      name: 'Technical Category → IT Support',
+      ticketType: 'CLIENT_SUPPORT',
+      category: 'TECHNICAL',
+      departmentId: itDeptId,
+      slaPolicyId: standardSla?.id ?? null,
+      ruleOrder: 50,
+    },
+    {
+      name: 'Bug Report → IT Support',
+      ticketType: 'CLIENT_SUPPORT',
+      category: 'BUG_REPORT',
+      departmentId: itDeptId,
+      slaPolicyId: urgentSla?.id ?? null,
+      ruleOrder: 60,
+    },
+    {
+      name: 'Security → IT Support + Urgent SLA',
+      ticketType: 'CLIENT_SUPPORT',
+      category: 'SECURITY',
+      departmentId: itDeptId,
+      slaPolicyId: criticalSla?.id ?? null,
+      ruleOrder: 80,
+    },
+    {
+      name: 'URGENT priority anywhere → Support + Urgent SLA',
+      ticketType: 'CLIENT_SUPPORT',
+      priority: 'URGENT',
+      departmentId: supportDeptId,
+      slaPolicyId: urgentSla?.id ?? null,
+      ruleOrder: 70,
+    },
+    {
+      name: 'CRITICAL priority anywhere → Support + Critical SLA',
+      ticketType: 'CLIENT_SUPPORT',
+      priority: 'CRITICAL',
+      departmentId: supportDeptId,
+      slaPolicyId: criticalSla?.id ?? null,
+      ruleOrder: 90,
+    },
+    {
+      name: 'Feature Request → Sales',
+      ticketType: 'CLIENT_SUPPORT',
+      category: 'FEATURE_REQUEST',
+      departmentId: salesDeptId,
+      slaPolicyId: standardSla?.id ?? null,
+      ruleOrder: 40,
+    },
+    {
+      name: 'Internal IT ticket',
+      ticketType: 'INTERNAL',
+      category: 'IT_SUPPORT',
+      departmentId: itDeptId,
+      slaPolicyId: itSla?.id ?? null,
+      ruleOrder: 60,
+    },
+    {
+      name: 'Internal HR ticket',
+      ticketType: 'INTERNAL',
+      category: 'HR',
+      departmentId: hrDeptId,
+      slaPolicyId: hrSla?.id ?? null,
+      ruleOrder: 60,
+    },
+    {
+      name: 'Payroll Category → HR',
+      category: 'PAYROLL',
+      departmentId: hrDeptId,
+      slaPolicyId: hrSla?.id ?? null,
+      ruleOrder: 55,
+    },
+  ];
+
+  let routingCount = 0;
+  for (const r of routingSeed) {
+    await safeRun(`Upsert Routing Rule: ${r.name}`, async () => {
+      const existing = await prisma.routingRule.findFirst({
+        where: { organizationId: org.id, name: r.name },
+        select: { id: true },
+      });
+      if (existing) return existing;
+      const created = await prisma.routingRule.create({
+        data: {
+          organizationId: org.id,
+          name: r.name,
+          ticketType: (r.ticketType as any) ?? null,
+          category: (r.category as any) ?? null,
+          priority: (r.priority as any) ?? null,
+          departmentId: r.departmentId ?? null,
+          slaPolicyId: r.slaPolicyId ?? null,
+          defaultAgentId: r.defaultAgentId ?? null,
+          autoAssignEmployeeId: r.autoAssignEmployeeId ?? null,
+          ruleOrder: r.ruleOrder,
+          isDefault: r.isDefault ?? false,
+          isActive: true,
+        },
+      });
+      return created;
+    });
+    routingCount++;
+  }
+  console.log(`  Seeded ${routingCount} routing rules.`);
+
+  console.log('Helpdesk configuration seeded successfully!');
+
   console.log('Seeding completed successfully.');
   console.log(`========================================`);
   console.log(`ACCOUNT SUMMARY:`);

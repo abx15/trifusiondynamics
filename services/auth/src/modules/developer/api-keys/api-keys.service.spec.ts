@@ -28,10 +28,12 @@ describe('ApiKeysService', () => {
 
   describe('generateKey', () => {
     it('should generate and return a valid raw key', async () => {
-      dbMock.apiKey.create.mockImplementation(async (args: any) => ({
+      // Cast because jest-mock-extended types the delegate as a
+      // PrismaPromise-returning function.
+      dbMock.apiKey.create.mockImplementation((async (args: any) => ({
         id: 'key-1',
         ...args.data,
-      }));
+      })) as any);
 
       const result = await service.generateKey('org-1', 'user-1', {
         name: 'Test Key',

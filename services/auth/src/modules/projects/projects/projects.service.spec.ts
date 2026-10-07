@@ -23,12 +23,14 @@ describe('ProjectsService tenant isolation (IDOR regression)', () => {
 
   it('scopes findOne by organizationId and rejects cross-tenant access', async () => {
     // Simulate the DB only returning the row when the org matches.
-    dbMock.project.findFirst.mockImplementation(async (args: any) => {
+    // Cast the implementation because jest-mock-extended types the delegate as a
+    // PrismaPromise-returning function, which a plain async mock cannot match.
+    dbMock.project.findFirst.mockImplementation((async (args: any) => {
       if (args?.where?.organizationId === 'org-A') {
         return { id: 'proj-1', organizationId: 'org-A' } as any;
       }
       return null;
-    });
+    }) as any);
     dbMock.task.groupBy.mockResolvedValue([]);
 
     // Owner org can access its own project.
@@ -52,11 +54,10 @@ describe('ProjectsService tenant isolation (IDOR regression)', () => {
   });
 
   it('scopes update by organizationId', async () => {
-    dbMock.project.findFirst.mockImplementation(async (args: any) =>
+    dbMock.project.findFirst.mockImplementation((async (args: any) =>
       args?.where?.organizationId === 'org-A'
         ? ({ id: 'proj-1', organizationId: 'org-A' } as any)
-        : null,
-    );
+        : null) as any);
     dbMock.project.update.mockResolvedValue({ id: 'proj-1' } as any);
 
     await expect(

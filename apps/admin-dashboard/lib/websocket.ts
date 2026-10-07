@@ -13,6 +13,8 @@ type WebSocketHookReturn = {
   messages: WebSocketMessage[];
   sendMessage: (message: any) => void;
   lastMessage: WebSocketMessage | null;
+  subscribeToTicket: (ticketId: string) => void;
+  unsubscribeFromTicket: (ticketId: string) => void;
 };
 
 export function useWebSocket(url: string): WebSocketHookReturn {
@@ -21,11 +23,19 @@ export function useWebSocket(url: string): WebSocketHookReturn {
   const [lastMessage, setLastMessage] = useState<WebSocketMessage | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectAttemptsRef = useRef(0);
+  const MAX_RECONNECT_ATTEMPTS = 3;
 
   useEffect(() => {
+    // Skip WebSocket connection if not enabled
+    if (process.env.NEXT_PUBLIC_ENABLE_WEBSOCKET !== "true") {
+      console.log("WebSocket is disabled via NEXT_PUBLIC_ENABLE_WEBSOCKET");
+      return;
+    }
+
     const connect = () => {
       const wsUrl = url || `${process.env.NEXT_PUBLIC_WS_URL || (process.env.NODE_ENV === "production" ? "wss://trifusiondynamics-api.onrender.com" : "ws://localhost:8000")}/ws`;
-      
+
       try {
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
@@ -33,7 +43,8 @@ export function useWebSocket(url: string): WebSocketHookReturn {
         ws.onopen = () => {
           console.log("WebSocket connected");
           setIsConnected(true);
-          
+          reconnectAttemptsRef.current = 0; // Reset on successful connection
+
           // Send authentication token if available
           const token = sessionStorage.getItem("accessToken");
           if (token) {
@@ -52,20 +63,27 @@ export function useWebSocket(url: string): WebSocketHookReturn {
         };
 
         ws.onerror = (error) => {
-          console.error("WebSocket error:", error);
+          console.warn("WebSocket connection failed (non-critical):", error);
+          setIsConnected(false);
         };
 
         ws.onclose = () => {
           console.log("WebSocket disconnected");
           setIsConnected(false);
-          
-          // Attempt to reconnect after 5 seconds
-          reconnectTimeoutRef.current = setTimeout(() => {
-            connect();
-          }, 5000);
+
+          // Attempt to reconnect with exponential backoff, but limit attempts
+          if (reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
+            reconnectAttemptsRef.current += 1;
+            const delay = Math.min(5000 * Math.pow(2, reconnectAttemptsRef.current - 1), 30000);
+            reconnectTimeoutRef.current = setTimeout(() => {
+              connect();
+            }, delay);
+          } else {
+            console.log("Max WebSocket reconnection attempts reached. Giving up.");
+          }
         };
       } catch (error) {
-        console.error("Failed to connect to WebSocket:", error);
+        console.warn("Failed to initialize WebSocket (non-critical):", error);
       }
     };
 
@@ -89,11 +107,21 @@ export function useWebSocket(url: string): WebSocketHookReturn {
     }
   };
 
+  const subscribeToTicket = (ticketId: string) => {
+    sendMessage({ type: "subscribe", ticketId });
+  };
+
+  const unsubscribeFromTicket = (ticketId: string) => {
+    sendMessage({ type: "unsubscribe", ticketId });
+  };
+
   return {
     isConnected,
     messages,
     sendMessage,
     lastMessage,
+    subscribeToTicket,
+    unsubscribeFromTicket,
   };
 }
 
