@@ -145,10 +145,7 @@ export class AuthController {
   }
 
   @Post('logout')
-  async logout(
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const refreshTokenString = req.cookies?.refresh_token;
     const accessTokenString =
       this.getBearerToken(req) || req.cookies?.access_token;

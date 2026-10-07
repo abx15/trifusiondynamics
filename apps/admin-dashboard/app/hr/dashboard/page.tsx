@@ -1,10 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { Users2, Calendar, ClipboardList, TrendingUp, ArrowUpRight } from "lucide-react";
+import { Users2, Calendar, ClipboardList, TrendingUp, ArrowUpRight, Loader2 } from "lucide-react";
 import Link from "next/link";
 
 export default function HrDashboardPage() {
+  // TODO: Integrate with real HR API endpoints when available
+  // const { data: employeesData } = useEmployees();
+  // const { data: leavesData } = useLeaves();
+  // const { data: recruitmentData } = useRecruitment();
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
       {/* Header Banner */}
@@ -27,8 +31,8 @@ export default function HrDashboardPage() {
             <span className="text-xs font-semibold uppercase">Total Employees</span>
             <Users2 className="w-5 h-5 text-emerald-400" />
           </div>
-          <p className="text-3xl font-extrabold text-white mt-3">24</p>
-          <p className="text-xs text-emerald-400 mt-1">+3 this quarter</p>
+          <p className="text-3xl font-extrabold text-white mt-3">--</p>
+          <p className="text-xs text-zinc-500 mt-1">API integration pending</p>
         </div>
 
         <div className="p-6 rounded-2xl bg-zinc-900/60 border border-zinc-800">
@@ -36,8 +40,8 @@ export default function HrDashboardPage() {
             <span className="text-xs font-semibold uppercase">Pending Leaves</span>
             <Calendar className="w-5 h-5 text-amber-400" />
           </div>
-          <p className="text-3xl font-extrabold text-white mt-3">5</p>
-          <p className="text-xs text-amber-400 mt-1">2 urgent reviews</p>
+          <p className="text-3xl font-extrabold text-white mt-3">--</p>
+          <p className="text-xs text-zinc-500 mt-1">API integration pending</p>
         </div>
 
         <div className="p-6 rounded-2xl bg-zinc-900/60 border border-zinc-800">
@@ -45,8 +49,8 @@ export default function HrDashboardPage() {
             <span className="text-xs font-semibold uppercase">Open Positions</span>
             <ClipboardList className="w-5 h-5 text-blue-400" />
           </div>
-          <p className="text-3xl font-extrabold text-white mt-3">7</p>
-          <p className="text-xs text-blue-400 mt-1">4 in interview stage</p>
+          <p className="text-3xl font-extrabold text-white mt-3">--</p>
+          <p className="text-xs text-zinc-500 mt-1">API integration pending</p>
         </div>
 
         <div className="p-6 rounded-2xl bg-zinc-900/60 border border-zinc-800">
@@ -54,8 +58,8 @@ export default function HrDashboardPage() {
             <span className="text-xs font-semibold uppercase">Retention Rate</span>
             <TrendingUp className="w-5 h-5 text-purple-400" />
           </div>
-          <p className="text-3xl font-extrabold text-white mt-3">94.2%</p>
-          <p className="text-xs text-emerald-400 mt-1">Above industry avg</p>
+          <p className="text-3xl font-extrabold text-white mt-3">--</p>
+          <p className="text-xs text-zinc-500 mt-1">API integration pending</p>
         </div>
       </div>
 

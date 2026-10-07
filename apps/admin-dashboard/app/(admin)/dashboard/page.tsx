@@ -4,35 +4,45 @@ import * as React from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
-import { Users, Shield, Cpu, Activity, Clock, Terminal } from "lucide-react";
+import { useTicketSummary } from "@/lib/hooks/useTickets";
+import { useProjects } from "@/lib/hooks/useProjects";
+import { Users, Shield, Cpu, Activity as ActivityIcon, Clock, Terminal, Loader2 } from "lucide-react";
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { data: ticketSummary, isLoading: ticketsLoading } = useTicketSummary();
+  const { data: projectsData, isLoading: projectsLoading } = useProjects({ limit: 1 });
+
+  const totalProjects = projectsData?.total || 0;
 
   const stats = [
     {
-      label: "Active Team Members",
-      value: "12 Members",
-      description: "Manage in Organization Settings",
-      icon: Users,
+      label: "Total Tickets",
+      value: ticketsLoading ? "Loading..." : (ticketSummary?.total || 0).toString(),
+      description: `${ticketSummary?.open || 0} open, ${ticketSummary?.resolved || 0} resolved`,
+      icon: ActivityIcon,
+      isLoading: ticketsLoading,
+    },
+    {
+      label: "Active Projects",
+      value: projectsLoading ? "Loading..." : totalProjects.toString(),
+      description: "Manage in Projects section",
+      icon: Cpu,
+      isLoading: projectsLoading,
     },
     {
       label: "Configured Security Roles",
-      value: "4 Roles",
+      value: user?.roles?.length?.toString() || "0",
       description: "RBAC policies active",
       icon: Shield,
-    },
-    {
-      label: "Active AI Pipelines",
-      value: "8 Active",
-      description: "RAG & Document processing stubs",
-      icon: Cpu,
+      isLoading: false,
     },
     {
       label: "System Status",
       value: "Operational",
-      description: "API latencies normal (85ms)",
-      icon: Activity,
+      description: "API latencies normal",
+      icon: ActivityIcon,
+      isLoading: false,
     },
   ];
 
@@ -75,7 +85,11 @@ export default function DashboardPage() {
                 <Icon className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-foreground">{stat.value}</div>
+                {stat.isLoading ? (
+                  <Loader2 className="h-6 w-6 text-muted-foreground animate-spin" />
+                ) : (
+                  <div className="text-2xl font-bold text-foreground">{stat.value}</div>
+                )}
                 <p className="text-xs text-muted-foreground mt-1">{stat.description}</p>
               </CardContent>
             </Card>

@@ -58,12 +58,14 @@ describe('EmployeesController - Download Authorization (P1: IDOR prevention)', (
     permissions: [],
   };
 
-  const mockEmployee = {
+  // Typed loosely because it is a partial fixture used across several specs.
+  const mockEmployee: any = {
     id: 'emp-1',
     userId: 'user-emp-1',
     employeeCode: 'TFX-EMP-001',
     organizationId: 'org-A',
-    department: 'Engineering',
+    departmentId: 'dept-1',
+    departmentLegacy: 'Engineering',
     designation: 'Dev',
     joiningDate: new Date('2024-01-01'),
     employmentType: 'FULL_TIME',

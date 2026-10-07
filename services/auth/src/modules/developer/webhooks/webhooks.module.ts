@@ -8,5 +8,6 @@ import { DatabaseModule } from '../../database/database.module';
   imports: [DatabaseModule],
   controllers: [WebhooksController],
   providers: [WebhooksService, WebhookDispatcherService],
+  exports: [WebhooksService, WebhookDispatcherService],
 })
 export class WebhooksModule {}

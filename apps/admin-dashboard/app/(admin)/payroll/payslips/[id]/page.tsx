@@ -64,10 +64,6 @@ export default function PayslipDetailPage() {
   const date = new Date(payslip.year, payslip.month - 1);
   const periodStr = date.toLocaleString("default", { month: "long", year: "numeric" });
 
-  const basic = Number(payslip.grossAmount) - Number(payslip.tax) - Number(payslip.deductions) > 0 // let's do a mock or use actual structure
-    ? Number(payslip.grossAmount) * 0.6 // Mock breakdown since we only store totals in Payslip model
-    : Number(payslip.grossAmount);
-
   return (
     <div className="space-y-6">
       

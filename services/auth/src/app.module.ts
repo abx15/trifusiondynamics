@@ -12,11 +12,19 @@ import { AutomationModule } from './modules/automation/automation.module';
 import { DeveloperModule } from './modules/developer/developer.module';
 import { StubsModule } from './modules/stubs/stubs.module';
 import { UsersModule } from './modules/users/users.module';
+import { DepartmentsModule } from './modules/helpdesk/departments/departments.module';
+import { RoutingModule } from './modules/helpdesk/routing/routing.module';
+import { SlaModule } from './modules/helpdesk/sla/sla.module';
+import { TicketsModule } from './modules/helpdesk/tickets/tickets.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { OutboxModule } from './modules/developer/outbox/outbox.module';
+import { GatewayModule } from './gateway/gateway.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD, APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
 import { ApiLoggingInterceptor } from './gateway/interceptors/api-logging.interceptor';
+import { BigIntSafeInterceptor } from './gateway/interceptors/bigint-safe.interceptor';
 import { AllExceptionsFilter } from './gateway/filters/http-exception.filter';
 import { LoggerModule } from 'nestjs-pino';
 import { randomUUID } from 'crypto';
@@ -63,6 +71,13 @@ import { UserThrottlerGuard } from './common/guards/user-throttler.guard';
     AutomationModule,
     DeveloperModule,
     StubsModule,
+    DepartmentsModule,
+    RoutingModule,
+    SlaModule,
+    TicketsModule,
+    NotificationsModule,
+    OutboxModule,
+    GatewayModule,
   ],
   controllers: [AppController],
   providers: [
@@ -74,6 +89,10 @@ import { UserThrottlerGuard } from './common/guards/user-throttler.guard';
     {
       provide: APP_INTERCEPTOR,
       useClass: ApiLoggingInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: BigIntSafeInterceptor,
     },
     {
       provide: APP_FILTER,

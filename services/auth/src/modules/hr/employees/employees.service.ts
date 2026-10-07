@@ -6,17 +6,21 @@ import {
 import { PrismaService } from '../../database/prisma.service';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
-import { EmployeeStatus } from '@prisma/client';
+import { EmployeeStatus, Prisma } from '@prisma/client';
 import {
   parsePagination,
   paginatedResult,
 } from '../../../common/utils/pagination';
+import { DepartmentsService } from '../../helpdesk/departments/departments.service';
 
 const MAX_EMPLOYEE_LIMIT = 200;
 
 @Injectable()
 export class EmployeesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly departments: DepartmentsService,
+  ) {}
 
   async create(dto: CreateEmployeeDto, orgId: string) {
     // 1. Verify user exists in the organization
@@ -46,12 +50,29 @@ export class EmployeesService {
     const nextCodeNumber = employeeCount + 1;
     const employeeCode = `TFX-EMP-${String(nextCodeNumber).padStart(3, '0')}`;
 
-    // 4. Create Employee
+    // 4. Resolve the department to a real org-scoped FK. `departmentId` is
+    //    validated against the tenant; a legacy free-text `department` value is
+    //    resolved (or created) within the tenant and preserved in
+    //    `departmentLegacy` so no information is lost.
+    const departmentId = dto.departmentId
+      ? await this.departments.assertInOrg(this.prisma, dto.departmentId, orgId)
+      : dto.department
+        ? ((
+            await this.departments.resolveOrCreateByName(
+              this.prisma,
+              orgId,
+              dto.department,
+            )
+          )?.id ?? null)
+        : null;
+
+    // 5. Create Employee
     return this.prisma.employee.create({
       data: {
         userId: dto.userId,
         employeeCode,
-        department: dto.department,
+        departmentId,
+        departmentLegacy: dto.department ?? null,
         designation: dto.designation,
         joiningDate: new Date(dto.joiningDate),
         employmentType: dto.employmentType || 'FULL_TIME',
@@ -61,6 +82,10 @@ export class EmployeesService {
     });
   }
 
+  /**
+   * `department` accepts either a Department id or a free-text value so existing
+   * callers keep working; both forms resolve to the same `departmentId` filter.
+   */
   async findAll(
     orgId: string,
     department?: string,
@@ -68,9 +93,19 @@ export class EmployeesService {
     page?: number,
     limit?: number,
   ) {
-    const where: any = { organizationId: orgId };
+    const where: Prisma.EmployeeWhereInput = { organizationId: orgId };
     if (department) {
-      where.department = department;
+      const trimmed = department.trim();
+      const resolved =
+        (await this.departments.resolveOrCreateByName(
+          this.prisma,
+          orgId,
+          trimmed,
+        )) ?? null;
+      where.OR = [
+        ...(resolved ? [{ departmentId: resolved.id }] : []),
+        { departmentLegacy: { equals: trimmed, mode: 'insensitive' } },
+      ];
     }
     if (status) {
       where.status = status;
@@ -186,8 +221,34 @@ export class EmployeesService {
       throw new NotFoundException(`Employee with ID ${id} not found`);
     }
 
-    const data: any = {};
-    if (dto.department !== undefined) data.department = dto.department;
+    const data: Prisma.EmployeeUpdateInput = {};
+    if (dto.departmentId !== undefined) {
+      // FK form: must exist inside the tenant, otherwise 404.
+      const resolvedId = dto.departmentId
+        ? await this.departments.assertInOrg(
+            this.prisma,
+            dto.departmentId,
+            orgId,
+          )
+        : null;
+      data.department = resolvedId
+        ? { connect: { id: resolvedId } }
+        : { disconnect: true };
+      if (!resolvedId) data.departmentLegacy = null;
+    } else if (dto.department !== undefined) {
+      // Free-text form: resolve/create within the tenant and keep the original.
+      const resolved = dto.department.trim()
+        ? await this.departments.resolveOrCreateByName(
+            this.prisma,
+            orgId,
+            dto.department,
+          )
+        : null;
+      data.department = resolved
+        ? { connect: { id: resolved.id } }
+        : { disconnect: true };
+      data.departmentLegacy = dto.department.trim() || null;
+    }
     if (dto.designation !== undefined) data.designation = dto.designation;
     if (dto.employmentType !== undefined)
       data.employmentType = dto.employmentType;
