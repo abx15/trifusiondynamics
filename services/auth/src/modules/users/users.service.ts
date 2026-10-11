@@ -3,6 +3,7 @@ import {
   ConflictException,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
@@ -21,7 +22,7 @@ export class UsersService {
 
   constructor(private prisma: PrismaService) {}
 
-  async createUserByAdmin(dto: CreateUserDto, currentOrgId?: string) {
+  async createUserByAdmin(dto: CreateUserDto, currentOrgId?: string, isSuperAdmin = false) {
     // 1. Check if user already exists
     const existing = await this.prisma.user.findFirst({
       where: {
@@ -38,14 +39,28 @@ export class UsersService {
       );
     }
 
-    // 2. Determine Organization ID
-    let orgId = dto.organizationId || currentOrgId;
-    if (!orgId) {
-      const defaultOrg = await this.prisma.organization.findFirst();
-      if (!defaultOrg) {
-        throw new NotFoundException('No default organization found');
+    // 2. Determine Organization ID (Organization Isolation)
+    let orgId: string;
+    if (isSuperAdmin) {
+      // Superadmin can create users in any organization
+      if (dto.organizationId) {
+        orgId = dto.organizationId;
+      } else if (currentOrgId) {
+        orgId = currentOrgId;
+      } else {
+        const defaultOrg = await this.prisma.organization.findFirst();
+        if (!defaultOrg) {
+          throw new NotFoundException('No default organization found');
+        }
+        orgId = defaultOrg.id;
       }
-      orgId = defaultOrg.id;
+    } else {
+      // Admin can only create users in their own organization
+      // Ignore dto.organizationId for regular admins
+      if (!currentOrgId) {
+        throw new BadRequestException('Organization ID is required');
+      }
+      orgId = currentOrgId;
     }
 
     // 3. Use shared default temporary password from environment
@@ -192,6 +207,13 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
+    // Organization Isolation: Regular admins cannot change organizationId
+    if (!isSuperAdmin && dto.organizationId !== undefined && dto.organizationId !== orgId) {
+      throw new ForbiddenException(
+        'Organization administrators cannot change a user\'s organization. Only super administrators can move users between organizations.',
+      );
+    }
+
     const updateData: any = {};
     if (dto.name !== undefined) updateData.name = dto.name;
     if (dto.email !== undefined)
@@ -237,6 +259,19 @@ export class UsersService {
     });
 
     if (dto.roles !== undefined && Array.isArray(dto.roles)) {
+      // Role Assignment Security: Regular admins cannot assign superadmin roles
+      if (!isSuperAdmin) {
+        const superAdminRoles = ['superadmin', 'super_admin'];
+        const hasSuperAdminRole = dto.roles.some(role =>
+          superAdminRoles.includes(role.toLowerCase())
+        );
+        if (hasSuperAdminRole) {
+          throw new ForbiddenException(
+            'Organization administrators cannot assign superadmin roles. Only super administrators can assign platform-level roles.',
+          );
+        }
+      }
+
       await this.prisma.userRole.deleteMany({
         where: { userId: id },
       });
@@ -269,6 +304,19 @@ export class UsersService {
 
     if (!user) {
       throw new NotFoundException('User not found');
+    }
+
+    // Role Assignment Security: Regular admins cannot assign superadmin roles
+    if (!isSuperAdmin) {
+      const superAdminRoles = ['superadmin', 'super_admin'];
+      const hasSuperAdminRole = roles.some(role =>
+        superAdminRoles.includes(role.toLowerCase())
+      );
+      if (hasSuperAdminRole) {
+        throw new ForbiddenException(
+          'Organization administrators cannot assign superadmin roles. Only super administrators can assign platform-level roles.',
+        );
+      }
     }
 
     // Generate temporary password

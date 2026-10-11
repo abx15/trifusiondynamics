@@ -138,10 +138,10 @@ async function main() {
     console.log(`Permission upserted: ${permission.action}`);
   }
 
-  // 4. Assign All Permissions to superadmin, super_admin and admin Roles
+  // 4. Assign All Permissions to superadmin and super_admin Roles (Platform Level)
   for (const action of permissionsToCreate) {
-    for (const roleName of ['superadmin', 'super_admin', 'admin']) {
-      await safeRun(`Assign ${action} to ${roleName}`, () => 
+    for (const roleName of ['superadmin', 'super_admin']) {
+      await safeRun(`Assign ${action} to ${roleName}`, () =>
         prisma.rolePermission.upsert({
           where: {
             roleId_permissionId: {
@@ -157,6 +157,92 @@ async function main() {
         })
       );
     }
+  }
+
+  // 4b. Assign Organization-Level Permissions to admin Role
+  // Admin can manage users, roles, and settings within their organization only
+  // Note: developer:write and super_admin:all are EXCLUDED for admin role
+  const adminPermissions = [
+    'crm:read', 'crm:write',
+    'billing:read', 'billing:write',
+    'hr:read', 'hr:write',
+    'projects:read', 'projects:write',
+    'clients:read', 'clients:write',
+    'payroll:read', 'payroll:write',
+    'helpdesk:read', 'helpdesk:write',
+    'helpdesk:assign',
+    'helpdesk:comment_internal',
+    'helpdesk:submit_resolution',
+    'helpdesk:verify_resolution',
+    'helpdesk:reopen',
+    'helpdesk:close',
+    'helpdesk:escalate',
+    'helpdesk:manage_sla',
+    'helpdesk:manage_routing',
+    'helpdesk:read_audit',
+    'documents:read', 'documents:write',
+    'ai:read', 'ai:write',
+    'analytics:read', 'automation:read', 'automation:write',
+    'developer:read',
+  ];
+  for (const action of adminPermissions) {
+    await safeRun(`Assign ${action} to admin`, () =>
+      prisma.rolePermission.upsert({
+        where: {
+          roleId_permissionId: {
+            roleId: dbRoles.admin.id,
+            permissionId: dbPermissions[action].id,
+          },
+        },
+        update: {},
+        create: {
+          roleId: dbRoles.admin.id,
+          permissionId: dbPermissions[action].id,
+        },
+      })
+    );
+  }
+
+  // 4b. Assign Organization-Level Permissions to admin Role
+  // Admin can manage users, roles, and settings within their organization only
+  const adminPermissions = [
+    'crm:read', 'crm:write',
+    'billing:read', 'billing:write',
+    'hr:read', 'hr:write',
+    'projects:read', 'projects:write',
+    'clients:read', 'clients:write',
+    'payroll:read', 'payroll:write',
+    'helpdesk:read', 'helpdesk:write',
+    'helpdesk:assign',
+    'helpdesk:comment_internal',
+    'helpdesk:submit_resolution',
+    'helpdesk:verify_resolution',
+    'helpdesk:reopen',
+    'helpdesk:close',
+    'helpdesk:escalate',
+    'helpdesk:manage_sla',
+    'helpdesk:manage_routing',
+    'helpdesk:read_audit',
+    'documents:read', 'documents:write',
+    'ai:read', 'ai:write',
+    'analytics:read', 'automation:read', 'automation:write',
+  ];
+  for (const action of adminPermissions) {
+    await safeRun(`Assign ${action} to admin`, () =>
+      prisma.rolePermission.upsert({
+        where: {
+          roleId_permissionId: {
+            roleId: dbRoles.admin.id,
+            permissionId: dbPermissions[action].id,
+          },
+        },
+        update: {},
+        create: {
+          roleId: dbRoles.admin.id,
+          permissionId: dbPermissions[action].id,
+        },
+      })
+    );
   }
 
   // Assign department agent permissions

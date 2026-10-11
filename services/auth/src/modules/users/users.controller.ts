@@ -37,7 +37,8 @@ export class UsersController {
     @Body() dto: CreateUserDto,
     @CurrentUser() user: JwtPayload,
   ) {
-    return this.usersService.createUserByAdmin(dto, user.orgId);
+    const isSuper = isSuperAdminUser(user);
+    return this.usersService.createUserByAdmin(dto, user.orgId, isSuper);
   }
 
   @Get()
