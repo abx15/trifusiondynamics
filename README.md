@@ -59,6 +59,103 @@ graph TB
     style H fill:#F44336,color:#fff
 ```
 
+## 🏢 Multi-Tenant Architecture
+
+AgencyOS is a **multi-tenant SaaS platform** where each organization operates in complete isolation:
+
+```mermaid
+graph TD
+    subgraph "Super Admin (Universal Access)"
+        SA[Super Admin<br/>trifusiondynamics@gmail.com]
+    end
+
+    subgraph "Organization A"
+        OrgA["Org: TFX AI Demo Org<br/>(tfx-ai-demo-org)"]
+        AdminA["Org Admin<br/>admin@trifusiondynamics.com"]
+        EmpA1["Sales Agent<br/>Sales, CRM, Leads"]
+        EmpA2["Support Agent<br/>Tickets, Helpdesk"]
+        EmpA3["HR Agent<br/>Employees, Payroll"]
+        EmpA4["Employee<br/>Attendance, Tasks"]
+    end
+
+    subgraph "Organization B"
+        OrgB["Org: Acme Corp<br/>(acme-corp)"]
+        AdminB["Org Admin<br/>admin@acme.com"]
+    end
+
+    subgraph "Organization C"
+        OrgC["Org: Beta Inc<br/>(beta-inc)"]
+        AdminC["Org Admin<br/>admin@beta.com"]
+    end
+
+    SA -->|views & manages| OrgA
+    SA -->|views & manages| OrgB
+    SA -->|views & manages| OrgC
+    SA -->|provisions admins| AdminA
+    SA -->|provisions admins| AdminB
+    SA -->|provisions admins| AdminC
+
+    AdminA -->|org-scoped CRUD| OrgA
+    AdminB -->|org-scoped CRUD| OrgB
+    AdminC -->|org-scoped CRUD| OrgC
+
+    EmpA1 -->|read/write| OrgA
+    EmpA2 -->|read/write| OrgA
+    EmpA3 -->|read/write| OrgA
+    EmpA4 -->|read/write| OrgA
+
+    OrgA -->|WHERE orgId = orgA| DB[(PostgreSQL)]
+    OrgB -->|WHERE orgId = orgB| DB
+    OrgC -->|WHERE orgId = orgC| DB
+    SA -->|NO orgId filter| DB
+
+    style SA fill:#f59e0b,color:#fff
+    style OrgA fill:#8b5cf6,color:#fff
+    style OrgB fill:#8b5cf6,color:#fff
+    style OrgC fill:#8b5cf6,color:#fff
+    style DB fill:#64748b,color:#fff
+```
+
+### Tenant Isolation Rules
+
+| Role | Can See | Can Modify | Scope |
+|------|---------|------------|-------|
+| **Super Admin** | All organizations + all data | Everything (cross-org) | Universal |
+| **Org Admin** | Own org only | Users, clients, projects, tickets, invoices, leads, settings | `WHERE orgId = user.orgId` |
+| **Sales Agent** | Own org CRM | Leads, clients, projects | `WHERE orgId = user.orgId` |
+| **Support Agent** | Own org helpdesk | Tickets, messages | `WHERE orgId = user.orgId` |
+| **HR Agent** | Own org HR | Employees, attendance, leaves, payroll | `WHERE orgId = user.orgId` |
+| **Employee** | Own org | Attendance, tasks | `WHERE orgId = user.orgId` |
+| **Client** | Own org portal | Projects, invoices, tickets | `WHERE orgId = user.orgId` |
+
+### Organization Provisioning Flow
+
+```mermaid
+sequenceDiagram
+    participant SA as Super Admin
+    participant F as Organizations Page
+    participant B as Auth Service (8000)
+    participant DB as PostgreSQL
+
+    SA->>F: Fill org form + admin email/password
+    F->>B: POST /super-admin/organizations
+    B->>B: $transaction:
+    B->>DB: CREATE Organization
+    B->>DB: CREATE User (admin role)
+    B->>DB: CREATE UserRole (admin)
+    B-->>F: { org, admin: {email} }
+    F->>F: Toast: "Org created! Admin: admin@acme.com"
+    
+    Note over SA,AdminB: Next: Org Admin logs in
+    
+    AdminB->>F: Login with admin email + password
+    F->>B: POST /auth/login
+    B-->>F: { user, accessToken, organization }
+    F->>F: setAuth(token, user) → localStorage
+    F->>B: GET /users/org-dashboard (scoped to orgId)
+    B-->>F: { counts, users, stats } for THIS org only
+```
+
 ## 📁 Project Structure
 
 ```
@@ -88,10 +185,12 @@ agency-os/
 
 ### System Architecture
 - **[Complete System Architecture](docs/architecture/SYSTEM_ARCHITECTURE.md)** - Detailed architecture with service diagrams, data flows, and module interconnections
+- **[Architecture Patterns & Layers](docs/architecture/ARCHITECTURE_PATTERNS_LAYERS.md)** - Design patterns, architectural layers, and implementation strategies
 - **[Authentication Flow](docs/architecture/auth-flow.md)** - Detailed authentication flow documentation
 - **[Ecosystem Overview](docs/architecture/ecosystem.md)** - Project ecosystem and dependencies
 
 ### Database & Infrastructure
+- **[Database Schema Complete Guide](docs/DATABASE_SCHEMA_COMPLETE_GUIDE.md)** - Comprehensive database documentation with diagrams, patterns, and layers
 - **[Database Schema Audit](docs/DATABASE_SCHEMA_AUDIT.md)** - Model-by-model schema analysis
 - **[PostgreSQL Production Hardening](docs/POSTGRESQL_PRODUCTION_HARDENING_REPORT.md)** - PostgreSQL production readiness report
 - **[Redis Architecture](docs/REDIS_ARCHITECTURE.md)** - Redis architecture audit
@@ -103,6 +202,15 @@ agency-os/
 - **[Cloudflare Production Setup](docs/CLOUDFLARE_PRODUCTION_SETUP.md)** - Cloudflare edge security setup
 - **[Cloudflare Edge Security Report](docs/CLOUDFLARE_EDGE_SECURITY_REPORT.md)** - Cloudflare edge security report
 
+### CI/CD & Deployment
+- **[CI/CD Pipeline Guide](docs/deployment/CI_CD_PIPELINE_GUIDE.md)** - Complete CI/CD pipeline documentation with improved workflows
+- **[Production Setup](docs/deployment/production-setup.md)** - Production deployment guide
+
+### Multi-Tenant Architecture
+- **[Actual Routes](docs/architecture/actual-routes.md)** - Complete API endpoint inventory (82+ endpoints)
+- **[Authentication Flow](docs/architecture/auth-flow.md)** - Cross-domain auth with exchange code pattern
+- **[Ecosystem Overview](docs/architecture/ecosystem.md)** - Project ecosystem and dependencies
+
 ### Development Guidelines
 - **[AGENTS.md](AGENTS.md)** - Engineering guidelines and verification commands
 - **[Seeded Users Credentials](docs/SEEDED_USERS_CREDENTIALS.md)** - Test user credentials and login information
@@ -111,7 +219,9 @@ agency-os/
 
 AgencyOS handles the full agency lifecycle:
 
-- **Authentication & Access** — Secure login with JWT HttpOnly cookies, role-based access control, and user management.
+- **Multi-Tenant Architecture** — Each organization operates in complete isolation. Org admins see only their org's data; super admins have universal cross-organization access.
+- **Organization Provisioning** — Superadmin creates organizations and auto-provisions an org admin user (email, name, password) in a single transaction.
+- **Authentication & Access** — Secure login with JWT HttpOnly cookies, role-based access control (8 roles), and user management.
 - **Client Management** — Track leads, manage contacts, map organizations, and move deals through a visual sales pipeline.
 - **Projects & Tasks** — Create projects, assign sprints and tasks, set milestones, and keep teams aligned with Kanban-ready workflows.
 - **HR & Payroll** — Manage employees, attendance punches, leave requests, recruitment pipelines, salary structures, and payslip generation.
@@ -229,10 +339,31 @@ The project is organized as a **pnpm workspace + Turborepo** monorepo:
 
 The NestJS API exposes a comprehensive REST interface:
 
-- `POST /api/auth/login` — User login
+### Authentication
+- `POST /api/auth/login` — User login (returns `user` + `organization`)
 - `POST /api/auth/register` — User registration
-- `GET /api/auth/me` — Current user profile
-- `GET /api/health` — Service health check
+- `GET /api/auth/me` — Current user profile (includes `organization`)
+- `GET /api/auth/me/activity` — Get user activity
+- `POST /api/auth/logout` — User logout
+- `POST /api/auth/refresh` — Refresh access token
+
+### Super Admin (Cross-Organization)
+- `GET /api/super-admin/organizations` — List all organizations with employee counts
+- `POST /api/super-admin/organizations` — Create organization + auto-provision admin
+- `PATCH /api/super-admin/organizations/:id` — Update organization (activate/deactivate)
+- `GET /api/super-admin/organizations/:id/automation` — Per-org automation stats
+- `GET /api/super-admin/automation/workflows` — All workflows across orgs
+- `PATCH /api/super-admin/automation/workflows/:id/toggle` — Toggle workflow active state
+- `POST /api/super-admin/automation/workflows/:id/trigger` — Trigger MANUAL workflow
+
+### Org-Scoped (Tenant Isolation)
+- `GET /api/users/org-dashboard` — Org-scoped dashboard (counts, users, stats)
+- `GET /api/users` — List users (scoped to `user.orgId`)
+- `POST /api/users` — Create user
+- `PATCH /api/users/:id` — Update user
+- `DELETE /api/users/:id` — Delete user
+
+### Other Modules
 - `POST /api/projects` — Create project
 - `GET /api/projects` — List projects
 - `POST /api/hr/employees` — Create employee
