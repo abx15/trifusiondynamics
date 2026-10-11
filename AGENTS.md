@@ -78,3 +78,43 @@ Relevant docs live in `docs/` — update them when making schema or infrastructu
 - `REDIS_PRODUCTION_HARDENING_REPORT.md` — Redis production hardening report
 - `CLOUDFLARE_PRODUCTION_SETUP.md` — Cloudflare edge security setup instructions
 - `CLOUDFLARE_EDGE_SECURITY_REPORT.md` — Cloudflare edge security report
+
+## Production Deployment Checklist
+
+Before deploying to production, complete these security checks:
+
+### 1. Environment Variables (CRITICAL)
+- [ ] Copy `.env.production` to `.env` and fill in real values
+- [ ] Replace all placeholder values (marked with "replace-with-...")
+- [ ] Generate strong JWT secrets: `openssl rand -base64 64`
+- [ ] Generate AI_SERVICE_SECRET: `openssl rand -hex 32`
+- [ ] Set strong admin passwords (16+ chars, mixed case, numbers, symbols)
+- [ ] Add real AI API keys (Anthropic, OpenAI, Gemini)
+- [ ] Set `NODE_ENV=production`
+- [ ] Remove localhost URLs from CORS_ALLOWED_ORIGINS
+- [ ] Update DATABASE_URL, REDIS_URL with production credentials
+- [ ] Set SENTRY_DSN for error tracking (optional but recommended)
+
+### 2. AI Service Configuration
+- [ ] Copy `services/ai-service/.env.production` to `services/ai-service/.env`
+- [ ] Fill in AI API keys
+- [ ] Set AI_SERVICE_SECRET (same as in root .env)
+- [ ] Update CORS_ALLOWED_ORIGINS for production domains
+- [ ] Set ENVIRONMENT=production
+
+### 3. Security Best Practices
+- [ ] Never commit `.env` files to version control
+- [ ] Use environment variable managers in production (Vercel env vars, Render env vars, etc.)
+- [ ] Rotate secrets regularly (quarterly)
+- [ ] Enable 2FA on all service accounts
+- [ ] Set up automated backups
+- [ ] Configure rate limiting
+- [ ] Enable HTTPS everywhere
+- [ ] Set up logging and monitoring
+
+### 4. Database Security
+- [ ] Never use `prisma db push` in production - use `prisma migrate deploy`
+- [ ] Ensure connection pooling is configured
+- [ ] Set appropriate connection limits
+- [ ] Enable SSL/TLS for all database connections
+- [ ] Use read replicas for high-traffic scenarios

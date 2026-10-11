@@ -1,0 +1,12 @@
+{
+  "name": "ai-service",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI Service - FastAPI Python microservice",
+  "scripts": {
+    "build": "echo 'Python service - build handled by Docker'",
+    "dev": "python -m uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload",
+    "start": "python -m uvicorn app.main:app --host 0.0.0.0 --port 8001",
+    "lint": "echo 'Python lint - add ruff/flake8 if needed'"
+  }
+}

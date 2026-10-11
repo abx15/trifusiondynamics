@@ -11,7 +11,9 @@
         "test:api": "newman run postman/trifusion-dynamics.postman_collection.json -e postman/local.postman_environment.json --reporters cli,json --reporter-json-export postman/results.json",
         "docker:up": "docker compose -f infra/docker/docker-compose.yml up --build",
         "docker:down": "docker compose -f infra/docker/docker-compose.yml down",
-        "docker:logs": "docker compose -f infra/docker/docker-compose.yml logs -f"
+        "docker:logs": "docker compose -f infra/docker/docker-compose.yml logs -f",
+        "ai:dev": "cd services/ai-service && venv\\Scripts\\python -m uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload",
+        "ai:start": "cd services/ai-service && venv\\Scripts\\python -m uvicorn app.main:app --host 0.0.0.0 --port 8001"
     },
     "devDependencies": {
         "autocannon": "^8.0.0",
