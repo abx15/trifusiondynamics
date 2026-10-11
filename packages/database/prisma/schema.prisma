@@ -595,6 +595,7 @@ model Employee {
   organizationId String
   leaves         Leave[]
   documents      EmployeeDocument[]
+  attendanceRecords AttendanceRecord[]
   ticketAssignments TicketAssignment[]
   requestedTickets  Ticket[]          @relation("TicketRequesterEmployee")
   autoAssignRoutingRules RoutingRule[] @relation("RoutingAutoEmployee")
@@ -666,6 +667,22 @@ model EmployeeDocument {
   fileUrl    String
   uploadedAt DateTime @default(now())
 
+  @@schema("hr")
+}
+
+model AttendanceRecord {
+  id             String    @id @default(uuid())
+  employeeId     String
+  employee       Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  organizationId String
+  type           String    // "CHECK_IN" | "CHECK_OUT"
+  timestamp      DateTime  @default(now())
+  location       String?
+  notes          String?
+  createdAt      DateTime  @default(now())
+
+  @@index([employeeId, timestamp])
+  @@index([organizationId, timestamp])
   @@schema("hr")
 }
 

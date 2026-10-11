@@ -30,52 +30,58 @@ export default function BlogPreview({ posts }: BlogPreviewProps) {
         </div>
 
         {/* Blog Post List */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-          {posts.slice(0, 2).map((post) => (
-            <Link
-              key={post.id}
-              href={`/blog/${post.slug}`}
-              className="group flex flex-col sm:flex-row rounded-3xl bg-[#0f172a]/45 border border-white/5 overflow-hidden transition-all hover:border-primary/20 hover:bg-[#0f172a]/70"
-            >
-              {/* Cover Image */}
-              <div className="relative aspect-video sm:aspect-auto sm:w-2/5 min-h-[200px] bg-slate-950">
-                <Image
-                  src={post.coverImage}
-                  alt={post.title}
-                  fill
-                  sizes="(max-w-768px) 100vw, 20vw"
-                  className="object-cover transition-transform duration-500 group-hover:scale-103"
-                />
-              </div>
-
-              {/* Text Info */}
-              <div className="flex-1 flex flex-col justify-between p-6 sm:p-8">
-                <div>
-                  <span className="inline-block rounded-full bg-primary/10 border border-primary/25 px-2.5 py-0.5 text-[10px] font-semibold text-primary mb-4">
-                    {post.category}
-                  </span>
-                  <h3 className="text-lg font-bold text-white mb-2 leading-snug group-hover:text-primary transition-colors line-clamp-2">
-                    {post.title}
-                  </h3>
-                  <p className="text-slate-400 text-xs sm:text-sm line-clamp-2 mb-4 leading-relaxed">
-                    {post.summary}
-                  </p>
+        {posts.length === 0 ? (
+          <div className="rounded-3xl border border-dashed border-white/10 bg-[#0b1320] px-6 py-12 text-center text-slate-400">
+            No blog posts are currently available.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+            {posts.slice(0, 2).map((post) => (
+              <Link
+                key={post.id}
+                href={`/blog/${post.slug}`}
+                className="group flex flex-col sm:flex-row rounded-3xl bg-[#0f172a]/45 border border-white/5 overflow-hidden transition-all hover:border-primary/20 hover:bg-[#0f172a]/70"
+              >
+                {/* Cover Image */}
+                <div className="relative aspect-video sm:aspect-auto sm:w-2/5 min-h-[200px] bg-slate-950">
+                  <Image
+                    src={post.coverImage}
+                    alt={post.title}
+                    fill
+                    sizes="(max-w-768px) 100vw, 20vw"
+                    className="object-cover transition-transform duration-500 group-hover:scale-103"
+                  />
                 </div>
 
-                <div className="flex items-center gap-4 text-[11px] text-slate-500 border-t border-white/5 pt-4">
-                  <span className="flex items-center gap-1">
-                    <Calendar className="h-3.5 w-3.5" />
-                    {post.date}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Clock className="h-3.5 w-3.5" />
-                    {post.readTime}
-                  </span>
+                {/* Text Info */}
+                <div className="flex-1 flex flex-col justify-between p-6 sm:p-8">
+                  <div>
+                    <span className="inline-block rounded-full bg-primary/10 border border-primary/25 px-2.5 py-0.5 text-[10px] font-semibold text-primary mb-4">
+                      {post.category}
+                    </span>
+                    <h3 className="text-lg font-bold text-white mb-2 leading-snug group-hover:text-primary transition-colors line-clamp-2">
+                      {post.title}
+                    </h3>
+                    <p className="text-slate-400 text-xs sm:text-sm line-clamp-2 mb-4 leading-relaxed">
+                      {post.summary}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-4 text-[11px] text-slate-500 border-t border-white/5 pt-4">
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-3.5 w-3.5" />
+                      {post.date}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3.5 w-3.5" />
+                      {post.readTime}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            </Link>
-          ))}
-        </div>
+              </Link>
+            ))}
+          </div>
+        )}
 
       </div>
     </section>

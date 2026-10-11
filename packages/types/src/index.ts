@@ -6,6 +6,8 @@ export interface JwtPayload {
   orgId: string;
   roles: string[];
   permissions: string[];
+  /** Populated for users with the `client` role. */
+  linkedClientId?: string | null;
 }
 
 export interface UserResponse {
@@ -15,6 +17,12 @@ export interface UserResponse {
   isActive: boolean;
   mustChangePassword: boolean;
   organizationId: string;
+  organization?: {
+    id: string;
+    name: string;
+    slug: string;
+    isActive: boolean;
+  } | null;
   roles: string[];
   permissions: string[];
   createdAt: string;

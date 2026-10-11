@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Ticket as TicketIcon, Filter, ShieldCheck, UserCheck, CheckCircle2, Clock, AlertTriangle, Loader2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTickets, useAssignTicket, type Ticket } from "@/lib/hooks/useTickets";
 import { useEmployees as useEmployeesHook, type Employee } from "@/lib/hooks/useHR";
 import { useWebSocket } from "@/lib/websocket";
@@ -24,13 +25,17 @@ export default function AdminTicketsPage() {
     }
   }, [isConnected, tickets, subscribeToTicket]);
 
+  const queryClient = useQueryClient();
+
   // Handle WebSocket updates
   useEffect(() => {
-    if (lastMessage?.type === "ticket.updated" || lastMessage?.type === "ticket.assigned") {
-      // React Query will auto-refetch via query invalidation in the mutation
+    if (lastMessage?.type) {
       console.log("Ticket update received via WebSocket:", lastMessage);
+      queryClient.invalidateQueries({ queryKey: ["tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["tickets-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["ticket-comments"] });
     }
-  }, [lastMessage]);
+  }, [lastMessage, queryClient]);
 
   const handleAssignEngineer = async (ticketId: string, employeeId: string) => {
     try {

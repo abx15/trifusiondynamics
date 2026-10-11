@@ -10,13 +10,14 @@ import { AiModule } from './modules/ai/ai.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { AutomationModule } from './modules/automation/automation.module';
 import { DeveloperModule } from './modules/developer/developer.module';
-import { StubsModule } from './modules/stubs/stubs.module';
 import { UsersModule } from './modules/users/users.module';
+import { BillingModule } from './modules/billing/billing.module';
 import { DepartmentsModule } from './modules/helpdesk/departments/departments.module';
 import { RoutingModule } from './modules/helpdesk/routing/routing.module';
 import { SlaModule } from './modules/helpdesk/sla/sla.module';
 import { TicketsModule } from './modules/helpdesk/tickets/tickets.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { ClientsModule } from './modules/clients/clients/clients.module';
 import { OutboxModule } from './modules/developer/outbox/outbox.module';
 import { GatewayModule } from './gateway/gateway.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
@@ -63,14 +64,15 @@ import { UserThrottlerGuard } from './common/guards/user-throttler.guard';
     DatabaseModule,
     AuthModule,
     UsersModule,
+    BillingModule,
     ProjectsSubModule,
+    ClientsModule,
     HrModule,
     PayrollModule,
     AiModule,
     AnalyticsModule,
     AutomationModule,
     DeveloperModule,
-    StubsModule,
     DepartmentsModule,
     RoutingModule,
     SlaModule,

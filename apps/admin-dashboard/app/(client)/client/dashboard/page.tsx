@@ -5,9 +5,12 @@ import Link from "next/link";
 import { useProjects, type Project } from "@/lib/hooks/useProjects";
 import { useInvoices, type Invoice } from "@/lib/hooks/useInvoices";
 import { useTickets, type Ticket } from "@/lib/hooks/useTickets";
+import { useAuthStore } from "@/lib/auth-store";
 
 export default function ClientDashboardPage() {
-  const { data: projectsData, isLoading: projectsLoading } = useProjects({ limit: 10 });
+  const user = useAuthStore((state) => state.user);
+  const clientId = user?.linkedClientId ?? undefined;
+  const { data: projectsData, isLoading: projectsLoading } = useProjects({ clientId, limit: 10 });
   const { data: invoicesData, isLoading: invoicesLoading } = useInvoices({ status: "SENT", limit: 10 });
   const { data: ticketsData, isLoading: ticketsLoading } = useTickets({ limit: 10 });
 

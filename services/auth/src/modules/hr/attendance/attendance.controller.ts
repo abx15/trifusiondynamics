@@ -26,13 +26,26 @@ export class AttendanceController {
   ) {}
 
   private async getEmployeeByUserId(userId: string) {
-    const employee = await this.prisma.employee.findUnique({
+    let employee = await this.prisma.employee.findUnique({
       where: { userId },
     });
     if (!employee) {
-      throw new NotFoundException(
-        'Employee record not found for this user account',
-      );
+      const user = await this.prisma.user.findUnique({ where: { id: userId } });
+      if (!user) {
+        throw new NotFoundException(
+          'Employee record not found for this user account',
+        );
+      }
+      employee = await this.prisma.employee.create({
+        data: {
+          userId: user.id,
+          employeeCode: `TFX-${user.id.substring(0, 6).toUpperCase()}`,
+          organizationId: user.organizationId,
+          joiningDate: new Date(),
+          designation: 'Staff',
+          status: 'ACTIVE',
+        },
+      });
     }
     return employee;
   }

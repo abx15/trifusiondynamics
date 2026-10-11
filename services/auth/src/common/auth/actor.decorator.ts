@@ -63,6 +63,7 @@ export function buildActorContext(
     organizationId: payload?.orgId ?? '',
     roles,
     permissions: payload?.permissions ?? [],
+    linkedClientId: payload?.linkedClientId ?? null,
     isSuperAdmin: hasRole(roles, SUPER_ADMIN_ROLES),
     isAdmin: hasRole(roles, ADMIN_ROLES),
     isAgent: hasRole(roles, AGENT_ROLES),

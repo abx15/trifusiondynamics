@@ -14,6 +14,9 @@ import {
   LogOut,
   Loader2,
   KeyRound,
+  Workflow,
+  BrainCircuit,
+  LifeBuoy,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuthStore, getPrimaryRole, getRoleHomeRoute } from "@/lib/auth-store";
@@ -75,6 +78,9 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
   const navItems = [
     { label: "Executive Control", href: "/super-admin", icon: LayoutDashboard },
     { label: "Organizations & Tenancy", href: "/super-admin/organizations", icon: Users },
+    { label: "Automation Center", href: "/super-admin/automation", icon: Workflow },
+    { label: "AI Analysis", href: "/super-admin/ai", icon: BrainCircuit },
+    { label: "Ticketing & Automation", href: "/super-admin/ticketing", icon: LifeBuoy },
     { label: "RBAC & Permissions", href: "/super-admin/rbac", icon: KeyRound },
     { label: "Infrastructure & Health", href: "/super-admin/system", icon: Server },
     { label: "Global Settings", href: "/super-admin/settings", icon: Settings },

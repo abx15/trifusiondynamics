@@ -3,6 +3,7 @@ import { UserThrottlerGuard } from './user-throttler.guard';
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ThrottlerModuleOptions, ThrottlerStorage } from '@nestjs/throttler';
+import * as jwt from 'jsonwebtoken';
 
 describe('UserThrottlerGuard', () => {
   let guard: UserThrottlerGuard;
@@ -77,7 +78,7 @@ describe('UserThrottlerGuard', () => {
       (guard as any).getTracker(req);
 
     it('should return user-scoped tracker when valid Bearer token provided', async () => {
-      jest.spyOn(require('jsonwebtoken'), 'verify').mockReturnValue({
+      jest.spyOn(jwt, 'verify').mockReturnValue({
         sub: 'user-123',
         email: 'test@test.com',
         orgId: 'org-1',
@@ -105,7 +106,7 @@ describe('UserThrottlerGuard', () => {
     });
 
     it('should return IP tracker when JWT is invalid', async () => {
-      jest.spyOn(require('jsonwebtoken'), 'verify').mockImplementation(() => {
+      jest.spyOn(jwt, 'verify').mockImplementation(() => {
         throw new Error('Invalid token');
       });
 
@@ -119,7 +120,7 @@ describe('UserThrottlerGuard', () => {
     });
 
     it('should return user-scoped tracker when access_token cookie present', async () => {
-      jest.spyOn(require('jsonwebtoken'), 'verify').mockReturnValue({
+      jest.spyOn(jwt, 'verify').mockReturnValue({
         sub: 'cookie-user-456',
         email: 'cookie@test.com',
         orgId: 'org-1',

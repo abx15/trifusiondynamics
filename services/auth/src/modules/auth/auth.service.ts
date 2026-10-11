@@ -76,7 +76,7 @@ export class AuthService {
         },
         include: {
           organization: {
-            select: { isActive: true },
+            select: { id: true, name: true, slug: true, isActive: true },
           },
           roles: {
             include: {
@@ -144,6 +144,7 @@ export class AuthService {
         orgId: user.organizationId,
         roles: rolesList,
         permissions: permissionsList,
+        linkedClientId: user.linkedClientId ?? null,
       };
 
       const accessToken = this.generateAccessToken(jwtPayload);
@@ -179,6 +180,12 @@ export class AuthService {
           isActive: user.isActive,
           mustChangePassword: user.mustChangePassword,
           organizationId: user.organizationId,
+          organization: {
+            id: user.organization.id,
+            name: user.organization.name,
+            slug: user.organization.slug,
+            isActive: user.organization.isActive,
+          },
           roles: rolesList,
           permissions: permissionsList,
           createdAt: user.createdAt.toISOString(),
@@ -418,6 +425,9 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
+        organization: {
+          select: { id: true, name: true, slug: true, isActive: true },
+        },
         roles: {
           include: {
             role: {
@@ -455,6 +465,7 @@ export class AuthService {
       isActive: user.isActive,
       mustChangePassword: user.mustChangePassword,
       organizationId: user.organizationId,
+      organization: user.organization,
       roles: rolesList,
       permissions: permissionsList,
       createdAt: user.createdAt.toISOString(),

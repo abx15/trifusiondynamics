@@ -4,11 +4,13 @@ import { useState, useEffect } from "react";
 import { Ticket as TicketIcon, CheckCircle2, MessageSquare, Send, Clock, ShieldCheck, Loader2 } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { useTickets, useStartWork, useSubmitResolution, useAddComment, useTicketComments, type Ticket, type TicketComment } from "@/lib/hooks/useTickets";
+import { useQueryClient } from "@tanstack/react-query";
 import { useWebSocket } from "@/lib/websocket";
 
 export default function AgentTicketsPage() {
   const [selectedTicketId, setSelectedTicketId] = useState<string>("");
   const [replyText, setReplyText] = useState("");
+  const queryClient = useQueryClient();
   
   const { data: ticketsData, isLoading, error } = useTickets({ assignedToMe: true, limit: 50 });
   const startWork = useStartWork();
@@ -37,10 +39,12 @@ export default function AgentTicketsPage() {
 
   // Handle WebSocket updates
   useEffect(() => {
-    if (lastMessage?.type === "ticket.updated" || lastMessage?.type === "ticket.assigned") {
+    if (lastMessage?.type) {
       console.log("Ticket update received via WebSocket:", lastMessage);
+      queryClient.invalidateQueries({ queryKey: ["tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["ticket-comments"] });
     }
-  }, [lastMessage]);
+  }, [lastMessage, queryClient]);
 
   const handleSendReply = async (e: React.FormEvent) => {
     e.preventDefault();

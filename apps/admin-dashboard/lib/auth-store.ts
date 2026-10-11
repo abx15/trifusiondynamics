@@ -8,10 +8,17 @@ export interface User {
   isActive: boolean;
   mustChangePassword?: boolean;
   organizationId: string;
+  organization?: {
+    id: string;
+    name: string;
+    slug: string;
+    isActive: boolean;
+  } | null;
   roles: string[];
   permissions: string[];
   createdAt: string;
   updatedAt: string;
+  linkedClientId?: string | null;
 }
 
 export type PrimaryRole =

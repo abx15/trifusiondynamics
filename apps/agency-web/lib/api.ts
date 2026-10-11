@@ -1,8 +1,4 @@
 import {
-  SERVICES_DATA,
-  PORTFOLIO_DATA,
-  BLOG_DATA,
-  TESTIMONIALS_DATA,
   ServiceItem,
   PortfolioItem,
   BlogPost,
@@ -11,89 +7,63 @@ import {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === "production" ? "https://trifusiondynamics-api.onrender.com/api" : "http://localhost:8000/api");
 
-// Helper for relative time/caching revalidation
 const FETCH_CONFIG: RequestInit = {
   next: { revalidate: 60 },
 };
 
-/**
- * Fetch services from backend, enhanced with local details.
- */
+async function fetchJson<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...FETCH_CONFIG,
+    ...options,
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to fetch ${path}: ${res.status} ${res.statusText}`);
+  }
+
+  return (await res.json()) as T;
+}
+
+function normalizeArray<T>(payload: T[] | { data?: T[]; items?: T[]; results?: T[] } | null | undefined): T[] {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  if (payload && typeof payload === "object") {
+    const candidate = payload.data ?? payload.items ?? payload.results ?? [];
+    return Array.isArray(candidate) ? candidate : [];
+  }
+
+  return [];
+}
+
 export async function getCmsServices(): Promise<ServiceItem[]> {
   try {
-    const res = await fetch(`${API_BASE}/cms/services`, FETCH_CONFIG);
-    if (!res.ok) {
-      throw new Error(`Failed to fetch services: ${res.status}`);
-    }
-    const backendServices = await res.json();
-    
-    // Map backend stubs [{id, name}] to our enriched local features
-    return SERVICES_DATA.map((local) => {
-      const match = backendServices.find(
-      (b: { id: string; name?: string }) =>
-        b.id === local.id || b.name?.toLowerCase() === local.name?.toLowerCase(),
-    );
-      if (match) {
-        return {
-          ...local,
-          id: match.id,
-          name: match.name || local.name,
-        };
-      }
-      return local;
-    });
+    const payload = await fetchJson<ServiceItem[] | { data?: ServiceItem[]; items?: ServiceItem[]; results?: ServiceItem[] }>('/cms/services');
+    return normalizeArray(payload).filter((service): service is ServiceItem => Boolean(service && typeof service === "object" && typeof (service as ServiceItem).slug === "string" && (service as ServiceItem).slug.length > 0));
   } catch (error) {
-    console.warn("Backend /cms/services failed, returning static fallback data:", error);
-    return SERVICES_DATA;
+    console.error("CMS services unavailable; no fallback data is returned.", error);
+    return [];
   }
 }
 
-/**
- * Fetch single service by slug
- */
 export async function getServiceBySlug(slug: string): Promise<ServiceItem | undefined> {
   const services = await getCmsServices();
   return services.find((s) => s.slug === slug);
 }
 
-/**
- * Fetch page details from backend, falling back to dynamic configurations.
- */
 export async function getCmsPage(slug: string): Promise<{ title: string; content?: string }> {
   try {
-    const res = await fetch(`${API_BASE}/cms/pages/${slug}`, FETCH_CONFIG);
-    if (!res.ok) {
-      throw new Error(`Failed to fetch page ${slug}: ${res.status}`);
-    }
-    const data = await res.json();
-    return {
-      title: data.title || (slug === "about-us" ? "About Us" : slug),
-      content: data.content || "",
-    };
+    return await fetchJson<{ title: string; content?: string }>(`/cms/pages/${slug}`);
   } catch (error) {
-    console.warn(`Backend /cms/pages/${slug} failed, returning fallback:`, error);
-    if (slug === "about-us") {
-      return {
-        title: "About Us",
-        content: "Trifusion Dynamics is a boutique agency delivering cloud infrastructure, SaaS engineering, and AI consulting.",
-      };
-    }
-    if (slug === "privacy-policy") {
-      return {
-        title: "Privacy Policy",
-        content: "We protect your data. Submissions are processed and secured in compliance with local guidelines.",
-      };
-    }
+    console.error(`CMS page ${slug} unavailable; no fallback content is returned.`, error);
     return {
-      title: slug.charAt(0).toUpperCase() + slug.slice(1).replace("-", " "),
+      title: slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, " "),
       content: "",
     };
   }
 }
 
-/**
- * Submit Contact Form lead to backend
- */
 export async function submitContactForm(data: {
   name: string;
   email: string;
@@ -125,12 +95,14 @@ export async function submitContactForm(data: {
   return res.json();
 }
 
-/**
- * Get Case Studies / Portfolio Items
- */
 export async function getPortfolioItems(): Promise<PortfolioItem[]> {
-  // Returns static case study dataset
-  return PORTFOLIO_DATA;
+  try {
+    const payload = await fetchJson<PortfolioItem[] | { data?: PortfolioItem[]; items?: PortfolioItem[]; results?: PortfolioItem[] }>('/portfolio');
+    return normalizeArray(payload).filter((item): item is PortfolioItem => Boolean(item && typeof item === "object" && typeof (item as PortfolioItem).slug === "string" && (item as PortfolioItem).slug.length > 0));
+  } catch (error) {
+    console.error("Portfolio data unavailable; no fallback data is returned.", error);
+    return [];
+  }
 }
 
 export async function getPortfolioItemBySlug(slug: string): Promise<PortfolioItem | undefined> {
@@ -138,12 +110,14 @@ export async function getPortfolioItemBySlug(slug: string): Promise<PortfolioIte
   return items.find((item) => item.slug === slug);
 }
 
-/**
- * Get Insights / Blog Posts
- */
 export async function getBlogPosts(): Promise<BlogPost[]> {
-  // Returns static blog dataset
-  return BLOG_DATA;
+  try {
+    const payload = await fetchJson<BlogPost[] | { data?: BlogPost[]; items?: BlogPost[]; results?: BlogPost[] }>('/blog');
+    return normalizeArray(payload).filter((post): post is BlogPost => Boolean(post && typeof post === "object" && typeof (post as BlogPost).slug === "string" && (post as BlogPost).slug.length > 0));
+  } catch (error) {
+    console.error("Blog data unavailable; no fallback data is returned.", error);
+    return [];
+  }
 }
 
 export async function getBlogPostBySlug(slug: string): Promise<BlogPost | undefined> {
@@ -151,9 +125,12 @@ export async function getBlogPostBySlug(slug: string): Promise<BlogPost | undefi
   return posts.find((post) => post.slug === slug);
 }
 
-/**
- * Get Testimonials
- */
 export async function getTestimonials(): Promise<Testimonial[]> {
-  return TESTIMONIALS_DATA;
+  try {
+    const payload = await fetchJson<Testimonial[] | { data?: Testimonial[]; items?: Testimonial[]; results?: Testimonial[] }>('/testimonials');
+    return normalizeArray(payload);
+  } catch (error) {
+    console.error("Testimonials unavailable; no fallback data is returned.", error);
+    return [];
+  }
 }

@@ -15,5 +15,6 @@ import { DatabaseModule } from '../database/database.module';
     LeadEventsListener,
     ScheduledWorkflowsJob,
   ],
+  exports: [AutomationService, WorkflowEngineService],
 })
 export class AutomationModule {}

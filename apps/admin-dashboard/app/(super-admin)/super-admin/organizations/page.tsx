@@ -1,20 +1,22 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Building2,
   Plus,
   Users,
+  UserCheck,
   Search,
   ExternalLink,
   Shield,
   Loader2,
   CheckCircle2,
   AlertCircle,
-  MoreVertical,
   Activity,
   Trash2,
-  X,
+  Power,
+  Eye,
 } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
 import { toast } from "@/lib/toast";
@@ -31,16 +33,22 @@ interface Organization {
 }
 
 export default function SuperAdminOrganizationsPage() {
+  const router = useRouter();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [employeeCounts, setEmployeeCounts] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newOrgName, setNewOrgName] = useState("");
   const [newOrgSlug, setNewOrgSlug] = useState("");
+  const [newAdminEmail, setNewAdminEmail] = useState("");
+  const [newAdminName, setNewAdminName] = useState("");
+  const [newAdminPassword, setNewAdminPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [archiveOrg, setArchiveOrg] = useState<Organization | null>(null);
   const [archiveConfirmName, setArchiveConfirmName] = useState("");
   const [isArchiving, setIsArchiving] = useState(false);
+  const [reactivatingId, setReactivatingId] = useState<string | null>(null);
 
   const fetchOrganizations = async () => {
     try {
@@ -50,6 +58,20 @@ export default function SuperAdminOrganizationsPage() {
         // Handle both paginated response and direct array
         const orgsData = Array.isArray(res.data) ? res.data : (res.data.data || []);
         setOrganizations(orgsData);
+
+        // Enrich with employee counts from the super-admin detail endpoint
+        const counts: Record<string, number> = {};
+        await Promise.all(
+          orgsData.map(async (org: Organization) => {
+            try {
+              const detailRes = await apiClient.get(`/super-admin/organizations/${org.id}`);
+              counts[org.id] = detailRes.data?.counts?.employees ?? 0;
+            } catch {
+              counts[org.id] = 0;
+            }
+          }),
+        );
+        setEmployeeCounts(counts);
       }
     } catch (err: any) {
       console.error("Failed to load organizations:", err);
@@ -73,11 +95,22 @@ export default function SuperAdminOrganizationsPage() {
       const res = await apiClient.post("/users/organizations", {
         name: newOrgName.trim(),
         slug,
+        adminEmail: newAdminEmail.trim() || undefined,
+        adminName: newAdminName.trim() || undefined,
+        adminPassword: newAdminPassword.trim() || undefined,
       });
 
-      toast.success(`Organization "${newOrgName}" created successfully!`);
+      const admin = res.data?.admin;
+      if (admin) {
+        toast.success(`Organization "${newOrgName}" created! Admin: ${admin.email}`);
+      } else {
+        toast.success(`Organization "${newOrgName}" created successfully!`);
+      }
       setNewOrgName("");
       setNewOrgSlug("");
+      setNewAdminEmail("");
+      setNewAdminName("");
+      setNewAdminPassword("");
       setIsCreateOpen(false);
       fetchOrganizations();
     } catch (err: any) {
@@ -111,6 +144,22 @@ export default function SuperAdminOrganizationsPage() {
       );
     } finally {
       setIsArchiving(false);
+    }
+  };
+
+  const handleReactivate = async (org: Organization) => {
+    setReactivatingId(org.id);
+    try {
+      await apiClient.patch(`/super-admin/organizations/${org.id}/reactivate`);
+      toast.success(`Organization "${org.name}" reactivated`);
+      fetchOrganizations();
+    } catch (err: any) {
+      console.error("Error reactivating organization:", err);
+      toast.error(
+        err?.response?.data?.message || "Failed to reactivate organization",
+      );
+    } finally {
+      setReactivatingId(null);
     }
   };
 
@@ -204,6 +253,38 @@ export default function SuperAdminOrganizationsPage() {
                   className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-amber-500 font-mono"
                   required
                 />
+              </div>
+
+              <div className="pt-2 border-t border-zinc-800/60">
+                <p className="text-[11px] text-zinc-500 uppercase font-bold tracking-wider mb-2">
+                  Organization Admin (auto-provisioned)
+                </p>
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    value={newAdminName}
+                    onChange={(e) => setNewAdminName(e.target.value)}
+                    placeholder="Admin name (optional)"
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-amber-500"
+                  />
+                  <input
+                    type="email"
+                    value={newAdminEmail}
+                    onChange={(e) => setNewAdminEmail(e.target.value)}
+                    placeholder="admin@company.com (optional)"
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-amber-500"
+                  />
+                  <input
+                    type="password"
+                    value={newAdminPassword}
+                    onChange={(e) => setNewAdminPassword(e.target.value)}
+                    placeholder="Initial password (optional)"
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-amber-500 font-mono"
+                  />
+                </div>
+                <p className="text-[10px] text-zinc-600 mt-1.5">
+                  An admin user with the <code className="text-amber-400">admin</code> role is created for this organization so it has its own admin login. Leave blank to skip.
+                </p>
               </div>
 
               <div className="flex justify-end gap-2 pt-3">
@@ -335,29 +416,53 @@ export default function SuperAdminOrganizationsPage() {
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-zinc-800/80 flex items-center justify-between text-xs text-zinc-400">
-                <span className="flex items-center gap-1.5">
-                  <Users className="w-3.5 h-3.5 text-zinc-500" />
-                  <strong className="text-white">{org._count?.users ?? 0}</strong> members
-                </span>
-                <span className="text-[11px] text-zinc-500">
-                  {new Date(org.createdAt).toLocaleDateString()}
-                </span>
-              </div>
+               <div className="pt-3 border-t border-zinc-800/80 flex items-center justify-between text-xs text-zinc-400">
+                 <span className="flex items-center gap-1.5">
+                   <Users className="w-3.5 h-3.5 text-zinc-500" />
+                   <strong className="text-white">{org._count?.users ?? 0}</strong> members
+                 </span>
+                 <span className="flex items-center gap-1.5">
+                   <UserCheck className="w-3.5 h-3.5 text-emerald-500" />
+                   <strong className="text-white">{employeeCounts[org.id] ?? 0}</strong> employees
+                 </span>
+                 <span className="text-[11px] text-zinc-500">
+                   {new Date(org.createdAt).toLocaleDateString()}
+                 </span>
+               </div>
 
-              {org.isActive && (
-                <button
-                  onClick={() => {
-                    setArchiveOrg(org);
-                    setArchiveConfirmName("");
-                  }}
-                  className="mt-2 px-2.5 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-semibold hover:bg-red-500/20 transition-colors flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Trash2 className="w-3 h-3" />
-                  Archive Organization
-                </button>
-              )}
-            </div>
+               <div className="flex items-center gap-2 mt-2">
+                 <button
+                   onClick={() => router.push(`/super-admin/organizations/${org.id}`)}
+                   className="flex-1 px-2.5 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold hover:bg-amber-500/20 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                 >
+                   <Eye className="w-3 h-3" /> View Details
+                 </button>
+                 {org.isActive ? (
+                   <button
+                     onClick={() => {
+                       setArchiveOrg(org);
+                       setArchiveConfirmName("");
+                     }}
+                     className="px-2.5 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-semibold hover:bg-red-500/20 transition-colors flex items-center gap-1.5 cursor-pointer"
+                   >
+                     <Trash2 className="w-3 h-3" /> Archive
+                   </button>
+                 ) : (
+                   <button
+                     onClick={() => handleReactivate(org)}
+                     disabled={reactivatingId === org.id}
+                     className="px-2.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold hover:bg-emerald-500/20 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                   >
+                     {reactivatingId === org.id ? (
+                       <Loader2 className="w-3 h-3 animate-spin" />
+                     ) : (
+                       <Power className="w-3 h-3" />
+                     )}
+                     Reactivate
+                   </button>
+                 )}
+               </div>
+             </div>
           ))}
         </div>
       )}

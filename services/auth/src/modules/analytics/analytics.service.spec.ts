@@ -43,9 +43,9 @@ describe('AnalyticsService', () => {
         findMany: jest.fn().mockResolvedValue([]),
       },
       employee: {
-        findMany: jest.fn().mockResolvedValue([
-          { id: 'emp-1', userId: 'user-1' },
-        ]),
+        findMany: jest
+          .fn()
+          .mockResolvedValue([{ id: 'emp-1', userId: 'user-1' }]),
       },
       $queryRaw: jest.fn().mockResolvedValue([{ total: 0n }]),
     };
@@ -83,8 +83,8 @@ describe('AnalyticsService', () => {
 
       await service.getDashboardOverview('org-1', from, to);
 
-      const whereRevenue = prismaMock.revenueRollup.findMany.mock.calls[0][0]
-        .where;
+      const whereRevenue =
+        prismaMock.revenueRollup.findMany.mock.calls[0][0].where;
       expect(whereRevenue.periodDate.gte).toEqual(new Date(from));
       expect(whereRevenue.periodDate.lte).toEqual(new Date(to));
     });
