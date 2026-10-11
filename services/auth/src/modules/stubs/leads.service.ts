@@ -235,7 +235,26 @@ export class LeadsService {
       data: { stage: PipelineStage.WON },
     });
 
-    return { id: lead.convertedToClientId ?? lead.id, name: lead.name };
+    // Create Client record from lead
+    const client = await this.prisma.client.create({
+      data: {
+        name: lead.name,
+        companyName: lead.companyName,
+        email: lead.email,
+        phone: lead.phone,
+        organizationId: lead.organizationId,
+        status: 'ACTIVE',
+        leadId: lead.id,
+      },
+    });
+
+    // Update lead with converted client ID
+    await this.prisma.lead.update({
+      where: { id },
+      data: { convertedToClientId: client.id },
+    });
+
+    return { id: client.id, name: client.name, email: client.email };
   }
 
   private serializeLead(lead: {

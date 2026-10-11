@@ -387,18 +387,96 @@ export class UsersService {
     return paginatedResult(data, total, Math.floor(skip / take) + 1, take);
   }
 
-  async createOrganization(data: { name: string; slug: string }) {
+  async createOrganization(data: {
+    name: string;
+    slug: string;
+    adminEmail?: string;
+    adminName?: string;
+    adminPassword?: string;
+  }) {
     const slug = data.slug
       .toLowerCase()
       .trim()
       .replace(/[^a-z0-9]+/g, '-');
-    return this.prisma.organization.create({
-      data: {
-        name: data.name,
-        slug: `${slug}-${Date.now()}`,
-        isActive: true,
-      },
+
+    // Atomically create the organization AND its first admin user (if provided).
+    // Every organization gets its own admin login so tenant admins can operate
+    // their own workspace without leaking into other organizations.
+    return this.prisma.$transaction(async (tx) => {
+      const org = await tx.organization.create({
+        data: {
+          name: data.name,
+          slug: `${slug}-${Date.now()}`,
+          isActive: true,
+        },
+      });
+
+      let adminUser: any = null;
+      if (data.adminEmail && data.adminName && data.adminPassword) {
+        const hashedPassword = await bcrypt.hash(data.adminPassword, 12);
+        adminUser = await tx.user.create({
+          data: {
+            email: data.adminEmail.toLowerCase().trim(),
+            name: data.adminName,
+            password: hashedPassword,
+            organizationId: org.id,
+            isActive: true,
+            mustChangePassword: false,
+          },
+        });
+
+        // Assign the organization `admin` role
+        const adminRole = await tx.role.findUnique({
+          where: { name: 'admin' },
+        });
+        if (adminRole) {
+          await tx.userRole.create({
+            data: { userId: adminUser.id, roleId: adminRole.id },
+          });
+        }
+      }
+
+      return {
+        id: org.id,
+        name: org.name,
+        slug: org.slug,
+        isActive: org.isActive,
+        createdAt: org.createdAt.toISOString(),
+        admin: adminUser
+          ? {
+              id: adminUser.id,
+              email: adminUser.email,
+              name: adminUser.name,
+              role: 'admin',
+              mustChangePassword: false,
+            }
+          : null,
+      };
     });
+  }
+
+  async getSuperAdminStats() {
+    const [totalOrganizations, activeOrganizations, totalUsers] =
+      await this.prisma.$transaction([
+        this.prisma.organization.count(),
+        this.prisma.organization.count({ where: { isActive: true } }),
+        this.prisma.user.count(),
+      ]);
+
+    // Simple health check for services (can be enhanced with actual health endpoints)
+    const servicesHealth = {
+      auth: true, // API is running if this endpoint is reached
+      ai: process.env.AI_SERVICE_URL ? true : false,
+      database: true, // Prisma connection is working
+      redis: process.env.REDIS_URL ? true : false,
+    };
+
+    return {
+      totalOrganizations,
+      activeOrganizations,
+      totalUsers,
+      servicesHealth,
+    };
   }
 
   async archiveOrganization(
@@ -464,6 +542,136 @@ export class UsersService {
         isActive: false,
         createdAt: result.createdAt.toISOString(),
         updatedAt: result.updatedAt.toISOString(),
+      },
+    };
+  }
+
+  async reactivateOrganization(
+    orgId: string,
+    actor: { id: string; email: string; roles: string[] },
+  ): Promise<{
+    success: boolean;
+    message: string;
+    organization: OrganizationResponse;
+  }> {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: orgId },
+    });
+
+    if (!org) {
+      throw new NotFoundException('Organization not found');
+    }
+
+    if (org.isActive) {
+      throw new BadRequestException('Organization is already active');
+    }
+
+    const result = await this.prisma.organization.update({
+      where: { id: orgId },
+      data: { isActive: true },
+    });
+
+    this.logger.log(
+      `Organization reactivated — id=${result.id} name="${result.slug}" by actor=${actor.email}`,
+    );
+
+    return {
+      success: true,
+      message: 'Organization reactivated successfully',
+      organization: {
+        id: result.id,
+        name: result.name,
+        slug: result.slug,
+        isActive: true,
+        createdAt: result.createdAt.toISOString(),
+        updatedAt: result.updatedAt.toISOString(),
+      },
+    };
+  }
+
+  async getOrganizationDetails(orgId: string) {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: orgId },
+      include: {
+        _count: {
+          select: {
+            users: true,
+          },
+        },
+        users: {
+          where: { isActive: true },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            roles: {
+              select: {
+                role: { select: { name: true } },
+              },
+            },
+            createdAt: true,
+          },
+          take: 20,
+        },
+      },
+    });
+
+    if (!org) {
+      throw new NotFoundException('Organization not found');
+    }
+
+    // Flatten the UserRole join rows into plain role-name strings
+    const users = org.users.map((u) => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      roles: u.roles.map((r) => r.role.name),
+      createdAt: u.createdAt,
+    }));
+
+    // Get additional stats from different schemas
+    const [ticketStats, projectStats, invoiceStats, clientCount, leadCount, employeeCount] = await Promise.all([
+      this.prisma.ticket.groupBy({
+        by: ['status'],
+        where: { organizationId: orgId },
+        _count: { id: true },
+      }),
+      this.prisma.project.groupBy({
+        by: ['status'],
+        where: { organizationId: orgId },
+        _count: { id: true },
+      }),
+      this.prisma.invoice.groupBy({
+        by: ['status'],
+        where: { organizationId: orgId },
+        _count: { id: true },
+      }),
+      this.prisma.client.count({ where: { organizationId: orgId } }),
+      this.prisma.lead.count({ where: { organizationId: orgId } }),
+      this.prisma.employee.count({ where: { organizationId: orgId } }),
+    ]);
+
+    return {
+      id: org.id,
+      name: org.name,
+      slug: org.slug,
+      isActive: org.isActive,
+      createdAt: org.createdAt.toISOString(),
+      updatedAt: org.updatedAt.toISOString(),
+      counts: {
+        users: org._count.users,
+        clients: clientCount,
+        projects: projectStats.reduce((s, p) => s + p._count.id, 0),
+        tickets: ticketStats.reduce((s, t) => s + t._count.id, 0),
+        invoices: invoiceStats.reduce((s, i) => s + i._count.id, 0),
+        leads: leadCount,
+        employees: employeeCount,
+      },
+      users,
+      stats: {
+        tickets: ticketStats,
+        projects: projectStats,
+        invoices: invoiceStats,
       },
     };
   }

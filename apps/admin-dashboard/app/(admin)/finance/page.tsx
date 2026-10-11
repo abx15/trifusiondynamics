@@ -80,8 +80,7 @@ export default function FinancePage() {
     staleTime: 5 * 60_000,
   });
 
-  // Generate placeholder monthly data if API returns none
-  const monthlyData = data?.monthlyData ?? generatePlaceholderData();
+  const monthlyData = data?.monthlyData;
 
   if (isLoading) {
     return (
@@ -91,6 +90,20 @@ export default function FinancePage() {
         </div>
         <div className="h-72 rounded-xl bg-slate-200 dark:bg-zinc-800 animate-pulse" />
         <div className="h-72 rounded-xl bg-slate-200 dark:bg-zinc-800 animate-pulse" />
+      </div>
+    );
+  }
+
+  if (!monthlyData || monthlyData.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-xl font-bold text-foreground">Finance Dashboard</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Revenue, expenses, and profit overview</p>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-12 text-center">
+          <p className="text-muted-foreground">No financial data available</p>
+        </div>
       </div>
     );
   }
@@ -173,16 +186,4 @@ export default function FinancePage() {
       </div>
     </div>
   );
-}
-
-function generatePlaceholderData() {
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const now = new Date();
-  const currentMonth = now.getMonth();
-  return months.slice(0, currentMonth + 1).map((month) => ({
-    month,
-    revenue: Math.floor(Math.random() * 300_000 + 150_000),
-    expenses: Math.floor(Math.random() * 150_000 + 80_000),
-    profit: Math.floor(Math.random() * 150_000 + 50_000),
-  }));
 }

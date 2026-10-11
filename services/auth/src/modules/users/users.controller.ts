@@ -98,6 +98,41 @@ export class UsersController {
     });
   }
 
+  @Patch('organizations/:id/reactivate')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermission('users:write')
+  async reactivateOrganization(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    if (!isSuperAdminUser(user)) {
+      throw new ForbiddenException(
+        'Only super administrators can reactivate organizations',
+      );
+    }
+
+    return this.usersService.reactivateOrganization(id, {
+      id: user.sub,
+      email: user.email,
+      roles: user.roles,
+    });
+  }
+
+  @Get('organizations/:id')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermission('hr:read')
+  async getOrganizationDetails(@Param('id') id: string) {
+    return this.usersService.getOrganizationDetails(id);
+  }
+
+  @Get('org-dashboard')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermission('hr:read')
+  async getOrgDashboard(@CurrentUser() user: JwtPayload) {
+    // Tenant isolation: every org admin only ever sees their own organization.
+    return this.usersService.getOrganizationDetails(user.orgId);
+  }
+
   @Get('roles')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @RequirePermission('hr:read')
@@ -109,6 +144,18 @@ export class UsersController {
       page ? parseInt(page, 10) : undefined,
       limit ? parseInt(limit, 10) : undefined,
     );
+  }
+
+  @Get('stats')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermission('hr:read')
+  async getSuperAdminStats(@CurrentUser() user: JwtPayload) {
+    if (!isSuperAdminUser(user)) {
+      throw new ForbiddenException(
+        'Only super administrators can access global stats',
+      );
+    }
+    return this.usersService.getSuperAdminStats();
   }
 
   @Patch(':id')

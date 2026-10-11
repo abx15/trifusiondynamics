@@ -6,7 +6,8 @@ export interface Client {
   name: string;
   email?: string;
   phone?: string;
-  company?: string;
+  companyName?: string;
+  company?: string; // alias for companyName for backward compatibility
   address?: string;
   city?: string;
   state?: string;
@@ -15,10 +16,15 @@ export interface Client {
   gstNumber?: string;
   panNumber?: string;
   notes?: string;
+  status?: string;
   organizationId: string;
   createdAt: string;
   updatedAt: string;
   contacts?: ClientContact[];
+  _count?: {
+    tickets: number;
+    contacts: number;
+  };
 }
 
 export interface ClientContact {
@@ -42,7 +48,14 @@ export function useClients(filters: ClientFilters = {}) {
     queryKey: ["clients", filters],
     queryFn: async () => {
       const { data } = await apiClient.get("/clients", { params: filters });
-      return data as { data: Client[]; total: number; page: number; limit: number };
+      const result = data as { data: Client[]; total: number; page: number; limit: number };
+      // Add company alias for backward compatibility
+      if (result.data) {
+        result.data.forEach(client => {
+          client.company = client.companyName;
+        });
+      }
+      return result;
     },
     staleTime: 30_000,
   });
@@ -53,7 +66,12 @@ export function useClient(id: string) {
     queryKey: ["clients", id],
     queryFn: async () => {
       const { data } = await apiClient.get(`/clients/${id}`);
-      return data as Client;
+      const client = data as Client;
+      // Add company alias for backward compatibility
+      if (client) {
+        client.company = client.companyName;
+      }
+      return client;
     },
     enabled: !!id,
   });

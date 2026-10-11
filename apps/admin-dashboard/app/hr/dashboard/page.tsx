@@ -3,12 +3,21 @@
 import * as React from "react";
 import { Users2, Calendar, ClipboardList, TrendingUp, ArrowUpRight, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { useEmployees, useLeaves, useCandidates } from "@/lib/hooks/useHR";
 
 export default function HrDashboardPage() {
-  // TODO: Integrate with real HR API endpoints when available
-  // const { data: employeesData } = useEmployees();
-  // const { data: leavesData } = useLeaves();
-  // const { data: recruitmentData } = useRecruitment();
+  const { data: employees = [], isLoading: isLoadingEmployees } = useEmployees();
+  const { data: leaves = [], isLoading: isLoadingLeaves } = useLeaves();
+  const { data: candidates = [], isLoading: isLoadingCandidates } = useCandidates();
+
+  const totalEmployees = employees.length;
+  const activeEmployees = employees.filter((e) => e.status === "ACTIVE").length;
+  const pendingLeaves = leaves.filter((l) => l.status === "PENDING").length;
+  const openPositions = candidates.filter((c) => c.stage !== "HIRED" && c.stage !== "REJECTED").length;
+  const retentionRate = totalEmployees > 0 ? Math.round((activeEmployees / totalEmployees) * 100) : 100;
+
+  const isLoading = isLoadingEmployees || isLoadingLeaves || isLoadingCandidates;
+
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
       {/* Header Banner */}
@@ -31,8 +40,14 @@ export default function HrDashboardPage() {
             <span className="text-xs font-semibold uppercase">Total Employees</span>
             <Users2 className="w-5 h-5 text-emerald-400" />
           </div>
-          <p className="text-3xl font-extrabold text-white mt-3">--</p>
-          <p className="text-xs text-zinc-500 mt-1">API integration pending</p>
+          {isLoading ? (
+            <Loader2 className="w-6 h-6 text-zinc-400 animate-spin mt-3" />
+          ) : (
+            <>
+              <p className="text-3xl font-extrabold text-white mt-3">{totalEmployees}</p>
+              <p className="text-xs text-emerald-400 mt-1">{activeEmployees} Active on team</p>
+            </>
+          )}
         </div>
 
         <div className="p-6 rounded-2xl bg-zinc-900/60 border border-zinc-800">
@@ -40,8 +55,14 @@ export default function HrDashboardPage() {
             <span className="text-xs font-semibold uppercase">Pending Leaves</span>
             <Calendar className="w-5 h-5 text-amber-400" />
           </div>
-          <p className="text-3xl font-extrabold text-white mt-3">--</p>
-          <p className="text-xs text-zinc-500 mt-1">API integration pending</p>
+          {isLoading ? (
+            <Loader2 className="w-6 h-6 text-zinc-400 animate-spin mt-3" />
+          ) : (
+            <>
+              <p className="text-3xl font-extrabold text-white mt-3">{pendingLeaves}</p>
+              <p className="text-xs text-zinc-400 mt-1">{leaves.length} Total leave records</p>
+            </>
+          )}
         </div>
 
         <div className="p-6 rounded-2xl bg-zinc-900/60 border border-zinc-800">
@@ -49,8 +70,14 @@ export default function HrDashboardPage() {
             <span className="text-xs font-semibold uppercase">Open Positions</span>
             <ClipboardList className="w-5 h-5 text-blue-400" />
           </div>
-          <p className="text-3xl font-extrabold text-white mt-3">--</p>
-          <p className="text-xs text-zinc-500 mt-1">API integration pending</p>
+          {isLoading ? (
+            <Loader2 className="w-6 h-6 text-zinc-400 animate-spin mt-3" />
+          ) : (
+            <>
+              <p className="text-3xl font-extrabold text-white mt-3">{openPositions}</p>
+              <p className="text-xs text-blue-400 mt-1">{candidates.length} In candidate pipeline</p>
+            </>
+          )}
         </div>
 
         <div className="p-6 rounded-2xl bg-zinc-900/60 border border-zinc-800">
@@ -58,8 +85,14 @@ export default function HrDashboardPage() {
             <span className="text-xs font-semibold uppercase">Retention Rate</span>
             <TrendingUp className="w-5 h-5 text-purple-400" />
           </div>
-          <p className="text-3xl font-extrabold text-white mt-3">--</p>
-          <p className="text-xs text-zinc-500 mt-1">API integration pending</p>
+          {isLoading ? (
+            <Loader2 className="w-6 h-6 text-zinc-400 animate-spin mt-3" />
+          ) : (
+            <>
+              <p className="text-3xl font-extrabold text-white mt-3">{retentionRate}%</p>
+              <p className="text-xs text-emerald-400 mt-1">Based on active workforce</p>
+            </>
+          )}
         </div>
       </div>
 

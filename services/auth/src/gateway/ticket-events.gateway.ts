@@ -121,8 +121,11 @@ export class TicketEventsGateway implements OnModuleInit, OnModuleDestroy {
     try {
       const data = envelope.data as Record<string, unknown> | null | undefined;
       const ticketId =
-        typeof data?.ticketId === 'string' ? data.ticketId : null;
-      if (!ticketId) return;
+        typeof data?.ticketId === 'string'
+          ? data.ticketId
+          : typeof (data as any)?.id === 'string'
+            ? (data as any).id
+            : null;
 
       const message = JSON.stringify({
         type: envelope.eventType,
@@ -130,7 +133,15 @@ export class TicketEventsGateway implements OnModuleInit, OnModuleDestroy {
         timestamp: Date.now(),
       });
 
-      this.broadcast(`ticket:${ticketId}`, message);
+      if (ticketId) {
+        this.broadcast(`ticket:${ticketId}`, message);
+      }
+
+      if (envelope.organizationId) {
+        this.broadcast(`org:${envelope.organizationId}`, message);
+      }
+
+      this.broadcast('super_admin', message);
 
       const recipients = new Set<string>();
       for (const field of RECIPIENT_FIELDS) {
@@ -283,6 +294,12 @@ export class TicketEventsGateway implements OnModuleInit, OnModuleDestroy {
     }
 
     this.joinRoom(ws, state, `user:${state.actor.userId}`);
+    if (state.actor.organizationId) {
+      this.joinRoom(ws, state, `org:${state.actor.organizationId}`);
+    }
+    if (state.actor.isSuperAdmin) {
+      this.joinRoom(ws, state, 'super_admin');
+    }
     this.send(ws, {
       type: 'auth_ok',
       data: {

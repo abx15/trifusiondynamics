@@ -5,6 +5,7 @@ export * from "./useEstimates";
 export * from "./useHR";
 export * from "./useInvoices";
 export * from "./useLeads";
+export * from "./useNotifications";
 export * from "./usePayroll";
 export * from "./useProjects";
 export * from "./useQuotes";

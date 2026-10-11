@@ -2265,7 +2265,7 @@ export class TicketsService {
    * agents and admins see the full org.
    */
   async summary(actor: ActorContext): Promise<Record<string, number>> {
-    const baseWhere = await this.buildListWhere({} as any, actor);
+    const baseWhere = await this.buildListWhere({}, actor);
 
     const [
       total,
@@ -2287,16 +2287,30 @@ export class TicketsService {
       this.prisma.ticket.count({ where: baseWhere }),
       this.prisma.ticket.count({ where: { ...baseWhere, status: 'OPEN' } }),
       this.prisma.ticket.count({ where: { ...baseWhere, status: 'ASSIGNED' } }),
-      this.prisma.ticket.count({ where: { ...baseWhere, status: 'IN_PROGRESS' } }),
-      this.prisma.ticket.count({ where: { ...baseWhere, status: 'WAITING_FOR_CLIENT' } }),
-      this.prisma.ticket.count({ where: { ...baseWhere, status: 'WAITING_FOR_EMPLOYEE' } }),
-      this.prisma.ticket.count({ where: { ...baseWhere, status: 'RESOLUTION_SUBMITTED' } }),
-      this.prisma.ticket.count({ where: { ...baseWhere, status: 'UNDER_VERIFICATION' } }),
+      this.prisma.ticket.count({
+        where: { ...baseWhere, status: 'IN_PROGRESS' },
+      }),
+      this.prisma.ticket.count({
+        where: { ...baseWhere, status: 'WAITING_FOR_CLIENT' },
+      }),
+      this.prisma.ticket.count({
+        where: { ...baseWhere, status: 'WAITING_FOR_EMPLOYEE' },
+      }),
+      this.prisma.ticket.count({
+        where: { ...baseWhere, status: 'RESOLUTION_SUBMITTED' },
+      }),
+      this.prisma.ticket.count({
+        where: { ...baseWhere, status: 'UNDER_VERIFICATION' },
+      }),
       this.prisma.ticket.count({ where: { ...baseWhere, status: 'REOPENED' } }),
       this.prisma.ticket.count({ where: { ...baseWhere, status: 'RESOLVED' } }),
       this.prisma.ticket.count({ where: { ...baseWhere, status: 'CLOSED' } }),
-      this.prisma.ticket.count({ where: { ...baseWhere, status: 'CANCELLED' } }),
-      this.prisma.ticket.count({ where: { ...baseWhere, escalationLevel: { not: 'NONE' } } }),
+      this.prisma.ticket.count({
+        where: { ...baseWhere, status: 'CANCELLED' },
+      }),
+      this.prisma.ticket.count({
+        where: { ...baseWhere, escalationLevel: { not: 'NONE' } },
+      }),
       this.prisma.ticket.count({
         where: {
           ...baseWhere,

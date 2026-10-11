@@ -34,19 +34,27 @@ export function useWebSocket(url: string): WebSocketHookReturn {
     }
 
     const connect = () => {
-      const wsUrl = url || `${process.env.NEXT_PUBLIC_WS_URL || (process.env.NODE_ENV === "production" ? "wss://trifusiondynamics-api.onrender.com" : "ws://localhost:8000")}/ws`;
+      let wsUrl = url;
+      if (!wsUrl) {
+        const raw = process.env.NEXT_PUBLIC_WS_URL || (process.env.NODE_ENV === "production" ? "wss://trifusiondynamics-api.onrender.com/ws" : "ws://localhost:8000/ws");
+        wsUrl = raw.endsWith("/ws") ? raw : `${raw.replace(/\/+$/, "")}/ws`;
+      }
 
       try {
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 
         ws.onopen = () => {
-          console.log("WebSocket connected");
+          console.log("WebSocket connected to:", wsUrl);
           setIsConnected(true);
           reconnectAttemptsRef.current = 0; // Reset on successful connection
 
           // Send authentication token if available
-          const token = sessionStorage.getItem("accessToken");
+          let token = typeof window !== "undefined" ? sessionStorage.getItem("accessToken") : null;
+          if (!token && typeof document !== "undefined") {
+            const match = document.cookie.match(/(?:^|;\s*)access_token=([^;]+)/);
+            if (match) token = decodeURIComponent(match[1]);
+          }
           if (token) {
             ws.send(JSON.stringify({ type: "auth", token }));
           }

@@ -70,7 +70,6 @@ export class TicketsController {
     return this.tickets.list(query, actor);
   }
 
-
   @Get(':id')
   @RequirePermission(TICKET_PERMISSIONS.READ)
   findOne(@Param('id') id: string, @Actor() actor: ActorContext) {

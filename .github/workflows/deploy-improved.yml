@@ -1,0 +1,343 @@
+name: AgencyOS Deploy (Improved)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      deploy-auth:
+        description: 'Deploy Auth Service'
+        required: false
+        default: 'true'
+        type: boolean
+      deploy-ai:
+        description: 'Deploy AI Service'
+        required: false
+        default: 'true'
+        type: boolean
+      deploy-frontend:
+        description: 'Deploy Frontends'
+        required: false
+        default: 'true'
+        type: boolean
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PNPM_VERSION: '10'
+  NODE_VERSION: '20'
+  NEXT_TELEMETRY_DISABLED: '1'
+
+jobs:
+  # ─── Pre-deployment Checks ──────────────────────────────────────────────────────
+  pre-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check branch
+        run: |
+          if [ "${{ github.ref }}" != "refs/heads/main" ]; then
+            echo "::error::Deployment only allowed from main branch"
+            exit 1
+          fi
+
+      - name: Check for uncommitted changes
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "::error::Working directory not clean"
+            exit 1
+          fi
+
+  # ─── Build Services ────────────────────────────────────────────────────────────
+  build:
+    needs: pre-deploy
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_API_URL: https://trifusiondynamics-api.onrender.com/api
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build all packages
+        run: pnpm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts-${{ github.run_id }}
+          path: |
+            apps/agency-web/.next
+            apps/admin-dashboard/.next
+            services/auth/dist
+            packages/database/dist
+            packages/types/dist
+          retention-days: 1
+
+  # ─── Deploy Auth Service to Render ─────────────────────────────────────────────
+  deploy-auth:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event.inputs.deploy-auth != 'false'
+    environment:
+      name: auth-service-production
+      url: https://trifusiondynamics-api.onrender.com
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Render
+        uses: johnbeynon/render-deploy-action@v0.0.8
+        with:
+          service-id: ${{ secrets.RENDER_AUTH_SERVICE_ID }}
+          render-api-key: ${{ secrets.RENDER_API_KEY }}
+          wait-for-success: true
+
+      - name: Health check
+        run: |
+          echo "Waiting for service to stabilize..."
+          sleep 30
+
+          max_attempts=10
+          attempt=1
+
+          while [ $attempt -le $max_attempts ]; do
+            echo "Attempt $attempt of $max_attempts"
+            if curl -f https://trifusiondynamics-api.onrender.com/health; then
+              echo "Health check passed"
+              exit 0
+            fi
+            echo "Health check failed, retrying in 10s..."
+            sleep 10
+            attempt=$((attempt + 1))
+          done
+
+          echo "::error::Health check failed after $max_attempts attempts"
+          exit 1
+
+  # ─── Deploy AI Service to Render ───────────────────────────────────────────────
+  deploy-ai:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event.inputs.deploy-ai != 'false'
+    environment:
+      name: ai-service-production
+      url: https://trifusiondynamics-ai-api.onrender.com
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Render
+        uses: johnbeynon/render-deploy-action@v0.0.8
+        with:
+          service-id: ${{ secrets.RENDER_AI_SERVICE_ID }}
+          render-api-key: ${{ secrets.RENDER_API_KEY }}
+          wait-for-success: true
+
+      - name: Health check
+        run: |
+          echo "Waiting for service to stabilize..."
+          sleep 30
+
+          max_attempts=10
+          attempt=1
+
+          while [ $attempt -le $max_attempts ]; do
+            echo "Attempt $attempt of $max_attempts"
+            if curl -f https://trifusiondynamics-ai-api.onrender.com/health; then
+              echo "Health check passed"
+              exit 0
+            fi
+            echo "Health check failed, retrying in 10s..."
+            sleep 10
+            attempt=$((attempt + 1))
+          done
+
+          echo "::error::Health check failed after $max_attempts attempts"
+          exit 1
+
+  # ─── Deploy Agency Web to Vercel ─────────────────────────────────────────────
+  deploy-agency-web:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event.inputs.deploy-frontend != 'false'
+    environment:
+      name: agency-web-production
+      url: https://trifusiondynamics.vercel.app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        working-directory: apps/agency-web
+        run: pnpm install --frozen-lockfile
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID_AGENCY_WEB }}
+          working-directory: ./apps/agency-web
+          vercel-args: '--prod'
+
+      - name: Health check
+        run: |
+          echo "Waiting for deployment to propagate..."
+          sleep 30
+
+          max_attempts=10
+          attempt=1
+
+          while [ $attempt -le $max_attempts ]; do
+            echo "Attempt $attempt of $max_attempts"
+            if curl -f https://trifusiondynamics.vercel.app; then
+              echo "Health check passed"
+              exit 0
+            fi
+            echo "Health check failed, retrying in 10s..."
+            sleep 10
+            attempt=$((attempt + 1))
+          done
+
+          echo "::error::Health check failed after $max_attempts attempts"
+          exit 1
+
+  # ─── Deploy Admin Dashboard to Vercel ─────────────────────────────────────────
+  deploy-admin-dashboard:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event.inputs.deploy-frontend != 'false'
+    environment:
+      name: admin-dashboard-production
+      url: https://trifusiondynamicsadmin.vercel.app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        working-directory: apps/admin-dashboard
+        run: pnpm install --frozen-lockfile
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID_ADMIN_DASHBOARD }}
+          working-directory: ./apps/admin-dashboard
+          vercel-args: '--prod'
+
+      - name: Health check
+        run: |
+          echo "Waiting for deployment to propagate..."
+          sleep 30
+
+          max_attempts=10
+          attempt=1
+
+          while [ $attempt -le $max_attempts ]; do
+            echo "Attempt $attempt of $max_attempts"
+            if curl -f https://trifusiondynamicsadmin.vercel.app; then
+              echo "Health check passed"
+              exit 0
+            fi
+            echo "Health check failed, retrying in 10s..."
+            sleep 10
+            attempt=$((attempt + 1))
+          done
+
+          echo "::error::Health check failed after $max_attempts attempts"
+          exit 1
+
+  # ─── Post-deployment Tests ─────────────────────────────────────────────────────
+  post-deploy-tests:
+    needs: [deploy-auth, deploy-ai, deploy-agency-web, deploy-admin-dashboard]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test Auth Service
+        run: |
+          echo "Testing Auth Service..."
+          curl -f https://trifusiondynamics-api.onrender.com/health || exit 1
+          echo "✓ Auth Service is healthy"
+
+      - name: Test AI Service
+        run: |
+          echo "Testing AI Service..."
+          curl -f https://trifusiondynamics-ai-api.onrender.com/health || exit 1
+          echo "✓ AI Service is healthy"
+
+      - name: Test Agency Web
+        run: |
+          echo "Testing Agency Web..."
+          curl -f https://trifusiondynamics.vercel.app || exit 1
+          echo "✓ Agency Web is healthy"
+
+      - name: Test Admin Dashboard
+        run: |
+          echo "Testing Admin Dashboard..."
+          curl -f https://trifusiondynamicsadmin.vercel.app || exit 1
+          echo "✓ Admin Dashboard is healthy"
+
+  # ─── Deployment Summary ────────────────────────────────────────────────────────
+  summary:
+    needs: [pre-deploy, build, deploy-auth, deploy-ai, deploy-agency-web, deploy-admin-dashboard, post-deploy-tests]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Generate deployment summary
+        run: |
+          echo "## 🚀 AgencyOS Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Pre-deploy Checks | ${{ needs.pre-deploy.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Auth Service | ${{ needs.deploy-auth.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| AI Service | ${{ needs.deploy-ai.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Agency Web | ${{ needs.deploy-agency-web.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Admin Dashboard | ${{ needs.deploy-admin-dashboard.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Post-deploy Tests | ${{ needs.post-deploy-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployed at:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 Production URLs" >> $GITHUB_STEP_SUMMARY
+          echo "- Agency Web: https://trifusiondynamics.vercel.app" >> $GITHUB_STEP_SUMMARY
+          echo "- Admin Dashboard: https://trifusiondynamicsadmin.vercel.app" >> $GITHUB_STEP_SUMMARY
+          echo "- Auth API: https://trifusiondynamics-api.onrender.com" >> $GITHUB_STEP_SUMMARY
+          echo "- AI API: https://trifusiondynamics-ai-api.onrender.com" >> $GITHUB_STEP_SUMMARY
+
+      - name: Notify on failure
+        if: needs.post-deploy-tests.result == 'failure'
+        run: |
+          echo "::error::Deployment failed! Check the logs for details."
+          exit 1

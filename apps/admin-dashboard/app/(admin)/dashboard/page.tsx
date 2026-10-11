@@ -6,52 +6,130 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/com
 import { useAuth } from "@/hooks/useAuth";
 import { useTicketSummary } from "@/lib/hooks/useTickets";
 import { useProjects } from "@/lib/hooks/useProjects";
-import { Users, Shield, Cpu, Activity as ActivityIcon, Clock, Terminal, Loader2 } from "lucide-react";
+import { apiClient } from "@/lib/api-client";
+import {
+  Users,
+  Shield,
+  Cpu,
+  Activity as ActivityIcon,
+  Clock,
+  Terminal,
+  Loader2,
+  Building2,
+  UserCheck,
+  Briefcase,
+  FolderKanban,
+  LifeBuoy,
+  Receipt,
+  Target,
+  RefreshCw,
+} from "lucide-react";
+
+interface OrgDashboard {
+  id: string;
+  name: string;
+  slug: string;
+  isActive: boolean;
+  counts: {
+    users: number;
+    clients: number;
+    projects: number;
+    tickets: number;
+    invoices: number;
+    leads: number;
+    employees: number;
+  };
+  stats: {
+    tickets: { status: string; _count: { id: number } }[];
+    projects: { status: string; _count: { id: number } }[];
+    invoices: { status: string; _count: { id: number } }[];
+  };
+}
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const { data: ticketSummary, isLoading: ticketsLoading } = useTicketSummary();
   const { data: projectsData, isLoading: projectsLoading } = useProjects({ limit: 1 });
+  const [orgDash, setOrgDash] = React.useState<OrgDashboard | null>(null);
+  const [orgLoading, setOrgLoading] = React.useState(true);
+
+  const orgName = user?.organization?.name || user?.organizationId || "Organization";
+
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiClient.get("/users/org-dashboard");
+        if (!cancelled) setOrgDash(res.data);
+      } catch (err) {
+        console.error("Failed to load organization dashboard stats:", err);
+      } finally {
+        if (!cancelled) setOrgLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const totalProjects = projectsData?.total || 0;
 
-  const stats = [
+  const orgCards = [
     {
-      label: "Total Tickets",
-      value: ticketsLoading ? "Loading..." : (ticketSummary?.total || 0).toString(),
-      description: `${ticketSummary?.open || 0} open, ${ticketSummary?.resolved || 0} resolved`,
-      icon: ActivityIcon,
-      isLoading: ticketsLoading,
+      label: "Employees Working",
+      value: orgLoading ? "…" : (orgDash?.counts.employees ?? 0).toString(),
+      description: "Active workforce in your organization",
+      icon: UserCheck,
     },
     {
-      label: "Active Projects",
-      value: projectsLoading ? "Loading..." : totalProjects.toString(),
+      label: "Team Members",
+      value: orgLoading ? "…" : (orgDash?.counts.users ?? 0).toString(),
+      description: "Users with login access",
+      icon: Users,
+    },
+    {
+      label: "Clients",
+      value: orgLoading ? "…" : (orgDash?.counts.clients ?? 0).toString(),
+      description: "Client accounts",
+      icon: Briefcase,
+    },
+    {
+      label: "Projects",
+      value: projectsLoading ? "…" : totalProjects.toString(),
       description: "Manage in Projects section",
-      icon: Cpu,
-      isLoading: projectsLoading,
+      icon: FolderKanban,
     },
     {
-      label: "Configured Security Roles",
+      label: "Tickets",
+      value: orgLoading ? "…" : (orgDash?.counts.tickets ?? 0).toString(),
+      description: `${ticketSummary?.open || 0} open, ${ticketSummary?.resolved || 0} resolved`,
+      icon: LifeBuoy,
+    },
+    {
+      label: "Invoices",
+      value: orgLoading ? "…" : (orgDash?.counts.invoices ?? 0).toString(),
+      description: "Billing documents",
+      icon: Receipt,
+    },
+    {
+      label: "Leads",
+      value: orgLoading ? "…" : (orgDash?.counts.leads ?? 0).toString(),
+      description: "Pipeline leads",
+      icon: Target,
+    },
+    {
+      label: "Security Roles",
       value: user?.roles?.length?.toString() || "0",
       description: "RBAC policies active",
       icon: Shield,
-      isLoading: false,
-    },
-    {
-      label: "System Status",
-      value: "Operational",
-      description: "API latencies normal",
-      icon: ActivityIcon,
-      isLoading: false,
     },
   ];
 
   return (
     <div className="space-y-6">
-      
       {/* Welcome & PageHeader */}
       <PageHeader
-        title="Operations Overview"
+        title={`${orgName} — Operations Overview`}
         breadcrumbs={[]}
         actionSlot={
           <div className="flex items-center gap-2 text-xs text-muted-foreground bg-white dark:bg-zinc-900 border border-border rounded-lg px-3 py-1.5 font-medium shadow-xs">
@@ -61,20 +139,50 @@ export default function DashboardPage() {
         }
       />
 
-      {/* Greeting Banner */}
+      {/* Organization Banner */}
       <div className="rounded-xl border border-border bg-white dark:bg-zinc-900 p-6 shadow-xs">
-        <h2 className="text-xl font-bold tracking-tight text-foreground mb-1">
-          Welcome back, {user?.name || "Administrator"}
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          Workspace tenant: <span className="font-mono text-xs font-semibold text-primary">{user?.organizationId || "org_default"}</span>. 
-          Your roles: <span className="font-semibold text-foreground text-xs">{user?.roles?.join(", ") || "admin"}</span>.
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+              <Building2 className="h-6 w-6" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold tracking-tight text-foreground">
+                Welcome back, {user?.name || "Administrator"}
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Workspace tenant:{" "}
+                <span className="font-mono text-xs font-semibold text-primary">
+                  {orgName}
+                </span>{" "}
+                ({user?.organizationId || "org_default"}). Your roles:{" "}
+                <span className="font-semibold text-foreground text-xs">
+                  {user?.roles?.join(", ") || "admin"}
+                </span>
+              </p>
+            </div>
+          </div>
+          <span
+            className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full border ${
+              orgDash?.isActive
+                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                : "bg-zinc-500/10 text-zinc-500 border-zinc-500/30"
+            }`}
+          >
+            <ActivityIcon className="h-3 w-3" />
+            {orgDash?.isActive ? "Organization Active" : "Organization Archived"}
+          </span>
+        </div>
+        <p className="text-xs text-muted-foreground mt-3">
+          This dashboard shows only <strong>{orgName}</strong>&apos;s data — employees, clients, projects,
+          tickets and invoices are isolated per organization. Super Admin sees every organization from the
+          Super Admin Portal.
         </p>
       </div>
 
-      {/* Stats Cards Grid */}
+      {/* Org Stats Cards Grid */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat, idx) => {
+        {orgCards.map((stat, idx) => {
           const Icon = stat.icon;
           return (
             <Card key={idx} className="bg-white dark:bg-zinc-900 border border-border shadow-xs">
@@ -85,16 +193,87 @@ export default function DashboardPage() {
                 <Icon className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                {stat.isLoading ? (
-                  <Loader2 className="h-6 w-6 text-muted-foreground animate-spin" />
-                ) : (
-                  <div className="text-2xl font-bold text-foreground">{stat.value}</div>
-                )}
+                <div className="text-2xl font-bold text-foreground">{stat.value}</div>
                 <p className="text-xs text-muted-foreground mt-1">{stat.description}</p>
               </CardContent>
             </Card>
           );
         })}
+      </div>
+
+      {/* Ticket & Project Breakdown */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+        <Card className="bg-white dark:bg-zinc-900 border border-border shadow-xs">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <LifeBuoy className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-semibold">Tickets by Status</CardTitle>
+            </div>
+            <CardDescription>Your organization&apos;s ticket pipeline</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {orgLoading ? (
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            ) : !orgDash?.stats.tickets.length ? (
+              <p className="text-xs text-muted-foreground">No tickets yet.</p>
+            ) : (
+              orgDash.stats.tickets.map((t) => (
+                <div key={t.status} className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">{t.status.replace(/_/g, " ")}</span>
+                  <span className="font-bold text-foreground">{t._count.id}</span>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white dark:bg-zinc-900 border border-border shadow-xs">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <FolderKanban className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-semibold">Projects by Status</CardTitle>
+            </div>
+            <CardDescription>Delivery pipeline</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {orgLoading ? (
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            ) : !orgDash?.stats.projects.length ? (
+              <p className="text-xs text-muted-foreground">No projects yet.</p>
+            ) : (
+              orgDash.stats.projects.map((p) => (
+                <div key={p.status} className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">{p.status.replace(/_/g, " ")}</span>
+                  <span className="font-bold text-foreground">{p._count.id}</span>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white dark:bg-zinc-900 border border-border shadow-xs">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Receipt className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-semibold">Invoices by Status</CardTitle>
+            </div>
+            <CardDescription>Billing pipeline</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {orgLoading ? (
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            ) : !orgDash?.stats.invoices.length ? (
+              <p className="text-xs text-muted-foreground">No invoices yet.</p>
+            ) : (
+              orgDash.stats.invoices.map((i) => (
+                <div key={i.status} className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">{i.status.replace(/_/g, " ")}</span>
+                  <span className="font-bold text-foreground">{i._count.id}</span>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Console Activity Placeholder */}
@@ -122,7 +301,6 @@ export default function DashboardPage() {
           </div>
         </CardContent>
       </Card>
-
     </div>
   );
 }

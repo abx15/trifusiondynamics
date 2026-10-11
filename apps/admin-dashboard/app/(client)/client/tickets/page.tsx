@@ -15,12 +15,14 @@ import {
   Loader2,
 } from "lucide-react";
 import { useTickets, useCreateTicket, useAddComment, useTicketComments, type Ticket, type TicketComment } from "@/lib/hooks/useTickets";
+import { useQueryClient } from "@tanstack/react-query";
 import { useWebSocket } from "@/lib/websocket";
 
 export default function ClientTicketsPage() {
   const [activeTicketId, setActiveTicketId] = useState<string>("");
   const [showModal, setShowModal] = useState(false);
   const [newReply, setNewReply] = useState("");
+  const queryClient = useQueryClient();
 
   // Form State
   const [title, setTitle] = useState("");
@@ -54,10 +56,12 @@ export default function ClientTicketsPage() {
 
   // Handle WebSocket updates
   useEffect(() => {
-    if (lastMessage?.type === "ticket.updated" || lastMessage?.type === "ticket.assigned") {
+    if (lastMessage?.type) {
       console.log("Ticket update received via WebSocket:", lastMessage);
+      queryClient.invalidateQueries({ queryKey: ["tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["ticket-comments"] });
     }
-  }, [lastMessage]);
+  }, [lastMessage, queryClient]);
 
   const handleCreateTicket = async (e: React.FormEvent) => {
     e.preventDefault();

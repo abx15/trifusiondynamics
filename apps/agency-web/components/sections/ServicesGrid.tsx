@@ -64,47 +64,53 @@ export default function ServicesGrid({ services }: ServicesGridProps) {
         </div>
 
         {/* Services Cards Grid: 1 column mobile -> 2 column tablet/desktop -> 4 column xl */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6 md:gap-8">
-          {services.map((service) => (
-            <div
-              key={service.id}
-              className="glass-panel glass-panel-hover rounded-3xl p-6 sm:p-8 flex flex-col justify-between"
-            >
-              <div>
-                {/* Icon Container */}
-                <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/10 to-secondary/10 border border-primary/20 text-primary mb-6">
-                  <ServiceIcon name={service.iconName} className="h-6 w-6" />
-                </div>
-                
-                <h3 className="text-xl font-display font-bold text-white mb-3">
-                  {service.name}
-                </h3>
-                
-                <p className="text-slate-300 text-sm leading-relaxed mb-6">
-                  {service.description}
-                </p>
-                
-                {/* Micro Features list */}
-                <ul className="grid grid-cols-1 gap-2.5 mb-8">
-                  {service.features.slice(0, 4).map((feature, i) => (
-                    <li key={i} className="flex items-center gap-2.5 text-xs text-slate-400">
-                      <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <Link
-                href={`/services/${service.slug}`}
-                className="group inline-flex items-center gap-1.5 text-xs font-semibold text-white hover:text-primary transition-colors py-3 min-h-[44px]"
+        {services.length === 0 ? (
+          <div className="rounded-3xl border border-dashed border-white/10 bg-[#0b1320] px-6 py-12 text-center text-slate-400">
+            No services are currently available.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6 md:gap-8">
+            {services.map((service) => (
+              <div
+                key={service.id}
+                className="glass-panel glass-panel-hover rounded-3xl p-6 sm:p-8 flex flex-col justify-between"
               >
-                Learn More
-                <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-              </Link>
-            </div>
-          ))}
-        </div>
+                <div>
+                  {/* Icon Container */}
+                  <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/10 to-secondary/10 border border-primary/20 text-primary mb-6">
+                    <ServiceIcon name={service.iconName} className="h-6 w-6" />
+                  </div>
+                  
+                  <h3 className="text-xl font-display font-bold text-white mb-3">
+                    {service.name}
+                  </h3>
+                  
+                  <p className="text-slate-300 text-sm leading-relaxed mb-6">
+                    {service.description}
+                  </p>
+                  
+                  {/* Micro Features list */}
+                  <ul className="grid grid-cols-1 gap-2.5 mb-8">
+                    {service.features.slice(0, 4).map((feature, i) => (
+                      <li key={i} className="flex items-center gap-2.5 text-xs text-slate-400">
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <Link
+                  href={`/services/${service.slug}`}
+                  className="group inline-flex items-center gap-1.5 text-xs font-semibold text-white hover:text-primary transition-colors py-3 min-h-[44px]"
+                >
+                  Learn More
+                  <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                </Link>
+              </div>
+            ))}
+          </div>
+        )}
 
       </div>
     </section>

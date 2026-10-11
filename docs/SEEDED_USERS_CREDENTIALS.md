@@ -4,6 +4,13 @@
 
 Database has been successfully seeded with test users for all roles. All users can now login and access their respective dashboards.
 
+## Multi-Tenant Architecture
+
+AgencyOS is a **multi-tenant SaaS platform**. Each organization operates in complete isolation:
+- **Org Admin** sees only their org's data (users, clients, projects, tickets, invoices, leads)
+- **Super Admin** has universal cross-organization access
+- All queries are scoped: `WHERE organizationId = user.orgId`
+
 ## Login Credentials
 
 ### Executive Accounts (Full Access)
@@ -29,6 +36,17 @@ Database has been successfully seeded with test users for all roles. All users c
 |------|-------|----------|-----------|
 | **Client** | client@apexretail.com | trifusiondynamicsA3web | /client/dashboard |
 
+## Super Admin Capabilities
+
+Super Admin (`trifusiondynamics@gmail.com`) has **universal access** to all organizations:
+
+1. **View All Organizations** — Navigate to `/super-admin/organizations` to see all orgs with employee counts
+2. **Create New Organization** — Fill org name, slug, and optionally provision an admin user (email, name, password)
+3. **Activate/Deactivate Organizations** — Toggle org `isActive` status
+4. **View Org Details** — Click "View Details" to see org analytics, employee counts, and automation stats
+5. **Cross-Organization Automation** — View all workflows across orgs, toggle active state, trigger MANUAL workflows
+6. **Platform Analysis** — Revenue, clients, team performance, and system health across all tenants
+
 ## User Management Features
 
 ### Admin/Super Admin Capabilities:
@@ -41,12 +59,13 @@ Database has been successfully seeded with test users for all roles. All users c
 
 ### Role-Based Access Control:
 
-- **Super Admin**: Complete system access, user management, RBAC control
-- **Admin**: Full access to all modules except system-level settings
+- **Super Admin**: Complete system access, all organizations, RBAC control, workflow management
+- **Admin**: Full access to all modules except system-level settings (org-scoped)
 - **Sales Agent**: CRM, clients, leads management
 - **Support Agent**: Helpdesk, tickets, support operations
 - **HR Agent**: HR management, employee records, payroll access
 - **Agent**: General agent access and task management
+- **Employee**: Attendance, tasks, limited module access
 - **Client**: Limited access to own projects, invoices, and support tickets
 
 ## Testing Instructions
@@ -62,19 +81,34 @@ Use credentials from above table
 - Navigation options should be limited to their role permissions
 - Try accessing unauthorized routes - should be blocked
 
-### 3. Test Logout Functionality:
-- Click logout from any dashboard
-- Should be immediately redirected to login page
-- Session should be completely destroyed
-- Try accessing protected routes - should be redirected to login
+### 3. Test Tenant Isolation:
+- Login as Org Admin → `/dashboard` → see only YOUR org's data
+- Login as Super Admin → `/super-admin/organizations` → see ALL orgs
+- Verify `/users/org-dashboard` returns only your org's counts
 
-### 4. Test User Management (Admin/Super Admin only):
+### 4. Test Organization Provisioning:
+- Login as Super Admin
+- Navigate to `/super-admin/organizations`
+- Click "Provision New Organization"
+- Fill: name, slug, admin email, admin name, admin password
+- Verify admin user is created with `admin` role
+- Login as the new admin → verify they see only their org
+
+### 5. Test User Management (Admin/Super Admin only):
 - Login as admin or super admin
 - Navigate to `/settings/users`
 - Test creating a new user
 - Test editing existing user details
 - Test activating/deactivating users
 - Test deleting users
+
+### 6. Test Cross-Organization Automation:
+- Login as Super Admin
+- Navigate to `/super-admin/automation`
+- View all workflows across orgs
+- Toggle a workflow active/inactive
+- Trigger a MANUAL workflow
+- View per-org automation stats
 
 ## Important Notes
 
@@ -99,28 +133,41 @@ Use credentials from above table
 - Service: `services/auth/src/modules/users/users.service.ts`
 - API Endpoints: `/api/users` (GET, POST, PATCH, DELETE)
 
+### Super Admin Backend:
+- Controller: `services/auth/src/modules/users/super-admin.controller.ts`
+- Endpoints: `/api/super-admin/organizations`, `/api/super-admin/automation/*`
+
+### Tenant Isolation:
+- `GET /api/users/org-dashboard` — scoped to `user.orgId` (requires `hr:read` permission)
+- All org-scoped queries use `where: { organizationId: user.organizationId }`
+- Super Admin bypasses orgId filter via `SuperAdminGuard`
+
 ### User Management Frontend:
 - Page: `apps/admin-dashboard/app/(admin)/settings/users/page.tsx`
 - Component: `apps/admin-dashboard/components/UserFormSheet.tsx`
 
-### Logout Implementation:
-- Fixed to ensure complete session destruction
-- Hard redirect to login page after logout
-- Multiple cookie clearing strategies
-- Complete storage cleanup (sessionStorage + localStorage)
+### Super Admin Frontend:
+- Organizations: `apps/admin-dashboard/app/(super-admin)/super-admin/organizations/page.tsx`
+- Org Detail: `apps/admin-dashboard/app/(super-admin)/super-admin/organizations/[id]/page.tsx`
+- Automation: `apps/admin-dashboard/app/(super-admin)/super-admin/automation/page.tsx`
+- AI Analysis: `apps/admin-dashboard/app/(super-admin)/super-admin/ai/page.tsx`
+- Ticketing: `apps/admin-dashboard/app/(super-admin)/super-admin/ticketing/page.tsx`
 
 ## Next Steps
 
 1. ✅ Database seeded with all role-based users
 2. ✅ User management interface enabled for admin/super admin
-3. ✅ Logout functionality fixed across all roles
-4. ✅ Role-based access control implemented
-5. ⏳ Test all login credentials manually
-6. ⏳ Verify role-based dashboard access
-7. ⏳ Test user creation and management features
+3. ✅ Multi-tenant architecture with org isolation
+4. ✅ Super admin cross-organization access
+5. ✅ Organization auto-provisioning with admin user
+6. ✅ Role-based access control implemented
+7. ⏳ Test all login credentials manually
+8. ⏳ Verify role-based dashboard access
+9. ⏳ Test user creation and management features
+10. ⏳ Test cross-organization workflow control
 
 ---
 
 **Status**: Ready for testing 🚀
-**Last Updated**: 2026-08-19
-**Environment**: Development (Docker Compose)
+**Last Updated**: 2026-10-11
+**Environment**: Development (PostgreSQL + NestJS + Next.js)
