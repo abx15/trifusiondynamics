@@ -15,8 +15,9 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Sheet, SheetTrigger, SheetContent } from "@/components/ui/sheet";
 import { Sidebar } from "./Sidebar";
-import { Bell, Menu, User, Settings, LogOut, X, Check, Loader2 } from "lucide-react";
+import { Bell, Menu, User, Settings, LogOut, X, Check, Loader2, Wifi, WifiOff } from "lucide-react";
 import { useNotifications, useUnreadNotificationCount, useMarkNotificationRead, useMarkAllNotificationsRead, type Notification } from "@/lib/hooks/useNotifications";
+import { useIsRealtimeConnected } from "@/hooks/useWebSocket";
 
 interface TopbarProps {
   sidebarOpen: boolean;
@@ -26,6 +27,7 @@ interface TopbarProps {
 export function Topbar({ sidebarOpen, setSidebarOpen }: TopbarProps) {
   const { user } = useAuth();
   const { logout } = useLogout();
+  const isRealtimeConnected = useIsRealtimeConnected();
   const { data: notificationsData, isLoading: notificationsLoading, refetch: refetchNotifications } = useNotifications({ limit: 20 });
   const { data: unreadCount } = useUnreadNotificationCount();
   const markRead = useMarkNotificationRead();
@@ -109,7 +111,24 @@ export function Topbar({ sidebarOpen, setSidebarOpen }: TopbarProps) {
 
       {/* User Actions Right */}
       <div className="flex items-center gap-4">
-        
+
+        {/* Real-time Connection Status */}
+        <div
+          title={isRealtimeConnected ? "Real-time: Connected" : "Real-time: Disconnected"}
+          className="hidden sm:flex items-center gap-1.5"
+        >
+          <span
+            className={`h-2 w-2 rounded-full ${
+              isRealtimeConnected
+                ? "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.8)]"
+                : "bg-slate-400"
+            }`}
+          />
+          <span className="text-[10px] font-mono text-muted-foreground">
+            {isRealtimeConnected ? "Live" : "Offline"}
+          </span>
+        </div>
+
         {/* Notifications Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

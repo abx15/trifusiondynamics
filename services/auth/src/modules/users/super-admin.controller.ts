@@ -1,4 +1,16 @@
-import { Controller, Get, UseGuards, ForbiddenException, Param, Query, Patch, Body, Post, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  UseGuards,
+  ForbiddenException,
+  Param,
+  Query,
+  Patch,
+  Body,
+  Post,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
@@ -128,7 +140,10 @@ export class SuperAdminController {
 
   @Get('organizations/:id')
   @RequirePermission('hr:read')
-  async getOrganizationDetails(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
+  async getOrganizationDetails(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+  ) {
     if (!isSuperAdminUser(user)) {
       throw new ForbiddenException(
         'Only super administrators can access organization details',
@@ -139,7 +154,10 @@ export class SuperAdminController {
 
   @Patch('organizations/:id/reactivate')
   @RequirePermission('users:write')
-  async reactivateOrganization(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
+  async reactivateOrganization(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+  ) {
     if (!isSuperAdminUser(user)) {
       throw new ForbiddenException(
         'Only super administrators can reactivate organizations',
@@ -161,18 +179,21 @@ export class SuperAdminController {
       );
     }
 
-    const [totalWorkflows, activeWorkflows, totalRuns, recentRuns] = await Promise.all([
-      this.prisma.workflow.count(),
-      this.prisma.workflow.count({ where: { isActive: true } }),
-      this.prisma.workflowRun.count(),
-      this.prisma.workflowRun.findMany({
-        take: 20,
-        orderBy: { startedAt: 'desc' },
-        include: {
-          workflow: { select: { id: true, name: true, organizationId: true } },
-        },
-      }),
-    ]);
+    const [totalWorkflows, activeWorkflows, totalRuns, recentRuns] =
+      await Promise.all([
+        this.prisma.workflow.count(),
+        this.prisma.workflow.count({ where: { isActive: true } }),
+        this.prisma.workflowRun.count(),
+        this.prisma.workflowRun.findMany({
+          take: 20,
+          orderBy: { startedAt: 'desc' },
+          include: {
+            workflow: {
+              select: { id: true, name: true, organizationId: true },
+            },
+          },
+        }),
+      ]);
 
     const runsByStatus = await this.prisma.workflowRun.groupBy({
       by: ['status'],
@@ -190,7 +211,10 @@ export class SuperAdminController {
       totalWorkflows,
       activeWorkflows,
       totalRuns,
-      runsByStatus: runsByStatus.map(r => ({ status: r.status, count: r._count.id })),
+      runsByStatus: runsByStatus.map((r) => ({
+        status: r.status,
+        count: r._count.id,
+      })),
       topWorkflowsByRuns: runsByOrg,
       recentRuns,
     };
@@ -225,7 +249,9 @@ export class SuperAdminController {
       }),
     ]);
 
-    const runCountMap = new Map(runCounts.map((r) => [r.workflowId, r._count.id]));
+    const runCountMap = new Map(
+      runCounts.map((r) => [r.workflowId, r._count.id]),
+    );
     const orgMap = new Map(orgs.map((o) => [o.id, o]));
 
     return workflows.map((w) => ({
@@ -246,7 +272,10 @@ export class SuperAdminController {
 
   @Patch('automation/workflows/:id/toggle')
   @RequirePermission('automation:write')
-  async toggleWorkflow(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
+  async toggleWorkflow(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+  ) {
     if (!isSuperAdminUser(user)) {
       throw new ForbiddenException(
         'Only super administrators can toggle workflows across organizations',
@@ -271,7 +300,10 @@ export class SuperAdminController {
 
   @Post('automation/workflows/:id/trigger')
   @RequirePermission('automation:write')
-  async triggerWorkflow(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
+  async triggerWorkflow(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+  ) {
     if (!isSuperAdminUser(user)) {
       throw new ForbiddenException(
         'Only super administrators can trigger workflows across organizations',
@@ -284,7 +316,9 @@ export class SuperAdminController {
     }
 
     if (workflow.triggerType !== TriggerType.MANUAL) {
-      throw new BadRequestException('Only MANUAL workflows can be triggered this way');
+      throw new BadRequestException(
+        'Only MANUAL workflows can be triggered this way',
+      );
     }
 
     if (!workflow.isActive) {
@@ -333,11 +367,19 @@ export class SuperAdminController {
     ]);
 
     return {
-      organization: { id: org.id, name: org.name, slug: org.slug, isActive: org.isActive },
+      organization: {
+        id: org.id,
+        name: org.name,
+        slug: org.slug,
+        isActive: org.isActive,
+      },
       totalWorkflows: workflows.length,
       activeWorkflows: workflows.filter((w) => w.isActive).length,
       totalRuns,
-      runsByStatus: runsByStatus.map((r) => ({ status: r.status, count: r._count.id })),
+      runsByStatus: runsByStatus.map((r) => ({
+        status: r.status,
+        count: r._count.id,
+      })),
       workflows,
     };
   }
@@ -351,12 +393,13 @@ export class SuperAdminController {
       );
     }
 
-    const [totalProposals, totalAudits, totalEmails, totalSummaries] = await Promise.all([
-      this.prisma.aiProposalRequest.count(),
-      this.prisma.aiSeoAudit.count(),
-      this.prisma.aiEmailDraft.count(),
-      this.prisma.aiMeetingSummary.count(),
-    ]);
+    const [totalProposals, totalAudits, totalEmails, totalSummaries] =
+      await Promise.all([
+        this.prisma.aiProposalRequest.count(),
+        this.prisma.aiSeoAudit.count(),
+        this.prisma.aiEmailDraft.count(),
+        this.prisma.aiMeetingSummary.count(),
+      ]);
 
     const proposalsByOrg = await this.prisma.aiProposalRequest.groupBy({
       by: ['organizationId'],
@@ -403,12 +446,17 @@ export class SuperAdminController {
       );
     }
 
-    const [totalTickets, openTickets, resolvedTickets, slaBreached] = await Promise.all([
-      this.prisma.ticket.count(),
-      this.prisma.ticket.count({ where: { status: { in: ['OPEN', 'ASSIGNED', 'IN_PROGRESS'] } } }),
-      this.prisma.ticket.count({ where: { status: 'RESOLVED' } }),
-      this.prisma.ticket.count({ where: { slaResolutionBreachedAt: { not: null } } }),
-    ]);
+    const [totalTickets, openTickets, resolvedTickets, slaBreached] =
+      await Promise.all([
+        this.prisma.ticket.count(),
+        this.prisma.ticket.count({
+          where: { status: { in: ['OPEN', 'ASSIGNED', 'IN_PROGRESS'] } },
+        }),
+        this.prisma.ticket.count({ where: { status: 'RESOLVED' } }),
+        this.prisma.ticket.count({
+          where: { slaResolutionBreachedAt: { not: null } },
+        }),
+      ]);
 
     const ticketsByOrg = await this.prisma.ticket.groupBy({
       by: ['organizationId'],
@@ -427,21 +475,31 @@ export class SuperAdminController {
       _count: { id: true },
     });
 
-    const avgResolutionTime = await this.prisma.$queryRaw`
+    const avgResolutionTime = await this.prisma.$queryRaw<
+      { avg_seconds: number }[]
+    >`
       SELECT AVG(EXTRACT(EPOCH FROM ("resolvedAt" - "createdAt")))::float as avg_seconds
       FROM helpdesk."Ticket"
       WHERE "resolvedAt" IS NOT NULL
-    ` as { avg_seconds: number }[];
+    `;
 
     return {
       totalTickets,
       openTickets,
       resolvedTickets,
       slaBreached,
-      avgResolutionTimeHours: avgResolutionTime[0]?.avg_seconds ? Math.round(avgResolutionTime[0].avg_seconds / 3600) : 0,
+      avgResolutionTimeHours: avgResolutionTime[0]?.avg_seconds
+        ? Math.round(avgResolutionTime[0].avg_seconds / 3600)
+        : 0,
       ticketsByOrg,
-      ticketsByStatus: ticketsByStatus.map(t => ({ status: t.status, count: t._count.id })),
-      ticketsByPriority: ticketsByPriority.map(t => ({ priority: t.priority, count: t._count.id })),
+      ticketsByStatus: ticketsByStatus.map((t) => ({
+        status: t.status,
+        count: t._count.id,
+      })),
+      ticketsByPriority: ticketsByPriority.map((t) => ({
+        priority: t.priority,
+        count: t._count.id,
+      })),
     };
   }
 }

@@ -22,7 +22,11 @@ export class UsersService {
 
   constructor(private prisma: PrismaService) {}
 
-  async createUserByAdmin(dto: CreateUserDto, currentOrgId?: string, isSuperAdmin = false) {
+  async createUserByAdmin(
+    dto: CreateUserDto,
+    currentOrgId?: string,
+    isSuperAdmin = false,
+  ) {
     // 1. Check if user already exists
     const existing = await this.prisma.user.findFirst({
       where: {
@@ -208,9 +212,13 @@ export class UsersService {
     }
 
     // Organization Isolation: Regular admins cannot change organizationId
-    if (!isSuperAdmin && dto.organizationId !== undefined && dto.organizationId !== orgId) {
+    if (
+      !isSuperAdmin &&
+      dto.organizationId !== undefined &&
+      dto.organizationId !== orgId
+    ) {
       throw new ForbiddenException(
-        'Organization administrators cannot change a user\'s organization. Only super administrators can move users between organizations.',
+        "Organization administrators cannot change a user's organization. Only super administrators can move users between organizations.",
       );
     }
 
@@ -262,8 +270,8 @@ export class UsersService {
       // Role Assignment Security: Regular admins cannot assign superadmin roles
       if (!isSuperAdmin) {
         const superAdminRoles = ['superadmin', 'super_admin'];
-        const hasSuperAdminRole = dto.roles.some(role =>
-          superAdminRoles.includes(role.toLowerCase())
+        const hasSuperAdminRole = dto.roles.some((role) =>
+          superAdminRoles.includes(role.toLowerCase()),
         );
         if (hasSuperAdminRole) {
           throw new ForbiddenException(
@@ -309,8 +317,8 @@ export class UsersService {
     // Role Assignment Security: Regular admins cannot assign superadmin roles
     if (!isSuperAdmin) {
       const superAdminRoles = ['superadmin', 'super_admin'];
-      const hasSuperAdminRole = roles.some(role =>
-        superAdminRoles.includes(role.toLowerCase())
+      const hasSuperAdminRole = roles.some((role) =>
+        superAdminRoles.includes(role.toLowerCase()),
       );
       if (hasSuperAdminRole) {
         throw new ForbiddenException(
@@ -693,7 +701,14 @@ export class UsersService {
     }));
 
     // Get additional stats from different schemas
-    const [ticketStats, projectStats, invoiceStats, clientCount, leadCount, employeeCount] = await Promise.all([
+    const [
+      ticketStats,
+      projectStats,
+      invoiceStats,
+      clientCount,
+      leadCount,
+      employeeCount,
+    ] = await Promise.all([
       this.prisma.ticket.groupBy({
         by: ['status'],
         where: { organizationId: orgId },

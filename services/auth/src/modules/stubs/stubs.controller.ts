@@ -9,6 +9,14 @@ import {
   Query,
   UseInterceptors,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiParam,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { CacheInterceptor, CacheKey, CacheTTL } from '@nestjs/cache-manager';
 import { Throttle } from '@nestjs/throttler';
 import { LeadsService } from './leads.service';
@@ -21,6 +29,8 @@ import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { type JwtPayload } from '@agency-os/types';
 
+@ApiTags('CRM / Operations')
+@ApiBearerAuth()
 @Controller()
 export class StubsController {
   constructor(
@@ -51,14 +61,18 @@ export class StubsController {
   @Get('crm/contact-submissions')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @RequirePermissions('crm:read')
-  getContactSubmissions(@Query() query: any) {
-    return this.leadsService.getSubmissions(query);
+  getContactSubmissions(@Query() query: any, @CurrentUser() user: JwtPayload) {
+    return this.leadsService.getSubmissions(user.orgId, query);
   }
 
   @Patch('crm/leads/:id/stage')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @RequirePermissions('crm:write')
-  moveLeadStage(@Param('id') id: string, @Body() body: any, @CurrentUser() user: JwtPayload) {
+  moveLeadStage(
+    @Param('id') id: string,
+    @Body() body: any,
+    @CurrentUser() user: JwtPayload,
+  ) {
     return this.leadsService.moveStage(id, body.stage, user.orgId);
   }
 
@@ -104,15 +118,15 @@ export class StubsController {
   // CMS
   @Throttle({ default: { limit: 3, ttl: 60000 } })
   @Post('cms/leads')
-  createCmsLead(@Body() body: any) {
-    return this.leadsService.createSubmission(body);
+  createCmsLead(@Body() body: any, @Query('orgId') orgId?: string) {
+    return this.leadsService.createSubmission(body, orgId);
   }
 
   @Get('cms/leads')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @RequirePermissions('crm:read')
-  getCmsLeads(@Query() query: any) {
-    return this.leadsService.getSubmissions(query);
+  getCmsLeads(@Query() query: any, @CurrentUser() user: JwtPayload) {
+    return this.leadsService.getSubmissions(user.orgId, query);
   }
 
   // Helpdesk

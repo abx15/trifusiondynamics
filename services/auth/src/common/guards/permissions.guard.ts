@@ -32,7 +32,7 @@ export class PermissionsGuard implements CanActivate {
     // Superadmin roles have full access across all organizations
     const superAdminRoles = ['superadmin', 'super_admin'];
     const isSuperAdmin = user.roles?.some((role) =>
-      superAdminRoles.includes(role.toLowerCase())
+      superAdminRoles.includes(role.toLowerCase()),
     );
     if (isSuperAdmin) {
       return true;

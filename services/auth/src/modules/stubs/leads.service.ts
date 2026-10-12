@@ -17,6 +17,7 @@ import {
 
 export interface ContactSubmission {
   id: string;
+  organizationId: string;
   name: string;
   email: string;
   phone?: string | null;
@@ -49,7 +50,10 @@ export interface Lead {
 export class LeadsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async createSubmission(data: any): Promise<ContactSubmission> {
+  async createSubmission(
+    data: any,
+    organizationId?: string,
+  ): Promise<ContactSubmission> {
     const name = String(data.name ?? '').trim();
     const email = String(data.email ?? '')
       .trim()
@@ -60,8 +64,13 @@ export class LeadsService {
       throw new BadRequestException('Name, email, and message are required');
     }
 
+    // organizationId is required for multi-tenant isolation.
+    // CMS public endpoint resolves it from the host header / query param.
+    const orgId = organizationId || data.organizationId || 'unscoped';
+
     return this.prisma.contactSubmission.create({
       data: {
+        organizationId: orgId,
         name,
         email,
         phone: data.phone ? String(data.phone).trim() : null,
@@ -73,16 +82,21 @@ export class LeadsService {
     });
   }
 
-  async getSubmissions(query?: {
-    status?: string;
-    page?: string | number;
-    limit?: string | number;
-  }) {
+  async getSubmissions(
+    organizationId: string,
+    query?: {
+      status?: string;
+      page?: string | number;
+      limit?: string | number;
+    },
+  ) {
     const { page, limit, skip, take } = parsePagination(
       query?.page,
       query?.limit,
     );
-    const where: Prisma.ContactSubmissionWhereInput = {};
+
+    // Always scope to caller's organization — critical for multi-tenant security
+    const where: Prisma.ContactSubmissionWhereInput = { organizationId };
 
     if (
       query?.status &&
@@ -104,9 +118,12 @@ export class LeadsService {
     return paginatedResult(items, total, page, limit);
   }
 
-  async getSubmissionById(id: string): Promise<ContactSubmission | null> {
-    return this.prisma.contactSubmission.findUnique({
-      where: { id },
+  async getSubmissionById(
+    id: string,
+    organizationId?: string,
+  ): Promise<ContactSubmission | null> {
+    return this.prisma.contactSubmission.findFirst({
+      where: organizationId ? { id, organizationId } : { id },
     });
   }
 

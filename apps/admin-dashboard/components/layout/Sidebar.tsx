@@ -184,8 +184,8 @@ export function Sidebar({ collapsed = false, setCollapsed, onItemClick }: Sideba
   // 3. Operations Section
   const operationsItems: SidebarItem[] = [];
 
-  // CRM - visible only to Sales Agent and those with crm:read permission
-  if (isSalesAgent || hasPermission("crm:read")) {
+  // CRM - visible to Admin, Sales Agent, and those with crm:read permission
+  if (isAdmin || isSalesAgent || hasPermission("crm:read")) {
     operationsItems.push({
       label: "CRM",
       href: "/crm",
@@ -206,7 +206,7 @@ export function Sidebar({ collapsed = false, setCollapsed, onItemClick }: Sideba
     });
   }
 
-  if (hasPermission("clients:read")) {
+  if (isAdmin || hasPermission("clients:read")) {
     operationsItems.push({
       label: "Clients",
       href: "/clients",
@@ -216,7 +216,7 @@ export function Sidebar({ collapsed = false, setCollapsed, onItemClick }: Sideba
     });
   }
 
-  if (hasPermission("projects:read")) {
+  if (isAdmin || hasPermission("projects:read")) {
     operationsItems.push({
       label: "Projects",
       href: "/projects",
@@ -226,7 +226,7 @@ export function Sidebar({ collapsed = false, setCollapsed, onItemClick }: Sideba
     });
   }
 
-  if (hasPermission("billing:read")) {
+  if (isAdmin || hasPermission("billing:read")) {
     operationsItems.push({
       label: "Billing",
       href: "/billing/invoices",
@@ -242,8 +242,8 @@ export function Sidebar({ collapsed = false, setCollapsed, onItemClick }: Sideba
     });
   }
 
-  // HR Portal - visible only to HR Agent and those with hr:read permission
-  if (isHrAgent || hasPermission("hr:read")) {
+  // HR Portal - visible to Admin, HR Agent, and those with hr:read permission
+  if (isAdmin || isHrAgent || hasPermission("hr:read")) {
     operationsItems.push({
       label: "HR Portal",
       href: "/hr/employees",
@@ -269,8 +269,8 @@ export function Sidebar({ collapsed = false, setCollapsed, onItemClick }: Sideba
     });
   }
 
-  // Support Tickets - visible only to Support Agent and those with helpdesk:read or projects:read
-  if (isSupportAgent || hasPermission("helpdesk:read") || hasPermission("projects:read")) {
+  // Support Tickets - visible to Admin, Support Agent, and those with helpdesk/projects:read
+  if (isAdmin || isSupportAgent || hasPermission("helpdesk:read") || hasPermission("projects:read")) {
     operationsItems.push({
       label: "Support Tickets",
       href: "/tickets",

@@ -2513,6 +2513,94 @@ async function main() {
   }
   console.log(`  Seeded ${routingCount} routing rules.`);
 
+  // ────────────────────────────────────────────────────────────────────────────
+  // Demo: CRM Contact Submissions (Leads Inbox)
+  // ────────────────────────────────────────────────────────────────────────────
+  console.log('\nSeeding demo CRM contact submissions...');
+
+  const demoSubmissions = [
+    {
+      name: 'Rohan Mehta',
+      email: 'rohan.mehta@startupxyz.in',
+      phone: '+91-9876543210',
+      company: 'StartupXYZ India',
+      subject: 'Enterprise Web Development Inquiry',
+      message: 'We are a Series-A funded startup looking for a reliable agency to build our B2B SaaS product. Would love to schedule a discovery call.',
+      source: 'contact-form',
+      status: 'NEW',
+    },
+    {
+      name: 'Sarah Chen',
+      email: 'sarah.chen@globalretail.com',
+      phone: '+1-415-555-0192',
+      company: 'Global Retail Co.',
+      subject: 'E-commerce Platform Redesign',
+      message: 'Our current platform handles 50k+ daily orders and we need a complete overhaul. Looking for full-stack teams with React + Node experience.',
+      source: 'contact-form',
+      status: 'NEW',
+    },
+    {
+      name: 'Ahmed Al-Rashid',
+      email: 'ahmed@fintech-solutions.ae',
+      phone: '+971-50-123-4567',
+      company: 'Fintech Solutions MENA',
+      subject: 'Mobile App Development — Fintech',
+      message: 'We need a cross-platform mobile app for our payment processing platform. The app must comply with UAE Central Bank regulations.',
+      source: 'website',
+      status: 'NEW',
+    },
+    {
+      name: 'Priya Sharma',
+      email: 'priya@healthtech.io',
+      phone: '+91-8765432109',
+      company: 'HealthTech.io',
+      subject: 'AI Integration Consultation',
+      message: 'Looking to integrate AI-based diagnostic assistance into our hospital management system. Need a technical partner with ML experience.',
+      source: 'linkedin',
+      status: 'CONTACTED',
+    },
+    {
+      name: 'Marcus Thompson',
+      email: 'marcus@logisticspro.co',
+      phone: '+44-20-7946-0958',
+      company: 'LogisticsPro UK',
+      subject: 'Supply Chain Dashboard',
+      message: 'We need a real-time supply chain visibility dashboard for our 3PL operations across 12 countries. Budget is £200k.',
+      source: 'referral',
+      status: 'NEW',
+    },
+  ] as const;
+
+  let submissionCount = 0;
+  for (const sub of demoSubmissions) {
+    // Use findFirst + create pattern (no unique on email for submissions)
+    const existing = await safeRun(`Check existing submission from ${sub.email}`, () =>
+      prisma.contactSubmission.findFirst({
+        where: { email: sub.email, organizationId: org.id },
+        select: { id: true },
+      })
+    );
+    if (!existing) {
+      await safeRun(`Create submission from ${sub.name}`, () =>
+        prisma.contactSubmission.create({
+          data: {
+            organizationId: org.id,
+            name: sub.name,
+            email: sub.email,
+            phone: sub.phone,
+            company: sub.company,
+            subject: sub.subject,
+            message: sub.message,
+            source: sub.source,
+            status: sub.status as any,
+          },
+        })
+      );
+      submissionCount++;
+    }
+  }
+  console.log(`  Seeded ${submissionCount} demo contact submissions.`);
+
   console.log('Helpdesk configuration seeded successfully!');
 
   console.log('Seeding completed successfully.');

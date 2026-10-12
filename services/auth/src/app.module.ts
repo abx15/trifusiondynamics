@@ -34,6 +34,7 @@ import { RedisModule } from './modules/database/redis.module';
 import { RedisThrottlerStorage } from './modules/database/redis-throttler.storage';
 import { RateLimitModule } from './modules/database/rate-limit.module';
 import { UserThrottlerGuard } from './common/guards/user-throttler.guard';
+import { RequestContextInterceptor } from './common/context/request-context.interceptor';
 
 @Module({
   imports: [
@@ -97,6 +98,10 @@ import { UserThrottlerGuard } from './common/guards/user-throttler.guard';
     {
       provide: APP_INTERCEPTOR,
       useClass: BigIntSafeInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: RequestContextInterceptor,
     },
     {
       provide: APP_FILTER,
