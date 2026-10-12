@@ -119,19 +119,22 @@ model RefreshToken {
 // --- schema: "cms" ---
 
 model ContactSubmission {
-  id        String           @id @default(uuid())
-  name      String
-  email     String
-  phone     String?
-  company   String?
-  subject   String?
-  message   String           @db.Text
-  source    String           @default("contact-form")
-  status    SubmissionStatus @default(NEW)
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
+  id             String           @id @default(uuid())
+  organizationId String
+  name           String
+  email          String
+  phone          String?
+  company        String?
+  subject        String?
+  message        String           @db.Text
+  source         String           @default("contact-form")
+  status         SubmissionStatus @default(NEW)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 
   @@index([status])
+  @@index([organizationId])
+  @@index([organizationId, status])
   @@schema("cms")
 }
 

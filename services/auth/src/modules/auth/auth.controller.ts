@@ -9,6 +9,15 @@ import {
   UseGuards,
   UnauthorizedException,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiCookieAuth,
+  ApiBody,
+  ApiExcludeEndpoint,
+} from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -31,6 +40,7 @@ import * as jwt from 'jsonwebtoken';
 const EXCHANGE_CODE_RATE_LIMIT = 10; // 10 requests per minute
 const EXCHANGE_CODE_RATE_TTL = 60000; // 60 seconds
 
+@ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -106,6 +116,21 @@ export class AuthController {
     res.clearCookie('refresh_token', { ...clearOptions, path: '/' });
   }
 
+  @ApiOperation({
+    summary: 'Login',
+    description:
+      'Authenticate with email + password. Sets HttpOnly access_token and refresh_token cookies.',
+  })
+  @ApiBody({ type: LoginDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Authenticated successfully. Returns user profile + tokens.',
+  })
+  @ApiResponse({ status: 401, description: 'Invalid credentials.' })
+  @ApiResponse({
+    status: 429,
+    description: 'Rate limit exceeded (10 req/min).',
+  })
   @Post('login')
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   async login(
@@ -125,6 +150,21 @@ export class AuthController {
     };
   }
 
+  @ApiOperation({
+    summary: 'Register new user',
+    description:
+      'Create a new account. Rate-limited to 5 req/min to prevent spam.',
+  })
+  @ApiBody({ type: RegisterDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Account created. Returns user + tokens.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation error or email already in use.',
+  })
+  @ApiResponse({ status: 429, description: 'Rate limit exceeded.' })
   @Post('register')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   async register(
@@ -144,6 +184,11 @@ export class AuthController {
     };
   }
 
+  @ApiOperation({
+    summary: 'Logout',
+    description: 'Revoke refresh token and clear auth cookies.',
+  })
+  @ApiResponse({ status: 200, description: 'Logged out successfully.' })
   @Post('logout')
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const refreshTokenString = req.cookies?.refresh_token;
@@ -157,6 +202,17 @@ export class AuthController {
     return { success: true, message: 'Logged out successfully' };
   }
 
+  @ApiOperation({
+    summary: 'Refresh tokens',
+    description:
+      'Exchange a valid refresh_token (cookie or body) for new access + refresh tokens.',
+  })
+  @ApiBody({ type: RefreshDto, required: false })
+  @ApiResponse({ status: 200, description: 'New tokens issued.' })
+  @ApiResponse({
+    status: 401,
+    description: 'Refresh token invalid or expired.',
+  })
   @Post('refresh')
   @Throttle({ default: { limit: 30, ttl: 60000 } })
   async refresh(
@@ -199,6 +255,15 @@ export class AuthController {
     }
   }
 
+  @ApiOperation({
+    summary: 'Change password',
+    description: "Change the authenticated user's password.",
+  })
+  @ApiBearerAuth()
+  @ApiCookieAuth('access_token')
+  @ApiBody({ type: ChangePasswordDto })
+  @ApiResponse({ status: 200, description: 'Password changed.' })
+  @ApiResponse({ status: 401, description: 'Current password incorrect.' })
   @Patch('change-password')
   @UseGuards(JwtAuthGuard)
   async changePassword(
@@ -208,6 +273,14 @@ export class AuthController {
     return this.authService.changePassword(user.sub, dto);
   }
 
+  @ApiOperation({
+    summary: 'Get current user profile',
+    description: 'Returns the full user profile for the authenticated session.',
+  })
+  @ApiBearerAuth()
+  @ApiCookieAuth('access_token')
+  @ApiResponse({ status: 200, description: 'User profile returned.' })
+  @ApiResponse({ status: 401, description: 'Not authenticated.' })
   @Get('me')
   @UseGuards(JwtAuthGuard)
   async getMe(@CurrentUser() user: JwtPayload) {
@@ -215,6 +288,10 @@ export class AuthController {
     return { user: userProfile };
   }
 
+  @ApiOperation({ summary: 'Get user activity log' })
+  @ApiBearerAuth()
+  @ApiCookieAuth('access_token')
+  @ApiResponse({ status: 200, description: 'List of recent auth events.' })
   @Get('me/activity')
   @UseGuards(JwtAuthGuard)
   getMeActivity(@CurrentUser() user: JwtPayload): Promise<any[]> {
@@ -222,6 +299,17 @@ export class AuthController {
   }
 
   // Exchange Code Pattern for Cross-Domain Auth
+  @ApiOperation({
+    summary: 'Generate cross-domain exchange code',
+    description:
+      'Creates a short-lived one-time code to transfer session across subdomains.',
+  })
+  @ApiBearerAuth()
+  @ApiCookieAuth('access_token')
+  @ApiResponse({
+    status: 201,
+    description: 'Exchange code + redirect URL returned.',
+  })
   @Post('generate-exchange-code')
   @UseGuards(JwtAuthGuard)
   @Throttle({
@@ -241,6 +329,14 @@ export class AuthController {
     };
   }
 
+  @ApiOperation({
+    summary: 'Exchange code for session',
+    description:
+      'Exchanges a short-lived code (from generate-exchange-code) for access + refresh tokens.',
+  })
+  @ApiBody({ type: ExchangeCodeDto })
+  @ApiResponse({ status: 200, description: 'Tokens returned.' })
+  @ApiResponse({ status: 401, description: 'Code invalid or expired.' })
   @Post('exchange')
   @Throttle({
     default: { limit: EXCHANGE_CODE_RATE_LIMIT, ttl: EXCHANGE_CODE_RATE_TTL },

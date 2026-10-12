@@ -3,8 +3,10 @@ import {
   OnModuleInit,
   OnModuleDestroy,
   Logger,
+  Inject,
 } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
+import { RequestContextService } from '../../common/context/request-context.service';
 
 /**
  * Production-safe timeouts applied to every database connection.
@@ -38,7 +40,10 @@ export class PrismaService
 {
   private readonly logger = new Logger(PrismaService.name);
 
-  constructor() {
+  constructor(
+    @Inject(RequestContextService)
+    private readonly requestContext: RequestContextService,
+  ) {
     super({
       datasources: {
         db: {
@@ -50,6 +55,44 @@ export class PrismaService
           ? ['query', 'error', 'warn']
           : ['error'],
     });
+
+    this.$use(this.rlsMiddleware);
+  }
+
+  private async rlsMiddleware(
+    params: Prisma.MiddlewareParams,
+    next: (params: Prisma.MiddlewareParams) => Promise<any>,
+  ) {
+    // Skip RLS for internal Prisma raw operations
+    const rawActions = ['executeRaw', 'queryRaw', 'runCommandRaw'];
+    if (rawActions.includes(params.action)) {
+      return next(params);
+    }
+
+    const orgId = this.requestContext.getOrgId();
+    const bypassRls = this.requestContext.get<string>('bypassRls');
+
+    if (orgId) {
+      await this.$executeRawUnsafe(
+        `SET LOCAL app.current_org_id = ${this.escapeLiteral(orgId)};`,
+      );
+    } else if (bypassRls === 'on') {
+      await this.$executeRawUnsafe(`SET LOCAL app.bypass_rls = 'on';`);
+    }
+
+    try {
+      return await next(params);
+    } finally {
+      if (orgId) {
+        await this.$executeRawUnsafe(`RESET app.current_org_id;`);
+      } else if (bypassRls === 'on') {
+        await this.$executeRawUnsafe(`RESET app.bypass_rls;`);
+      }
+    }
+  }
+
+  private escapeLiteral(value: string): string {
+    return `'${value.replace(/'/g, "''")}'`;
   }
 
   async onModuleInit() {
