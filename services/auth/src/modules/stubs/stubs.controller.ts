@@ -58,15 +58,15 @@ export class StubsController {
   @Patch('crm/leads/:id/stage')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @RequirePermissions('crm:write')
-  moveLeadStage(@Param('id') id: string, @Body() body: any) {
-    return this.leadsService.moveStage(id, body.stage);
+  moveLeadStage(@Param('id') id: string, @Body() body: any, @CurrentUser() user: JwtPayload) {
+    return this.leadsService.moveStage(id, body.stage, user.orgId);
   }
 
   @Post('crm/leads/:id/convert')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @RequirePermissions('crm:write')
-  convertLead(@Param('id') id: string) {
-    return this.leadsService.convertToClient(id);
+  convertLead(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.leadsService.convertToClient(id, user.orgId);
   }
 
   // Billing

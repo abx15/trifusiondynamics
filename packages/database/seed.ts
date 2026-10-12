@@ -160,15 +160,14 @@ async function main() {
   }
 
   // 4b. Assign Organization-Level Permissions to admin Role
-  // Admin can manage users, roles, and settings within their organization only
-  // Note: developer:write and super_admin:all are EXCLUDED for admin role
+  // Admin can manage users, roles, settings, employees, clients, projects within their org
+  // EXCLUDED: super_admin:all, developer:write, hr:write, payroll:*, helpdesk:manage_*
   const adminPermissions = [
     'crm:read', 'crm:write',
     'billing:read', 'billing:write',
-    'hr:read', 'hr:write',
+    'hr:read',  // Can VIEW employees, attendance, leaves (not write)
     'projects:read', 'projects:write',
     'clients:read', 'clients:write',
-    'payroll:read', 'payroll:write',
     'helpdesk:read', 'helpdesk:write',
     'helpdesk:assign',
     'helpdesk:comment_internal',
@@ -177,55 +176,11 @@ async function main() {
     'helpdesk:reopen',
     'helpdesk:close',
     'helpdesk:escalate',
-    'helpdesk:manage_sla',
-    'helpdesk:manage_routing',
     'helpdesk:read_audit',
     'documents:read', 'documents:write',
     'ai:read', 'ai:write',
     'analytics:read', 'automation:read', 'automation:write',
     'developer:read',
-  ];
-  for (const action of adminPermissions) {
-    await safeRun(`Assign ${action} to admin`, () =>
-      prisma.rolePermission.upsert({
-        where: {
-          roleId_permissionId: {
-            roleId: dbRoles.admin.id,
-            permissionId: dbPermissions[action].id,
-          },
-        },
-        update: {},
-        create: {
-          roleId: dbRoles.admin.id,
-          permissionId: dbPermissions[action].id,
-        },
-      })
-    );
-  }
-
-  // 4b. Assign Organization-Level Permissions to admin Role
-  // Admin can manage users, roles, and settings within their organization only
-  const adminPermissions = [
-    'crm:read', 'crm:write',
-    'billing:read', 'billing:write',
-    'hr:read', 'hr:write',
-    'projects:read', 'projects:write',
-    'clients:read', 'clients:write',
-    'payroll:read', 'payroll:write',
-    'helpdesk:read', 'helpdesk:write',
-    'helpdesk:assign',
-    'helpdesk:comment_internal',
-    'helpdesk:submit_resolution',
-    'helpdesk:verify_resolution',
-    'helpdesk:reopen',
-    'helpdesk:close',
-    'helpdesk:escalate',
-    'helpdesk:manage_sla',
-    'helpdesk:manage_routing',
-    'helpdesk:read_audit',
-    'documents:read', 'documents:write',
-    'ai:read', 'ai:write',
-    'analytics:read', 'automation:read', 'automation:write',
   ];
   for (const action of adminPermissions) {
     await safeRun(`Assign ${action} to admin`, () =>
@@ -291,14 +246,19 @@ async function main() {
     );
   }
 
-  // `agent` coordinates tickets end to end and `employee` only works the tickets
-  // assigned to them. Neither role previously received any permission at all,
-  // which made the helpdesk unusable for them.
+  // `agent` coordinates tickets end to end and has org-wide overview dashboard.
+  // Can see all tickets, projects, clients, team status across the org.
   const agentPermissions = [
     'helpdesk:read', 'helpdesk:write', 'helpdesk:assign',
     'helpdesk:comment_internal', 'helpdesk:submit_resolution',
     'helpdesk:verify_resolution', 'helpdesk:reopen', 'helpdesk:close',
-    'helpdesk:escalate', 'projects:read', 'clients:read',
+    'helpdesk:escalate', 'helpdesk:manage_sla', 'helpdesk:manage_routing',
+    'helpdesk:read_audit',
+    'projects:read', 'projects:write',
+    'clients:read', 'clients:write',
+    'crm:read', 'crm:write',
+    'analytics:read',
+    'documents:read', 'documents:write',
   ];
   for (const action of agentPermissions) {
     await safeRun(`Assign ${action} to agent`, () =>
@@ -394,13 +354,6 @@ async function main() {
       where: { userId_roleId: { userId: configuredAdminUser.id, roleId: dbRoles.admin.id } },
       update: {},
       create: { userId: configuredAdminUser.id, roleId: dbRoles.admin.id },
-    })
-  );
-  await safeRun('Assign superadmin role to Configured Admin', () =>
-    prisma.userRole.upsert({
-      where: { userId_roleId: { userId: configuredAdminUser.id, roleId: dbRoles.superadmin.id } },
-      update: {},
-      create: { userId: configuredAdminUser.id, roleId: dbRoles.superadmin.id },
     })
   );
   console.log(`[SEED] Admin Account: ${configuredAdminEmail} | Password: [REDACTED - set via env]`);

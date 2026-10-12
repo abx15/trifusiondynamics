@@ -21,6 +21,8 @@ import {
   Loader2,
   CheckCircle2,
   Sparkles,
+  Building,
+  ChevronDown,
 } from "lucide-react";
 import { useAuthStore, getPrimaryRole, getRoleHomeRoute } from "@/lib/auth-store";
 import { apiClient } from "@/lib/api-client";
@@ -145,8 +147,32 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [organizations, setOrganizations] = useState<Array<{id: string, name: string, slug: string}>>([]);
+  const [selectedOrgId, setSelectedOrgId] = useState<string>("");
+  const [orgLoading, setOrgLoading] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const hasCheckedAuth = useRef(false);
+
+  // Fetch organizations on mount
+  useEffect(() => {
+    const fetchOrgs = async () => {
+      setOrgLoading(true);
+      try {
+        const response = await apiClient.get("/users/organizations/public");
+        if (response.data && Array.isArray(response.data)) {
+          setOrganizations(response.data);
+          if (response.data.length > 0) {
+            setSelectedOrgId(response.data[0].id);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch organizations:", err);
+      } finally {
+        setOrgLoading(false);
+      }
+    };
+    fetchOrgs();
+  }, []);
 
   // Read callbackUrl from URL on mount (avoids useSearchParams Suspense dependency)
   useEffect(() => {
@@ -355,6 +381,37 @@ export function LoginForm() {
             />
           </div>
         </div>
+
+        {/* Organization Selector */}
+        {organizations.length > 0 && (
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
+              Organization
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                <Building className="w-4 h-4" />
+              </div>
+              <select
+                value={selectedOrgId}
+                onChange={(e) => setSelectedOrgId(e.target.value)}
+                className="w-full pl-10 pr-10 py-2.5 bg-slate-900/90 border border-slate-800 rounded-xl text-sm text-slate-100 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-colors appearance-none cursor-pointer"
+                disabled={isLoading || orgLoading}
+              >
+                {orgLoading ? (
+                  <option value="" disabled>Loading organizations...</option>
+                ) : (
+                  organizations.map((org) => (
+                    <option key={org.id} value={org.id}>
+                      {org.name} ({org.slug})
+                    </option>
+                  ))
+                )}
+              </select>
+              <ChevronDown className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-500 pointer-events-none" />
+            </div>
+          </div>
+        )}
 
         <div>
           <div className="flex items-center justify-between mb-1.5">

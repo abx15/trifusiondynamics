@@ -71,6 +71,11 @@ export class UsersController {
     );
   }
 
+  @Get('organizations/public')
+  async listOrganizationsPublic() {
+    return this.usersService.listOrganizationsPublic();
+  }
+
   @Post('organizations')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @RequirePermission('hr:write')

@@ -19,6 +19,7 @@ import { TicketsModule } from './modules/helpdesk/tickets/tickets.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ClientsModule } from './modules/clients/clients/clients.module';
 import { OutboxModule } from './modules/developer/outbox/outbox.module';
+import { StubsModule } from './modules/stubs/stubs.module';
 import { GatewayModule } from './gateway/gateway.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -67,6 +68,7 @@ import { UserThrottlerGuard } from './common/guards/user-throttler.guard';
     BillingModule,
     ProjectsSubModule,
     ClientsModule,
+    StubsModule,
     HrModule,
     PayrollModule,
     AiModule,

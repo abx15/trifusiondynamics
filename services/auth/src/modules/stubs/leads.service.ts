@@ -220,18 +220,18 @@ export class LeadsService {
     );
   }
 
-  async moveStage(id: string, newStage: string) {
+  async moveStage(id: string, newStage: string, organizationId: string) {
     const lead = await this.prisma.lead.update({
-      where: { id },
+      where: { id, organizationId },
       data: { stage: this.normalizePipelineStage(newStage) },
     });
 
     return this.serializeLead(lead);
   }
 
-  async convertToClient(id: string) {
+  async convertToClient(id: string, organizationId: string) {
     const lead = await this.prisma.lead.update({
-      where: { id },
+      where: { id, organizationId },
       data: { stage: PipelineStage.WON },
     });
 

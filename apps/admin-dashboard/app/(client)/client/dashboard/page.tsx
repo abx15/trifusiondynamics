@@ -10,6 +10,7 @@ import { useAuthStore } from "@/lib/auth-store";
 export default function ClientDashboardPage() {
   const user = useAuthStore((state) => state.user);
   const clientId = user?.linkedClientId ?? undefined;
+  const orgName = user?.organization?.name || "Your Organization";
   const { data: projectsData, isLoading: projectsLoading } = useProjects({ clientId, limit: 10 });
   const { data: invoicesData, isLoading: invoicesLoading } = useInvoices({ status: "SENT", limit: 10 });
   const { data: ticketsData, isLoading: ticketsLoading } = useTickets({ limit: 10 });
@@ -27,14 +28,20 @@ export default function ClientDashboardPage() {
     <div className="space-y-8 max-w-7xl mx-auto">
       {/* Header Banner */}
       <div className="p-8 rounded-3xl bg-gradient-to-r from-purple-900/40 via-indigo-900/20 to-zinc-900 border border-purple-500/20 relative overflow-hidden">
-        <div className="relative z-10">
-          <span className="px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 text-xs font-semibold uppercase tracking-wider">
-            Client Portal Workspace
-          </span>
-          <h1 className="text-3xl font-extrabold text-white mt-3">Welcome to your Project Hub</h1>
-          <p className="mt-2 text-zinc-300 text-sm max-w-2xl">
-            Track real-time milestone progress, view open invoices, download deliverables, and raise priority support tickets.
-          </p>
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <span className="px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 text-xs font-semibold uppercase tracking-wider">
+              Client Portal Workspace
+            </span>
+            <h1 className="text-3xl font-extrabold text-white mt-3">Welcome to your Project Hub</h1>
+            <p className="mt-2 text-zinc-300 text-sm max-w-2xl">
+              Track real-time milestone progress, view open invoices, download deliverables, and raise priority support tickets.
+            </p>
+          </div>
+          <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-white/5 border border-white/10">
+            <span className="text-xs text-zinc-400">Organization:</span>
+            <span className="text-sm font-semibold text-white">{orgName}</span>
+          </div>
         </div>
       </div>
 

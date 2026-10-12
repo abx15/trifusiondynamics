@@ -73,6 +73,12 @@ export function Sidebar({ collapsed = false, setCollapsed, onItemClick }: Sideba
   const pathname = usePathname();
   const { user, isAdmin, isEmployee, hasPermission } = useAuth();
 
+  // Role checks
+  const isAgent = user?.roles?.some((r) => r === "agent") || false;
+  const isHrAgent = user?.roles?.some((r) => r === "hr_agent") || false;
+  const isSalesAgent = user?.roles?.some((r) => r === "sales_agent") || false;
+  const isSupportAgent = user?.roles?.some((r) => r === "support_agent") || false;
+
   const { data: inboxData } = useQuery({
     queryKey: ["leads-inbox-count"],
     queryFn: async () => {
@@ -86,7 +92,7 @@ export function Sidebar({ collapsed = false, setCollapsed, onItemClick }: Sideba
 
   const menuGroups: MenuGroup[] = [];
 
-  // 1. Overview Section
+  // 1. Overview Section - for Admin, Agent, and those with analytics:read
   const overviewItems: SidebarItem[] = [];
 
   if (isAdmin) {
@@ -115,7 +121,20 @@ export function Sidebar({ collapsed = false, setCollapsed, onItemClick }: Sideba
     );
   }
 
-  if (isAdmin || hasPermission("analytics:read")) {
+  // Agent Dashboard - shows org-wide overview
+  if (isAgent) {
+    overviewItems.push(
+      {
+        label: "Agent Dashboard",
+        href: "/agent/dashboard",
+        icon: LayoutDashboard,
+        active: pathname === "/agent/dashboard",
+        disabled: false,
+      }
+    );
+  }
+
+  if (isAdmin || isAgent || hasPermission("analytics:read")) {
     overviewItems.push({
       label: "Analytics",
       href: "/analytics",
@@ -132,8 +151,8 @@ export function Sidebar({ collapsed = false, setCollapsed, onItemClick }: Sideba
     });
   }
 
-  // 2. Employee Self-Service Section
-  if (isEmployee) {
+  // 2. Employee Self-Service Section - for employees and agents (who are also employees)
+  if (isEmployee || isAgent || isHrAgent || isSalesAgent || isSupportAgent) {
     menuGroups.push({
       label: "Employee Self-Service",
       items: [
@@ -165,7 +184,8 @@ export function Sidebar({ collapsed = false, setCollapsed, onItemClick }: Sideba
   // 3. Operations Section
   const operationsItems: SidebarItem[] = [];
 
-  if (isAdmin || hasPermission("crm:read")) {
+  // CRM - visible only to Sales Agent and those with crm:read permission
+  if (isSalesAgent || hasPermission("crm:read")) {
     operationsItems.push({
       label: "CRM",
       href: "/crm",
@@ -186,7 +206,7 @@ export function Sidebar({ collapsed = false, setCollapsed, onItemClick }: Sideba
     });
   }
 
-  if (isAdmin || hasPermission("clients:read")) {
+  if (hasPermission("clients:read")) {
     operationsItems.push({
       label: "Clients",
       href: "/clients",
@@ -196,7 +216,7 @@ export function Sidebar({ collapsed = false, setCollapsed, onItemClick }: Sideba
     });
   }
 
-  if (isAdmin || hasPermission("projects:read")) {
+  if (hasPermission("projects:read")) {
     operationsItems.push({
       label: "Projects",
       href: "/projects",
@@ -206,7 +226,7 @@ export function Sidebar({ collapsed = false, setCollapsed, onItemClick }: Sideba
     });
   }
 
-  if (isAdmin || hasPermission("billing:read")) {
+  if (hasPermission("billing:read")) {
     operationsItems.push({
       label: "Billing",
       href: "/billing/invoices",
@@ -222,7 +242,8 @@ export function Sidebar({ collapsed = false, setCollapsed, onItemClick }: Sideba
     });
   }
 
-  if (isAdmin || hasPermission("hr:read")) {
+  // HR Portal - visible only to HR Agent and those with hr:read permission
+  if (isHrAgent || hasPermission("hr:read")) {
     operationsItems.push({
       label: "HR Portal",
       href: "/hr/employees",
@@ -237,6 +258,7 @@ export function Sidebar({ collapsed = false, setCollapsed, onItemClick }: Sideba
     });
   }
 
+  // Payroll - only admin (not agent)
   if (isAdmin || hasPermission("payroll:read")) {
     operationsItems.push({
       label: "Payroll Management",
@@ -247,7 +269,8 @@ export function Sidebar({ collapsed = false, setCollapsed, onItemClick }: Sideba
     });
   }
 
-  if (isAdmin || hasPermission("helpdesk:read") || hasPermission("projects:read")) {
+  // Support Tickets - visible only to Support Agent and those with helpdesk:read or projects:read
+  if (isSupportAgent || hasPermission("helpdesk:read") || hasPermission("projects:read")) {
     operationsItems.push({
       label: "Support Tickets",
       href: "/tickets",
@@ -370,9 +393,16 @@ export function Sidebar({ collapsed = false, setCollapsed, onItemClick }: Sideba
             />
           </div>
           {!collapsed && (
-            <span className="font-display font-extrabold tracking-tight text-foreground text-sm uppercase">
-              Trifusion<span className="text-slate-500 font-normal">Ops</span>
-            </span>
+            <div className="flex flex-col leading-tight min-w-0">
+              <span className="font-display font-extrabold tracking-tight text-foreground text-sm uppercase truncate">
+                Trifusion<span className="text-slate-500 font-normal">Ops</span>
+              </span>
+              {user?.organization?.name && (
+                <span className="font-mono text-[10px] text-primary truncate">
+                  {user.organization.name}
+                </span>
+              )}
+            </div>
           )}
         </Link>
 

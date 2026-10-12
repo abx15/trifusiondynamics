@@ -435,6 +435,21 @@ export class UsersService {
     return paginatedResult(data, total, Math.floor(skip / take) + 1, take);
   }
 
+  async listOrganizationsPublic() {
+    const organizations = await this.prisma.organization.findMany({
+      where: { isActive: true },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        isActive: true,
+        createdAt: true,
+      },
+      orderBy: { name: 'asc' },
+    });
+    return organizations;
+  }
+
   async createOrganization(data: {
     name: string;
     slug: string;

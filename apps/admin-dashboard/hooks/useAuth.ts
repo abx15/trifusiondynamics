@@ -20,18 +20,17 @@ export function useAuth() {
         ["employee", "agent", "sales_agent", "support_agent", "hr_agent"].includes(
           role,
         ),
-      ) || isAdmin,
-    [user?.roles, isAdmin],
+      ) || false,
+    [user?.roles],
   );
 
   const hasPermission = useCallback(
     (action: string) => {
       if (!user) return false;
-      // Admins have wildcard access to everything
-      if (isAdmin) return true;
+      // Check actual permissions from JWT - admins only get their assigned permissions
       return user.permissions?.includes(action) || false;
     },
-    [user, isAdmin],
+    [user],
   );
 
   return {
