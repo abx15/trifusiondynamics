@@ -56,7 +56,7 @@ export class PrismaService
           : ['error'],
     });
 
-    this.$use(this.rlsMiddleware);
+    this.$use((params, next) => this.rlsMiddleware(params, next));
   }
 
   private async rlsMiddleware(

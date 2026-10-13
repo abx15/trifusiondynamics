@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer, RequestMethod } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DatabaseModule } from './modules/database/database.module';
@@ -24,7 +24,7 @@ import { GatewayModule } from './gateway/gateway.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { APP_GUARD, APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR, APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { ApiLoggingInterceptor } from './gateway/interceptors/api-logging.interceptor';
 import { BigIntSafeInterceptor } from './gateway/interceptors/bigint-safe.interceptor';
 import { AllExceptionsFilter } from './gateway/filters/http-exception.filter';
@@ -34,6 +34,9 @@ import { RedisModule } from './modules/database/redis.module';
 import { RedisThrottlerStorage } from './modules/database/redis-throttler.storage';
 import { RateLimitModule } from './modules/database/rate-limit.module';
 import { UserThrottlerGuard } from './common/guards/user-throttler.guard';
+import { ValidationModule } from './validation/validation.module';
+import { ZodValidationPipe } from './validation/zod-validation.pipe';
+import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
 import { RequestContextInterceptor } from './common/context/request-context.interceptor';
 
 @Module({
@@ -83,6 +86,7 @@ import { RequestContextInterceptor } from './common/context/request-context.inte
     NotificationsModule,
     OutboxModule,
     GatewayModule,
+    ValidationModule,
   ],
   controllers: [AppController],
   providers: [
@@ -109,4 +113,8 @@ import { RequestContextInterceptor } from './common/context/request-context.inte
     },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(CorrelationIdMiddleware).forRoutes({ path: '*', method: RequestMethod.ALL });
+  }
+}

@@ -15,7 +15,9 @@ import { Logger } from 'nestjs-pino';
 import * as Sentry from '@sentry/node';
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { getOpenApiDocumentation } from './common/swagger/openapi';
 import { ValidationPipe } from '@nestjs/common';
+import { ZodValidationPipe } from './validation/zod-validation.pipe';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import dns from 'dns';
@@ -104,6 +106,7 @@ async function bootstrap() {
       forbidNonWhitelisted: false,
       transform: true,
     }),
+    new ZodValidationPipe(),
   );
 
   // CORS — allow all known frontends with credentials
@@ -134,17 +137,21 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
   });
 
-  // Swagger
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('Trifusion-Dynamics Auth Service')
-    .setDescription('Auth API with HttpOnly cookie-based JWT authentication')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .addCookieAuth('access_token')
-    .build();
-  const documentFactory = () =>
-    SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('api/docs', app, documentFactory);
+  // Swagger (OpenAPI 3.1 + Scalar/Redoc support)
+  try {
+    const document = getOpenApiDocumentation(app);
+    SwaggerModule.setup('api/docs', app, document);
+  } catch (e) {
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('Trifusion-Dynamics Auth Service')
+      .setDescription('Auth API with HttpOnly cookie-based JWT authentication')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .addCookieAuth('access_token')
+      .build();
+    const documentFactory = () => SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup('api/docs', app, documentFactory);
+  }
 
   // Graceful shutdown: stop accepting new work, let in-flight requests finish,
   // then close database connections and exit.
@@ -169,3 +176,7 @@ async function bootstrap() {
   process.on('SIGINT', () => void shutdown('SIGINT'));
 }
 bootstrap();
+
+
+
+

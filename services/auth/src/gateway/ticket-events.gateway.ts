@@ -127,19 +127,17 @@ export class TicketEventsGateway implements OnModuleInit, OnModuleDestroy {
             ? (data as any).id
             : null;
 
+      if (!ticketId) {
+        return;
+      }
+
       const message = JSON.stringify({
         type: envelope.eventType,
         data: envelope,
         timestamp: Date.now(),
       });
 
-      if (ticketId) {
-        this.broadcast(`ticket:${ticketId}`, message);
-      }
-
-      if (envelope.organizationId) {
-        this.broadcast(`org:${envelope.organizationId}`, message);
-      }
+      this.broadcast(`ticket:${ticketId}`, message);
 
       this.broadcast('super_admin', message);
 

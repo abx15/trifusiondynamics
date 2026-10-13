@@ -118,7 +118,7 @@ describe('OutboxProcessorService', () => {
       expect(recovered).toBe(3);
       const sql = String(prismaMock.$executeRaw.mock.calls[0][0]);
       expect(sql).toContain("status = 'PENDING'");
-      expect(sql).toContain('lockedAt <');
+      expect(sql).toContain('"lockedAt" <');
       // A Date parameter is passed for the cutoff —
       // never string-concatenated.
       const cutoff = prismaMock.$executeRaw.mock.calls[0][1];
