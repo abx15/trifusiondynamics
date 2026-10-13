@@ -127,11 +127,11 @@ export class OutboxProcessorService {
     const result = await this.prisma.$executeRaw`
       UPDATE outbox."OutboxEvent"
       SET status = 'PENDING',
-          lockedAt = NULL,
-          lockedBy = NULL
+          "lockedAt" = NULL,
+          "lockedBy" = NULL
       WHERE status = 'PROCESSING'
-        AND lockedAt IS NOT NULL
-        AND lockedAt < ${cutoff}
+        AND "lockedAt" IS NOT NULL
+        AND "lockedAt" < ${cutoff}
     `;
     return Number(result);
   }
@@ -153,15 +153,15 @@ export class OutboxProcessorService {
       UPDATE outbox."OutboxEvent" AS evt
       SET status = 'PROCESSING',
           attempts = evt.attempts + 1,
-          lockedAt = now(),
-          lockedBy = ${this.processorId},
-          lastError = NULL
+          "lockedAt" = now(),
+          "lockedBy" = ${this.processorId},
+          "lastError" = NULL
       WHERE evt.id IN (
         SELECT sub.id
         FROM outbox."OutboxEvent" AS sub
         WHERE sub.status = 'PENDING'
-          AND sub.nextAttemptAt <= now()
-        ORDER BY sub.nextAttemptAt ASC, sub.id ASC
+          AND "nextAttemptAt" <= now()
+        ORDER BY sub."nextAttemptAt" ASC, sub.id ASC
         LIMIT ${limit}
         FOR UPDATE SKIP LOCKED
       )

@@ -212,6 +212,8 @@ importers:
         specifier: ^5.4.5
         version: 5.9.3
 
+  services/ai-service: {}
+
   services/auth:
     dependencies:
       '@agency-os/database':
@@ -310,6 +312,9 @@ importers:
       ws:
         specifier: 8.22.0
         version: 8.22.0
+      zod:
+        specifier: ^3.24.0
+        version: 3.25.76
     devDependencies:
       '@eslint/eslintrc':
         specifier: ^3.2.0
@@ -6048,6 +6053,9 @@ packages:
     engines: {node: '>=18.0.0'}
     peerDependencies:
       zod: ^3.25.0 || ^4.0.0
+
+  zod@3.25.76:
+    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
   zod@4.4.3:
     resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
@@ -12625,6 +12633,8 @@ snapshots:
   zod-validation-error@4.0.2(zod@4.4.3):
     dependencies:
       zod: 4.4.3
+
+  zod@3.25.76: {}
 
   zod@4.4.3: {}
 

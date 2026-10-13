@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
-import { RequestContextService } from '../context/request-context.service';
+import { RequestContextService } from './request-context.service';
 
 @Injectable()
 export class RequestContextInterceptor implements NestInterceptor {
@@ -29,3 +29,4 @@ export class RequestContextInterceptor implements NestInterceptor {
     );
   }
 }
+
