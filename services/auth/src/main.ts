@@ -21,8 +21,10 @@ import { ZodValidationPipe } from './validation/zod-validation.pipe';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import dns from 'dns';
-import { json, urlencoded } from 'express';
+import { json, urlencoded, Request, Response, NextFunction } from 'express';
 import { randomUUID } from 'crypto';
+import { apiReference } from '@scalar/express-api-reference';
+import redoc from 'redoc-express';
 
 // Configure DNS to Google Public DNS for better connectivity
 try {
@@ -137,10 +139,11 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
   });
 
-  // Swagger (OpenAPI 3.1 + Scalar/Redoc support)
+  // Swagger (OpenAPI 3.1)
+  let openApiDocument: any;
   try {
-    const document = getOpenApiDocumentation(app);
-    SwaggerModule.setup('api/docs', app, document);
+    openApiDocument = getOpenApiDocumentation(app);
+    SwaggerModule.setup('api/docs', app, openApiDocument);
   } catch (e) {
     const swaggerConfig = new DocumentBuilder()
       .setTitle('Trifusion-Dynamics Auth Service')
@@ -149,9 +152,73 @@ async function bootstrap() {
       .addBearerAuth()
       .addCookieAuth('access_token')
       .build();
-    const documentFactory = () => SwaggerModule.createDocument(app, swaggerConfig);
+    const documentFactory = () =>
+      SwaggerModule.createDocument(app, swaggerConfig);
+    openApiDocument = documentFactory();
     SwaggerModule.setup('api/docs', app, documentFactory);
   }
+
+  // Scalar API Reference (modern, fast alternative to Swagger UI)
+  app.use(
+    '/api/docs/scalar',
+    apiReference({
+      spec: {
+        content: openApiDocument,
+      },
+      theme: 'kepler',
+      layout: 'modern',
+      hideDownloadButton: false,
+      hideClientButton: false,
+      defaultHttpClient: {
+        targetKey: 'node',
+        clientKey: 'axios',
+      },
+    }),
+  );
+
+  // Redoc UI (three-panel layout)
+  app.use(
+    '/api/docs/redoc',
+    redoc({
+      specUrl: '/api/docs-json',
+      title: 'Auth Service API - Redoc',
+      redocOptions: {
+        theme: {
+          colors: {
+            primary: {
+              main: '#1a73e8',
+            },
+          },
+          typography: {
+            fontFamily:
+              '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+            fontSize: '14px',
+            lineHeight: '1.5',
+            code: {
+              fontSize: '13px',
+              fontFamily: '"Fira Code", "Monaco", "Consolas", monospace',
+            },
+          },
+          sidebar: {
+            backgroundColor: '#f8f9fa',
+          },
+        },
+        expandResponses: '200,201',
+        hideDownloadButton: false,
+        hideHostname: false,
+        pathInMiddlePanel: true,
+        requiredPropsFirst: true,
+        scrollYOffset: 60,
+        showExtensions: true,
+      },
+    }),
+  );
+
+  // Serve OpenAPI JSON spec for Redoc
+  app.use('/api/docs-json', (req: Request, res: Response) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.send(JSON.stringify(openApiDocument, null, 2));
+  });
 
   // Graceful shutdown: stop accepting new work, let in-flight requests finish,
   // then close database connections and exit.
@@ -160,6 +227,10 @@ async function bootstrap() {
   const port = parseInt(process.env.PORT || '8000', 10);
   await app.listen(port);
   console.log(`🚀 Auth API running on port ${port}`);
+  console.log(`📚 API Documentation:`);
+  console.log(`   Swagger UI: http://localhost:${port}/api/docs`);
+  console.log(`   Scalar UI:  http://localhost:${port}/api/docs/scalar`);
+  console.log(`   Redoc UI:   http://localhost:${port}/api/docs/redoc`);
 
   const shutdown = async (signal: string) => {
     console.warn(`Received ${signal}, shutting down gracefully...`);
@@ -176,7 +247,3 @@ async function bootstrap() {
   process.on('SIGINT', () => void shutdown('SIGINT'));
 }
 bootstrap();
-
-
-
-

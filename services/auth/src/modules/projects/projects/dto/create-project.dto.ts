@@ -5,6 +5,8 @@ import {
   IsNumber,
   IsDateString,
 } from 'class-validator';
+import { z } from 'zod';
+import { CreateProjectSchema } from '../../../../validation/schemas';
 
 export class CreateProjectDto {
   @IsString()
@@ -31,3 +33,6 @@ export class CreateProjectDto {
   @IsOptional()
   budget?: number;
 }
+
+export { CreateProjectSchema };
+export type CreateProjectInput = z.infer<typeof CreateProjectSchema>;

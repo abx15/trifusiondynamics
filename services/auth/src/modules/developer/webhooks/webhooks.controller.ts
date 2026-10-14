@@ -14,7 +14,9 @@ import { CreateWebhookDto } from './dto/create-webhook.dto';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { RequirePermissions } from '../../auth/decorators/permissions.decorator';
-import { Throttle } from '@nestjs/throttler';
+import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import { type JwtPayload } from '@agency-os/types';
+import { AdaptiveThrottle } from '../../../common/decorators/adaptive-throttle.decorator';
 
 @Controller('developer/webhooks')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -23,23 +25,34 @@ export class WebhooksController {
 
   @Post()
   @RequirePermissions('developer:write')
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
-  create(@Req() req, @Body() createWebhookDto: CreateWebhookDto) {
-    return this.webhooksService.create(
-      req.user.organizationId,
-      createWebhookDto,
-    );
+  @AdaptiveThrottle({
+    limit: 10,
+    ttl: 60000,
+    category: 'write',
+    roleMultipliers: { admin: 2, super_admin: 5 },
+  })
+  create(
+    @CurrentUser() user: JwtPayload,
+    @Body() createWebhookDto: CreateWebhookDto,
+  ) {
+    return this.webhooksService.create(user.orgId, createWebhookDto);
   }
 
   @Get()
   @RequirePermissions('developer:read')
+  @AdaptiveThrottle({
+    limit: 100,
+    ttl: 60000,
+    category: 'read',
+    roleMultipliers: { admin: 2, super_admin: 5 },
+  })
   findAll(
-    @Req() req,
+    @CurrentUser() user: JwtPayload,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
     return this.webhooksService.findAll(
-      req.user.organizationId,
+      user.orgId,
       page ? parseInt(page, 10) : undefined,
       limit ? parseInt(limit, 10) : undefined,
     );
@@ -47,13 +60,25 @@ export class WebhooksController {
 
   @Patch(':id/toggle')
   @RequirePermissions('developer:write')
-  toggleActive(@Req() req, @Param('id') id: string) {
-    return this.webhooksService.toggleActive(req.user.organizationId, id);
+  @AdaptiveThrottle({
+    limit: 50,
+    ttl: 60000,
+    category: 'write',
+    roleMultipliers: { admin: 2, super_admin: 5 },
+  })
+  toggleActive(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
+    return this.webhooksService.toggleActive(user.orgId, id);
   }
 
   @Get(':id/deliveries')
   @RequirePermissions('developer:read')
-  getDeliveries(@Req() req, @Param('id') id: string) {
-    return this.webhooksService.getDeliveries(req.user.organizationId, id);
+  @AdaptiveThrottle({
+    limit: 100,
+    ttl: 60000,
+    category: 'read',
+    roleMultipliers: { admin: 2, super_admin: 5 },
+  })
+  getDeliveries(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
+    return this.webhooksService.getDeliveries(user.orgId, id);
   }
 }

@@ -17,7 +17,7 @@ import { RequirePermission } from '../../../common/decorators/require-permission
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { type JwtPayload } from '@agency-os/types';
 import { PrismaService } from '../../database/prisma.service';
-import { Throttle } from '@nestjs/throttler';
+import { AdaptiveThrottle } from '../../../common/decorators/adaptive-throttle.decorator';
 
 @Controller('payroll/payslips')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -29,7 +29,12 @@ export class PayslipsController {
 
   @Post('generate-bulk')
   @RequirePermission('payroll:write')
-  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @AdaptiveThrottle({
+    limit: 3,
+    ttl: 60000,
+    category: 'admin',
+    roleMultipliers: { admin: 5, super_admin: 10 },
+  })
   generateBulk(
     @Body('month') month: number,
     @Body('year') year: number,
@@ -43,6 +48,12 @@ export class PayslipsController {
   }
 
   @Get()
+  @AdaptiveThrottle({
+    limit: 100,
+    ttl: 60000,
+    category: 'read',
+    roleMultipliers: { admin: 2, super_admin: 5 },
+  })
   async findAll(
     @CurrentUser() user: JwtPayload,
     @Query('employeeId') employeeId?: string,
@@ -79,6 +90,12 @@ export class PayslipsController {
   }
 
   @Get(':id')
+  @AdaptiveThrottle({
+    limit: 100,
+    ttl: 60000,
+    category: 'read',
+    roleMultipliers: { admin: 2, super_admin: 5 },
+  })
   async findOne(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     const payslip = await this.payslipsService.findOne(id, user.orgId);
     const hasPayrollRead = user.permissions.includes('payroll:read');
@@ -98,6 +115,12 @@ export class PayslipsController {
 
   @Patch(':id/pay')
   @RequirePermission('payroll:write')
+  @AdaptiveThrottle({
+    limit: 50,
+    ttl: 60000,
+    category: 'write',
+    roleMultipliers: { admin: 2, super_admin: 5 },
+  })
   markAsPaid(@Param('id') id: string, @CurrentUser('orgId') orgId: string) {
     return this.payslipsService.markAsPaid(id, orgId);
   }

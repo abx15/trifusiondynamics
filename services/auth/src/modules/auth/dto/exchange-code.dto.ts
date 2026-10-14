@@ -1,4 +1,9 @@
 import { IsNotEmpty, IsString } from 'class-validator';
+import { z } from 'zod';
+import {
+  ExchangeCodeSchema,
+  GenerateExchangeCodeSchema,
+} from '../../../validation/schemas';
 
 export class ExchangeCodeDto {
   @IsNotEmpty()
@@ -11,3 +16,9 @@ export class GenerateExchangeCodeDto {
   @IsString()
   redirectUrl!: string;
 }
+
+export { ExchangeCodeSchema, GenerateExchangeCodeSchema };
+export type ExchangeCodeInput = z.infer<typeof ExchangeCodeSchema>;
+export type GenerateExchangeCodeInput = z.infer<
+  typeof GenerateExchangeCodeSchema
+>;

@@ -20,6 +20,25 @@ import {
   TicketSource,
   TicketType,
 } from '@prisma/client';
+import { z } from 'zod';
+import {
+  CreateTicketSchema,
+  UpdateTicketSchema,
+  TicketAssignmentInputSchema,
+  AssignTicketSchema,
+  UnassignTicketSchema,
+  AddCommentSchema,
+  AddAttachmentSchema,
+  SubmitResolutionSchema,
+  VerifyResolutionSchema,
+  ReopenTicketSchema,
+  CloseTicketSchema,
+  CloseOverrideSchema,
+  CancelTicketSchema,
+  EscalateTicketSchema,
+  ClearEscalationSchema,
+  TicketQuerySchema,
+} from '../../../../validation/schemas';
 
 export class CreateTicketDto {
   @IsNotEmpty()
@@ -318,3 +337,39 @@ export class TicketQueryDto {
   @Max(100)
   limit?: number;
 }
+
+export {
+  CreateTicketSchema,
+  UpdateTicketSchema,
+  TicketAssignmentInputSchema,
+  AssignTicketSchema,
+  UnassignTicketSchema,
+  AddCommentSchema,
+  AddAttachmentSchema,
+  SubmitResolutionSchema,
+  VerifyResolutionSchema,
+  ReopenTicketSchema,
+  CloseTicketSchema,
+  CloseOverrideSchema,
+  CancelTicketSchema,
+  EscalateTicketSchema,
+  ClearEscalationSchema,
+  TicketQuerySchema,
+};
+
+export type CreateTicketInput = z.infer<typeof CreateTicketSchema>;
+export type UpdateTicketInput = z.infer<typeof UpdateTicketSchema>;
+export type TicketAssignmentInput = z.infer<typeof TicketAssignmentInputSchema>;
+export type AssignTicketInput = z.infer<typeof AssignTicketSchema>;
+export type UnassignTicketInput = z.infer<typeof UnassignTicketSchema>;
+export type AddCommentInput = z.infer<typeof AddCommentSchema>;
+export type AddAttachmentInput = z.infer<typeof AddAttachmentSchema>;
+export type SubmitResolutionInput = z.infer<typeof SubmitResolutionSchema>;
+export type VerifyResolutionInput = z.infer<typeof VerifyResolutionSchema>;
+export type ReopenTicketInput = z.infer<typeof ReopenTicketSchema>;
+export type CloseTicketInput = z.infer<typeof CloseTicketSchema>;
+export type CloseOverrideInput = z.infer<typeof CloseOverrideSchema>;
+export type CancelTicketInput = z.infer<typeof CancelTicketSchema>;
+export type EscalateTicketInput = z.infer<typeof EscalateTicketSchema>;
+export type ClearEscalationInput = z.infer<typeof ClearEscalationSchema>;
+export type TicketQueryInput = z.infer<typeof TicketQuerySchema>;

@@ -15,7 +15,9 @@ import { UpdateWorkflowDto } from './dto/update-workflow.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { Throttle } from '@nestjs/throttler';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { type JwtPayload } from '@agency-os/types';
+import { AdaptiveThrottle } from '../../common/decorators/adaptive-throttle.decorator';
 
 @Controller('automation')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -24,23 +26,34 @@ export class AutomationController {
 
   @Post('workflows')
   @RequirePermissions('automation:write')
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
-  create(@Req() req, @Body() createWorkflowDto: CreateWorkflowDto) {
-    return this.automationService.create(
-      req.user.organizationId,
-      createWorkflowDto,
-    );
+  @AdaptiveThrottle({
+    limit: 10,
+    ttl: 60000,
+    category: 'write',
+    roleMultipliers: { admin: 2, super_admin: 5 },
+  })
+  create(
+    @CurrentUser() user: JwtPayload,
+    @Body() createWorkflowDto: CreateWorkflowDto,
+  ) {
+    return this.automationService.create(user.orgId, createWorkflowDto);
   }
 
   @Get('workflows')
   @RequirePermissions('automation:read')
+  @AdaptiveThrottle({
+    limit: 100,
+    ttl: 60000,
+    category: 'read',
+    roleMultipliers: { admin: 2, super_admin: 5 },
+  })
   findAll(
-    @Req() req,
+    @CurrentUser() user: JwtPayload,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
     return this.automationService.findAll(
-      req.user.organizationId,
+      user.orgId,
       page ? parseInt(page, 10) : undefined,
       limit ? parseInt(limit, 10) : undefined,
     );
@@ -48,47 +61,73 @@ export class AutomationController {
 
   @Get('workflows/:id')
   @RequirePermissions('automation:read')
-  findOne(@Req() req, @Param('id') id: string) {
-    return this.automationService.findOne(req.user.organizationId, id);
+  @AdaptiveThrottle({
+    limit: 100,
+    ttl: 60000,
+    category: 'read',
+    roleMultipliers: { admin: 2, super_admin: 5 },
+  })
+  findOne(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
+    return this.automationService.findOne(user.orgId, id);
   }
 
   @Patch('workflows/:id')
   @RequirePermissions('automation:write')
+  @AdaptiveThrottle({
+    limit: 50,
+    ttl: 60000,
+    category: 'write',
+    roleMultipliers: { admin: 2, super_admin: 5 },
+  })
   update(
-    @Req() req,
+    @CurrentUser() user: JwtPayload,
     @Param('id') id: string,
     @Body() updateWorkflowDto: UpdateWorkflowDto,
   ) {
-    return this.automationService.update(
-      req.user.organizationId,
-      id,
-      updateWorkflowDto,
-    );
+    return this.automationService.update(user.orgId, id, updateWorkflowDto);
   }
 
   @Patch('workflows/:id/toggle')
   @RequirePermissions('automation:write')
-  toggleActive(@Req() req, @Param('id') id: string) {
-    return this.automationService.toggleActive(req.user.organizationId, id);
+  @AdaptiveThrottle({
+    limit: 50,
+    ttl: 60000,
+    category: 'write',
+    roleMultipliers: { admin: 2, super_admin: 5 },
+  })
+  toggleActive(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
+    return this.automationService.toggleActive(user.orgId, id);
   }
 
   @Post('workflows/:id/trigger')
   @RequirePermissions('automation:write')
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
-  triggerManual(@Req() req, @Param('id') id: string) {
-    return this.automationService.triggerManual(req.user.organizationId, id);
+  @AdaptiveThrottle({
+    limit: 10,
+    ttl: 60000,
+    category: 'write',
+    roleMultipliers: { admin: 2, super_admin: 5 },
+    burst: 2,
+  })
+  triggerManual(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
+    return this.automationService.triggerManual(user.orgId, id);
   }
 
   @Get('workflows/:id/runs')
   @RequirePermissions('automation:read')
+  @AdaptiveThrottle({
+    limit: 100,
+    ttl: 60000,
+    category: 'read',
+    roleMultipliers: { admin: 2, super_admin: 5 },
+  })
   getRuns(
-    @Req() req,
+    @CurrentUser() user: JwtPayload,
     @Param('id') id: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
     return this.automationService.getRuns(
-      req.user.organizationId,
+      user.orgId,
       id,
       page ? parseInt(page, 10) : undefined,
       limit ? parseInt(limit, 10) : undefined,
