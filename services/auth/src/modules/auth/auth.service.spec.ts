@@ -8,6 +8,7 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import * as bcrypt from 'bcryptjs';
 import { RedisService } from '../database/redis.service';
 import { RateLimitService } from '../database/rate-limit.service';
+import { SecretsService } from '../secrets/secrets.service';
 
 jest.mock('@agency-os/database', () => ({
   authActivityLogRepository: {

@@ -12,7 +12,6 @@ import {
   NotFoundException,
   Logger,
 } from '@nestjs/common';
-import { Throttle } from '@nestjs/throttler';
 import { EmployeesService } from './employees.service';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
@@ -25,6 +24,7 @@ import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { type JwtPayload } from '@agency-os/types';
 import { EmployeeStatus } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
+import { AdaptiveThrottle } from '../../../common/decorators/adaptive-throttle.decorator';
 
 @Controller('hr/employees')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -38,12 +38,24 @@ export class EmployeesController {
 
   @Post()
   @RequirePermission('hr:write')
+  @AdaptiveThrottle({
+    limit: 50,
+    ttl: 60000,
+    category: 'write',
+    roleMultipliers: { admin: 2, super_admin: 5 },
+  })
   create(@Body() dto: CreateEmployeeDto, @CurrentUser('orgId') orgId: string) {
     return this.employeesService.create(dto, orgId);
   }
 
   @Get()
   @RequirePermission('hr:read')
+  @AdaptiveThrottle({
+    limit: 100,
+    ttl: 60000,
+    category: 'read',
+    roleMultipliers: { admin: 2, super_admin: 5 },
+  })
   findAll(
     @CurrentUser('orgId') orgId: string,
     @Query('department') department?: string,
@@ -61,17 +73,35 @@ export class EmployeesController {
   }
 
   @Get('me')
+  @AdaptiveThrottle({
+    limit: 100,
+    ttl: 60000,
+    category: 'read',
+    roleMultipliers: { admin: 2, super_admin: 5 },
+  })
   async findMe(@CurrentUser() user: JwtPayload) {
     return this.employeesService.findByUserId(user.sub, user.orgId);
   }
 
   @Get('users')
   @RequirePermission('hr:write')
+  @AdaptiveThrottle({
+    limit: 100,
+    ttl: 60000,
+    category: 'read',
+    roleMultipliers: { admin: 2, super_admin: 5 },
+  })
   async findUsersToLink(@CurrentUser('orgId') orgId: string) {
     return this.employeesService.findUsersToLink(orgId);
   }
 
   @Get(':id')
+  @AdaptiveThrottle({
+    limit: 100,
+    ttl: 60000,
+    category: 'read',
+    roleMultipliers: { admin: 2, super_admin: 5 },
+  })
   async findOne(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     const employee = await this.employeesService.findOne(id, user.orgId);
 
@@ -90,6 +120,12 @@ export class EmployeesController {
 
   @Patch(':id')
   @RequirePermission('hr:write')
+  @AdaptiveThrottle({
+    limit: 50,
+    ttl: 60000,
+    category: 'write',
+    roleMultipliers: { admin: 2, super_admin: 5 },
+  })
   update(
     @Param('id') id: string,
     @Body() dto: UpdateEmployeeDto,
@@ -101,6 +137,12 @@ export class EmployeesController {
   // Document management endpoints
   @Post(':employeeId/documents')
   @RequirePermission('hr:write')
+  @AdaptiveThrottle({
+    limit: 50,
+    ttl: 60000,
+    category: 'write',
+    roleMultipliers: { admin: 2, super_admin: 5 },
+  })
   async addDocument(
     @Param('employeeId') employeeId: string,
     @Body() dto: CreateEmployeeDocumentDto,
@@ -125,6 +167,12 @@ export class EmployeesController {
 
   @Patch(':employeeId/documents/:documentId')
   @RequirePermission('hr:write')
+  @AdaptiveThrottle({
+    limit: 50,
+    ttl: 60000,
+    category: 'write',
+    roleMultipliers: { admin: 2, super_admin: 5 },
+  })
   async updateDocument(
     @Param('employeeId') employeeId: string,
     @Param('documentId') documentId: string,
@@ -155,6 +203,12 @@ export class EmployeesController {
 
   @Delete(':employeeId/documents/:documentId')
   @RequirePermission('hr:write')
+  @AdaptiveThrottle({
+    limit: 50,
+    ttl: 60000,
+    category: 'write',
+    roleMultipliers: { admin: 2, super_admin: 5 },
+  })
   async deleteDocument(
     @Param('employeeId') employeeId: string,
     @Param('documentId') documentId: string,
@@ -184,7 +238,12 @@ export class EmployeesController {
   }
 
   @Get(':employeeId/documents/:documentId/download')
-  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @AdaptiveThrottle({
+    limit: 30,
+    ttl: 60000,
+    category: 'read',
+    roleMultipliers: { admin: 2, super_admin: 5 },
+  })
   async downloadDocument(
     @Param('employeeId') employeeId: string,
     @Param('documentId') documentId: string,

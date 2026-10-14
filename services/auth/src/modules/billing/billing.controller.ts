@@ -5,6 +5,7 @@ import { RequirePermission } from '../../common/decorators/require-permission.de
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { type JwtPayload } from '@agency-os/types';
 import { BillingService } from './billing.service';
+import { AdaptiveThrottle } from '../../common/decorators/adaptive-throttle.decorator';
 
 @Controller('billing')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -13,6 +14,12 @@ export class BillingController {
 
   @Get('finance/summary')
   @RequirePermission('billing:read')
+  @AdaptiveThrottle({
+    limit: 100,
+    ttl: 60000,
+    category: 'read',
+    roleMultipliers: { admin: 2, super_admin: 5 },
+  })
   async getFinanceSummary(
     @CurrentUser() user: JwtPayload,
     @Query('year') year?: string,

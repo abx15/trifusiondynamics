@@ -1,4 +1,9 @@
-import { Module, NestModule, MiddlewareConsumer, RequestMethod } from '@nestjs/common';
+import {
+  Module,
+  NestModule,
+  MiddlewareConsumer,
+  RequestMethod,
+} from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DatabaseModule } from './modules/database/database.module';
@@ -21,6 +26,7 @@ import { ClientsModule } from './modules/clients/clients/clients.module';
 import { OutboxModule } from './modules/developer/outbox/outbox.module';
 import { StubsModule } from './modules/stubs/stubs.module';
 import { GatewayModule } from './gateway/gateway.module';
+import { SecretsModule } from './modules/secrets/secrets.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -38,6 +44,11 @@ import { ValidationModule } from './validation/validation.module';
 import { ZodValidationPipe } from './validation/zod-validation.pipe';
 import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
 import { RequestContextInterceptor } from './common/context/request-context.interceptor';
+import { Reflector } from '@nestjs/core';
+import {
+  InjectThrottlerOptions,
+  InjectThrottlerStorage,
+} from '@nestjs/throttler';
 
 @Module({
   imports: [
@@ -87,13 +98,17 @@ import { RequestContextInterceptor } from './common/context/request-context.inte
     OutboxModule,
     GatewayModule,
     ValidationModule,
+    SecretsModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
+    Reflector,
     {
       provide: APP_GUARD,
-      useClass: UserThrottlerGuard,
+      useFactory: (options: any, storage: any, reflector: Reflector) =>
+        new UserThrottlerGuard(options, storage, reflector),
+      inject: [InjectThrottlerOptions, InjectThrottlerStorage, Reflector],
     },
     {
       provide: APP_INTERCEPTOR,
@@ -115,6 +130,8 @@ import { RequestContextInterceptor } from './common/context/request-context.inte
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(CorrelationIdMiddleware).forRoutes({ path: '*', method: RequestMethod.ALL });
+    consumer
+      .apply(CorrelationIdMiddleware)
+      .forRoutes({ path: '*', method: RequestMethod.ALL });
   }
 }

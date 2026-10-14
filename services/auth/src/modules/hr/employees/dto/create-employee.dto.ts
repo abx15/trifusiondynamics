@@ -6,6 +6,8 @@ import {
   IsDateString,
 } from 'class-validator';
 import { EmploymentType } from '@prisma/client';
+import { z } from 'zod';
+import { CreateEmployeeSchema } from '../../../../validation/schemas';
 
 export class CreateEmployeeDto {
   @IsNotEmpty()
@@ -41,4 +43,6 @@ export class CreateEmployeeDto {
   @IsEnum(EmploymentType)
   employmentType?: EmploymentType;
 }
-export { EmploymentType };
+
+export { EmploymentType, CreateEmployeeSchema };
+export type CreateEmployeeInput = z.infer<typeof CreateEmployeeSchema>;

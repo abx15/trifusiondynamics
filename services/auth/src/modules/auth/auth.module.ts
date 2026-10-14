@@ -3,9 +3,10 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { DatabaseModule } from '../database/database.module';
 import { RateLimitModule } from '../database/rate-limit.module';
+import { SecretsModule } from '../secrets/secrets.module';
 
 @Module({
-  imports: [DatabaseModule, RateLimitModule],
+  imports: [DatabaseModule, RateLimitModule, SecretsModule],
   controllers: [AuthController],
   providers: [AuthService],
   exports: [AuthService],

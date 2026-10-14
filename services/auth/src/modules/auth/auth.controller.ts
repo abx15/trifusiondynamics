@@ -19,8 +19,8 @@ import {
   ApiExcludeEndpoint,
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { LoginDto } from './dto/login.dto';
-import { RegisterDto } from './dto/register.dto';
+import { LoginDto, LoginSchema } from './dto/login.dto';
+import { RegisterDto, RegisterSchema } from './dto/register.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import {
@@ -29,16 +29,11 @@ import {
 } from './dto/exchange-code.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { ZodBody } from '../../validation/zod-validation.pipe';
 import { type JwtPayload } from '@agency-os/types';
 import { type Request, type Response, type CookieOptions } from 'express';
-import { Throttle } from '@nestjs/throttler';
+import { AdaptiveThrottle } from '../../common/decorators/adaptive-throttle.decorator';
 import * as jwt from 'jsonwebtoken';
-
-// Exchange-code endpoints are public and must be rate-limited to prevent
-// token enumeration / abuse. These are separate from the global ThrottlerGuard
-// limits and provide additional per-IP protection.
-const EXCHANGE_CODE_RATE_LIMIT = 10; // 10 requests per minute
-const EXCHANGE_CODE_RATE_TTL = 60000; // 60 seconds
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -132,9 +127,14 @@ export class AuthController {
     description: 'Rate limit exceeded (10 req/min).',
   })
   @Post('login')
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @AdaptiveThrottle({
+    limit: 10,
+    ttl: 60000,
+    category: 'auth',
+    roleMultipliers: { admin: 2, super_admin: 5 },
+  })
   async login(
-    @Body() dto: LoginDto,
+    @ZodBody(LoginSchema) dto: LoginDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
@@ -166,9 +166,14 @@ export class AuthController {
   })
   @ApiResponse({ status: 429, description: 'Rate limit exceeded.' })
   @Post('register')
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @AdaptiveThrottle({
+    limit: 5,
+    ttl: 60000,
+    category: 'auth',
+    roleMultipliers: { admin: 2, super_admin: 5 },
+  })
   async register(
-    @Body() dto: RegisterDto,
+    @ZodBody(RegisterSchema) dto: RegisterDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
@@ -214,7 +219,12 @@ export class AuthController {
     description: 'Refresh token invalid or expired.',
   })
   @Post('refresh')
-  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @AdaptiveThrottle({
+    limit: 30,
+    ttl: 60000,
+    category: 'auth',
+    roleMultipliers: { admin: 2, super_admin: 5 },
+  })
   async refresh(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
@@ -312,8 +322,11 @@ export class AuthController {
   })
   @Post('generate-exchange-code')
   @UseGuards(JwtAuthGuard)
-  @Throttle({
-    default: { limit: EXCHANGE_CODE_RATE_LIMIT, ttl: EXCHANGE_CODE_RATE_TTL },
+  @AdaptiveThrottle({
+    limit: 10,
+    ttl: 60000,
+    category: 'auth',
+    roleMultipliers: { admin: 2, super_admin: 5 },
   })
   async generateExchangeCode(
     @CurrentUser() user: JwtPayload,
@@ -338,8 +351,11 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Tokens returned.' })
   @ApiResponse({ status: 401, description: 'Code invalid or expired.' })
   @Post('exchange')
-  @Throttle({
-    default: { limit: EXCHANGE_CODE_RATE_LIMIT, ttl: EXCHANGE_CODE_RATE_TTL },
+  @AdaptiveThrottle({
+    limit: 10,
+    ttl: 60000,
+    category: 'auth',
+    roleMultipliers: { admin: 2, super_admin: 5 },
   })
   async exchangeCode(@Body() dto: ExchangeCodeDto) {
     return this.authService.exchangeCode(dto.code);

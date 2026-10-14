@@ -9,6 +9,7 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { RateLimitService } from '../database/rate-limit.service';
+import { SecretsService } from '../secrets/secrets.service';
 import * as bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
 import { JwtPayload, AuthResponse } from '@agency-os/types';
@@ -25,30 +26,33 @@ export class AuthService {
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
     private redis: RedisService,
     private rateLimit: RateLimitService,
+    private secrets: SecretsService,
   ) {}
 
-  private getJwtSecret(): string {
-    const secret = process.env.JWT_ACCESS_SECRET;
+  private async getJwtSecret(): Promise<string> {
+    const secret = await this.secrets.getJwtAccessSecret();
     if (!secret) {
-      throw new Error('JWT_ACCESS_SECRET environment variable is not set');
+      throw new Error('JWT_ACCESS_SECRET not found in secret provider');
     }
     return secret;
   }
 
-  private getJwtRefreshSecret(): string {
-    const secret = process.env.JWT_REFRESH_SECRET;
+  private async getJwtRefreshSecret(): Promise<string> {
+    const secret = await this.secrets.getJwtRefreshSecret();
     if (!secret) {
-      throw new Error('JWT_REFRESH_SECRET environment variable is not set');
+      throw new Error('JWT_REFRESH_SECRET not found in secret provider');
     }
     return secret;
   }
 
-  private generateAccessToken(payload: JwtPayload): string {
-    return jwt.sign(payload, this.getJwtSecret(), { expiresIn: '1h' });
+  private async generateAccessToken(payload: JwtPayload): Promise<string> {
+    const secret = await this.getJwtSecret();
+    return jwt.sign(payload, secret, { expiresIn: '1h' });
   }
 
-  private generateRefreshToken(payload: JwtPayload): string {
-    return jwt.sign({ sub: payload.sub }, this.getJwtRefreshSecret(), {
+  private async generateRefreshToken(payload: JwtPayload): Promise<string> {
+    const secret = await this.getJwtRefreshSecret();
+    return jwt.sign({ sub: payload.sub }, secret, {
       expiresIn: '7d',
     });
   }
@@ -147,8 +151,8 @@ export class AuthService {
         linkedClientId: user.linkedClientId ?? null,
       };
 
-      const accessToken = this.generateAccessToken(jwtPayload);
-      const refreshToken = this.generateRefreshToken(jwtPayload);
+      const accessToken = await this.generateAccessToken(jwtPayload);
+      const refreshToken = await this.generateRefreshToken(jwtPayload);
 
       await this.prisma.$transaction(
         async (tx) => {
@@ -239,8 +243,8 @@ export class AuthService {
         permissions: permissionsList,
       };
 
-      const accessToken = this.generateAccessToken(jwtPayload);
-      const refreshToken = this.generateRefreshToken(jwtPayload);
+      const accessToken = await this.generateAccessToken(jwtPayload);
+      const refreshToken = await this.generateRefreshToken(jwtPayload);
 
       await tx.refreshToken.create({
         data: {
@@ -353,8 +357,8 @@ export class AuthService {
     // 3. Rotate Tokens (delete old, create new) — atomic transaction ensures
     //    the old token is revoked and the new one is issued together, so a
     //    crash between the two steps cannot strand the user without a session.
-    const newAccessToken = this.generateAccessToken(jwtPayload);
-    const newRefreshToken = this.generateRefreshToken(jwtPayload);
+    const newAccessToken = await this.generateAccessToken(jwtPayload);
+    const newRefreshToken = await this.generateRefreshToken(jwtPayload);
 
     await this.prisma.$transaction(
       async (tx) => {
@@ -483,11 +487,10 @@ export class AuthService {
     userId: string,
     organizationId: string,
   ): Promise<string> {
-    const code = jwt.sign(
-      { sub: userId, orgId: organizationId },
-      this.getJwtSecret(),
-      { expiresIn: '120s' },
-    );
+    const secret = await this.getJwtSecret();
+    const code = jwt.sign({ sub: userId, orgId: organizationId }, secret, {
+      expiresIn: '120s',
+    });
 
     // Store the code with a TTL in Redis (distributed + single-use).
     // Fall back to the in-memory cache if Redis is unavailable.
@@ -542,14 +545,16 @@ export class AuthService {
           await this.cacheManager.del(`code:${code}`);
         } else {
           // Cache miss — fall back to JWT verification
-          const payload = jwt.verify(code, this.getJwtSecret()) as any;
+          const secret = await this.getJwtSecret();
+          const payload = jwt.verify(code, secret) as any;
           userId = payload.sub;
           organizationId = payload.orgId;
         }
       } catch (cacheErr) {
         // Cache error — try JWT verification directly
         try {
-          const payload = jwt.verify(code, this.getJwtSecret()) as any;
+          const secret = await this.getJwtSecret();
+          const payload = jwt.verify(code, secret) as any;
           userId = payload.sub;
           organizationId = payload.orgId;
         } catch (jwtErr) {
@@ -606,8 +611,8 @@ export class AuthService {
     };
 
     // Generate Tokens
-    const accessToken = this.generateAccessToken(jwtPayload);
-    const refreshToken = this.generateRefreshToken(jwtPayload);
+    const accessToken = await this.generateAccessToken(jwtPayload);
+    const refreshToken = await this.generateRefreshToken(jwtPayload);
 
     // Save refresh token to Postgres
     await this.prisma.refreshToken.create({

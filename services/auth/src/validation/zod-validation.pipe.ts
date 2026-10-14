@@ -2,13 +2,13 @@ import {
   ArgumentMetadata,
   Injectable,
   PipeTransform,
-  UnauthorizedException,
+  BadRequestException,
 } from '@nestjs/common';
 import { ZodSchema, ZodError } from 'zod';
 
 /**
  * Registry that maps (controller prototype, method name, parameter index) -> Zod schema.
- * Populated by the `@ZodBody` decorator; read by the ZodValidationPipe.
+ * Populated by the `@ZodBody`, `@ZodQuery`, `@ZodParam` decorators; read by the ZodValidationPipe.
  */
 const schemaRegistry = new WeakMap<object, Map<number, ZodSchema>>();
 
@@ -30,7 +30,34 @@ function getOrCreateMap(target: object): Map<number, ZodSchema> {
  */
 export function ZodBody(schema: ZodSchema) {
   return function (_target: object, _key: string | symbol, idx: number) {
-    // `this` inside a parameter decorator is the prototype of the class.
+    const map = getOrCreateMap(_target);
+    map.set(idx, schema);
+  };
+}
+
+/**
+ * Parameter decorator for query parameter validation.
+ *
+ * Usage:
+ *   @Get()
+ *   findAll(@ZodQuery(PaginationSchema) query: PaginationInput) { ... }
+ */
+export function ZodQuery(schema: ZodSchema) {
+  return function (_target: object, _key: string | symbol, idx: number) {
+    const map = getOrCreateMap(_target);
+    map.set(idx, schema);
+  };
+}
+
+/**
+ * Parameter decorator for route parameter validation.
+ *
+ * Usage:
+ *   @Get(':id')
+ *   findOne(@ZodParam(UuidSchema) id: string) { ... }
+ */
+export function ZodParam(schema: ZodSchema) {
+  return function (_target: object, _key: string | symbol, idx: number) {
     const map = getOrCreateMap(_target);
     map.set(idx, schema);
   };
@@ -38,7 +65,7 @@ export function ZodBody(schema: ZodSchema) {
 
 /**
  * NestJS pipe that validates request payloads against a Zod schema registered
- * via `@ZodBody` (or any other decorator that populates the schema registry).
+ * via `@ZodBody`, `@ZodQuery`, or `@ZodParam` decorators.
  *
  * Registered globally via `app.useGlobalPipes(new ZodValidationPipe())`.
  */
@@ -59,7 +86,7 @@ export class ZodValidationPipe implements PipeTransform {
 
     const result = schema.safeParse(value);
     if (!result.success) {
-      throw new UnauthorizedException(this.formatError(result.error));
+      throw new BadRequestException(this.formatError(result.error));
     }
     return result.data;
   }

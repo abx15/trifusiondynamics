@@ -10,7 +10,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { type JwtPayload } from '@agency-os/types';
-import { Throttle } from '@nestjs/throttler';
+import { AdaptiveThrottle } from '../../common/decorators/adaptive-throttle.decorator';
 
 @Controller('ai')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -19,7 +19,12 @@ export class AiController {
 
   @Post('proposal-generator')
   @RequirePermissions('ai:write')
-  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @AdaptiveThrottle({
+    limit: 20,
+    ttl: 60000,
+    category: 'write',
+    roleMultipliers: { admin: 2, super_admin: 5 },
+  })
   async generateProposal(
     @CurrentUser() user: JwtPayload,
     @Body() dto: GenerateProposalDto,
@@ -29,6 +34,12 @@ export class AiController {
 
   @Get('proposal-generator/history')
   @RequirePermissions('ai:read')
+  @AdaptiveThrottle({
+    limit: 100,
+    ttl: 60000,
+    category: 'read',
+    roleMultipliers: { admin: 2, super_admin: 5 },
+  })
   async getProposalHistory(
     @CurrentUser() user: JwtPayload,
     @Query('page') page?: string,
@@ -43,7 +54,12 @@ export class AiController {
 
   @Post('seo-audit')
   @RequirePermissions('ai:write')
-  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @AdaptiveThrottle({
+    limit: 20,
+    ttl: 60000,
+    category: 'write',
+    roleMultipliers: { admin: 2, super_admin: 5 },
+  })
   async auditWebsite(
     @CurrentUser() user: JwtPayload,
     @Body() dto: AuditWebsiteDto,
@@ -53,6 +69,12 @@ export class AiController {
 
   @Get('seo-audit/history')
   @RequirePermissions('ai:read')
+  @AdaptiveThrottle({
+    limit: 100,
+    ttl: 60000,
+    category: 'read',
+    roleMultipliers: { admin: 2, super_admin: 5 },
+  })
   async getSeoAuditHistory(
     @CurrentUser() user: JwtPayload,
     @Query('page') page?: string,
@@ -67,7 +89,12 @@ export class AiController {
 
   @Post('email-writer')
   @RequirePermissions('ai:write')
-  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @AdaptiveThrottle({
+    limit: 30,
+    ttl: 60000,
+    category: 'write',
+    roleMultipliers: { admin: 2, super_admin: 5 },
+  })
   async writeEmail(
     @CurrentUser() user: JwtPayload,
     @Body() dto: WriteEmailDto,
@@ -77,7 +104,12 @@ export class AiController {
 
   @Post('meeting-summary')
   @RequirePermissions('ai:write')
-  @Throttle({ default: { limit: 15, ttl: 60000 } })
+  @AdaptiveThrottle({
+    limit: 15,
+    ttl: 60000,
+    category: 'write',
+    roleMultipliers: { admin: 2, super_admin: 5 },
+  })
   async summarizeMeeting(
     @CurrentUser() user: JwtPayload,
     @Body() dto: SummarizeMeetingDto,
@@ -87,7 +119,13 @@ export class AiController {
 
   @Post('chat')
   @RequirePermissions('ai:write')
-  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @AdaptiveThrottle({
+    limit: 30,
+    ttl: 60000,
+    category: 'write',
+    roleMultipliers: { admin: 2, super_admin: 5 },
+    burst: 2,
+  })
   async chat(@CurrentUser() user: JwtPayload, @Body() dto: AiChatDto) {
     return this.aiService.chat(user.sub, dto);
   }
