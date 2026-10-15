@@ -11,9 +11,9 @@ export class QueueProcessor {
   private readonly workers: Worker[] = [];
 
   constructor(
-    @Inject('BullModule_emails') private readonly emailsQueue: any,
-    @Inject('BullModule_webhooks') private readonly webhooksQueue: any,
-    @Inject('BullModule_analytics') private readonly analyticsQueue: any,
+    @Inject('BullQueue_emails') private readonly emailsQueue: any,
+    @Inject('BullQueue_webhooks') private readonly webhooksQueue: any,
+    @Inject('BullQueue_analytics') private readonly analyticsQueue: any,
     private readonly emailProcessor: EmailQueueProcessor,
     private readonly webhookProcessor: WebhookQueueProcessor,
     private readonly analyticsProcessor: AnalyticsQueueProcessor,
