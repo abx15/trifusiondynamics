@@ -33,30 +33,98 @@ function withTimeoutParams(url: string): string {
   return `${url}${separator}connect_timeout=${CONNECT_TIMEOUT}&application_name=${appName}`;
 }
 
+function withPgBouncerParams(url: string): string {
+  if (!url) return url;
+  // PgBouncer requires prepared statements disabled and specific pool mode
+  // For transaction pool mode (recommended), we need:
+  // - pgbouncer=true (or equivalent via pool_mode=transaction)
+  // - Disable prepared statements in Prisma
+  if (url.includes('pgbouncer') || url.includes('pool_mode')) return url;
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}pgbouncer=true&connection_limit=1`;
+}
+
 @Injectable()
 export class PrismaService
   extends PrismaClient
   implements OnModuleInit, OnModuleDestroy
 {
   private readonly logger = new Logger(PrismaService.name);
+  private readonly replicaUrls: Record<string, string> = {};
 
   constructor(
     @Inject(RequestContextService)
     private readonly requestContext: RequestContextService,
   ) {
-    super({
-      datasources: {
-        db: {
-          url: withTimeoutParams(process.env.DATABASE_URL || ''),
-        },
+    // Build datasources with support for read replicas
+    const datasources: Record<string, { url: string }> = {
+      db: {
+        url: withTimeoutParams(
+          process.env.DATABASE_URL ||
+            process.env.DIRECT_URL ||
+            process.env.DATABASE_WRITE_URL ||
+            '',
+        ),
       },
+    };
+
+    // Add read replicas if configured
+    if (process.env.DATABASE_READ_REPLICA_URLS) {
+      const replicaUrls = process.env.DATABASE_READ_REPLICA_URLS.split(',')
+        .map((u) => u.trim())
+        .filter(Boolean);
+      replicaUrls.forEach((url, index) => {
+        const key = `read_replica_${index + 1}`;
+        datasources[key] = { url: withTimeoutParams(url) };
+        this.replicaUrls[key] = withTimeoutParams(url);
+      });
+    }
+
+    // Check if we should use PgBouncer for the primary connection
+    const usePgBouncer = process.env.DATABASE_USE_PGBOUNCER === 'true';
+
+    super({
+      datasources,
       log:
         process.env.NODE_ENV === 'development'
           ? ['query', 'error', 'warn']
           : ['error'],
+      // Disable prepared statements when using PgBouncer in transaction pool mode
+      ...(usePgBouncer
+        ? { __internal: { engine: { disablePreparedStatements: true } } }
+        : {}),
     });
 
     this.$use((params, next) => this.rlsMiddleware(params, next));
+  }
+
+  /**
+   * Get a Prisma client instance connected to a read replica.
+   * Use this for read-heavy analytics/reporting queries.
+   * Falls back to primary if no replicas configured.
+   */
+  getReadReplica(): PrismaClient {
+    const replicaKeys = Object.keys(this.replicaUrls);
+
+    if (replicaKeys.length === 0) {
+      this.logger.debug('No read replicas configured, using primary');
+      return this;
+    }
+
+    // Round-robin selection (simple load balancing)
+    const replicaIndex = Math.floor(Math.random() * replicaKeys.length);
+    const replicaKey = replicaKeys[replicaIndex];
+    const replicaUrl = this.replicaUrls[replicaKey];
+
+    if (!replicaUrl) {
+      return this;
+    }
+
+    // Create a new client instance pointing to the replica
+    return new PrismaClient({
+      datasources: { db: { url: replicaUrl } },
+      log: process.env.NODE_ENV === 'development' ? ['error'] : ['error'],
+    });
   }
 
   private async rlsMiddleware(
@@ -115,6 +183,18 @@ export class PrismaService
         this.logger.warn(
           'Could not set session GUCs (non-fatal, continuing):',
           gucsError,
+        );
+      }
+
+      // Log read replica configuration
+      const replicaCount = Object.keys(this.replicaUrls).length;
+      if (replicaCount > 0) {
+        this.logger.log(`📖 ${replicaCount} read replica(s) configured`);
+      }
+
+      if (process.env.DATABASE_USE_PGBOUNCER === 'true') {
+        this.logger.log(
+          '🔗 PgBouncer mode enabled (prepared statements disabled)',
         );
       }
     } catch (error) {
