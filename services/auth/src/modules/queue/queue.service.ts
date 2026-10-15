@@ -8,12 +8,12 @@ export class QueueService implements OnModuleInit {
   private readonly queues = new Map<string, Queue>();
 
   constructor(
-    @Inject('BullModule_emails') private readonly emailsQueue: Queue,
-    @Inject('BullModule_webhooks') private readonly webhooksQueue: Queue,
-    @Inject('BullModule_analytics') private readonly analyticsQueue: Queue,
-    @Inject('BullModule_notifications')
+    @Inject('BullQueue_emails') private readonly emailsQueue: Queue,
+    @Inject('BullQueue_webhooks') private readonly webhooksQueue: Queue,
+    @Inject('BullQueue_analytics') private readonly analyticsQueue: Queue,
+    @Inject('BullQueue_notifications')
     private readonly notificationsQueue: Queue,
-    @Inject('BullModule_cleanup') private readonly cleanupQueue: Queue,
+    @Inject('BullQueue_cleanup') private readonly cleanupQueue: Queue,
   ) {
     this.queues.set(QUEUE_NAMES.EMAILS, this.emailsQueue);
     this.queues.set(QUEUE_NAMES.WEBHOOKS, this.webhooksQueue);
