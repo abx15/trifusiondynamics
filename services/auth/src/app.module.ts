@@ -34,8 +34,12 @@ import { HealthModule } from './common/health/health.module';
 import { FailoverModule } from './common/failover/failover.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
-import { ThrottlerModule } from '@nestjs/throttler';
-import { APP_GUARD, APP_INTERCEPTOR, APP_FILTER, APP_PIPE } from '@nestjs/core';
+import {
+  ThrottlerModule,
+  InjectThrottlerOptions,
+  InjectThrottlerStorage,
+} from '@nestjs/throttler';
+import { APP_GUARD, APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
 import { ApiLoggingInterceptor } from './gateway/interceptors/api-logging.interceptor';
 import { BigIntSafeInterceptor } from './gateway/interceptors/bigint-safe.interceptor';
 import { AllExceptionsFilter } from './gateway/filters/http-exception.filter';
@@ -46,26 +50,12 @@ import { RedisThrottlerStorage } from './modules/database/redis-throttler.storag
 import { RateLimitModule } from './modules/database/rate-limit.module';
 import { UserThrottlerGuard } from './common/guards/user-throttler.guard';
 import { ValidationModule } from './validation/validation.module';
-import { ZodValidationPipe } from './validation/zod-validation.pipe';
 import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
 import { RequestContextInterceptor } from './common/context/request-context.interceptor';
 import { Reflector } from '@nestjs/core';
-import {
-  InjectThrottlerOptions,
-  InjectThrottlerStorage,
-} from '@nestjs/throttler';
 
 @Module({
   imports: [
-    LoggerModule.forRoot({
-      pinoHttp: {
-        genReqId: (req) => req.headers['x-request-id'] || randomUUID(),
-        transport:
-          process.env.NODE_ENV !== 'production'
-            ? { target: 'pino-pretty', options: { singleLine: true } }
-            : undefined,
-      },
-    }),
     EventEmitterModule.forRoot(),
     ScheduleModule.forRoot(),
     ThrottlerModule.forRoot({
