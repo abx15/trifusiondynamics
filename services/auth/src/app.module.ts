@@ -27,6 +27,11 @@ import { OutboxModule } from './modules/developer/outbox/outbox.module';
 import { StubsModule } from './modules/stubs/stubs.module';
 import { GatewayModule } from './gateway/gateway.module';
 import { SecretsModule } from './modules/secrets/secrets.module';
+import { QueueModule } from './modules/queue/queue.module';
+import { StorageModule } from './modules/storage/storage.module';
+import { EmailModule } from './modules/email/email.module';
+import { HealthModule } from './common/health/health.module';
+import { FailoverModule } from './common/failover/failover.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -99,6 +104,11 @@ import {
     GatewayModule,
     ValidationModule,
     SecretsModule,
+    QueueModule,
+    StorageModule,
+    EmailModule,
+    HealthModule,
+    FailoverModule,
   ],
   controllers: [AppController],
   providers: [
