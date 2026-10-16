@@ -20,11 +20,15 @@ export class QueueProcessor {
   ) {}
 
   async onModuleInit() {
+    if (!this.emailsQueue?.client || !this.webhooksQueue?.client || !this.analyticsQueue?.client) {
+      this.logger.warn('BullMQ queues are not ready yet; skipping worker startup');
+      return;
+    }
+
     await this.initializeWorkers();
   }
 
   private getConnection() {
-    // Extract connection from the queue's client
     return this.emailsQueue.client.options;
   }
 

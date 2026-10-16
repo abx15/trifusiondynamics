@@ -1,5 +1,6 @@
 import { Module, Global } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
+import { QUEUE_NAMES } from '../queue/queue.constants';
 import { EmailQueueProcessor } from '../queue/processors/email.processor';
 import { EmailService } from './email.service';
 import { TemplateEngine } from './template.engine';
@@ -20,7 +21,7 @@ import { QueueModule } from '../queue/queue.module';
     SecretsModule,
     QueueModule,
     BullModule.registerQueue({
-      name: 'email',
+      name: QUEUE_NAMES.EMAILS,
     }),
   ],
   providers: [
