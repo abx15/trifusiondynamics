@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+import { QUEUE_NAMES } from '../queue/queue.constants';
 import {
   EmailProvider,
   SendEmailOptions,
@@ -23,7 +24,7 @@ import {
 import { SecretsService } from '../secrets/secrets.service';
 import { redisService } from '../database/redis.service';
 
-const EMAIL_QUEUE = 'email';
+const EMAIL_QUEUE = QUEUE_NAMES.EMAILS;
 const SUPPRESSION_KEY_PREFIX = 'email:suppression:';
 const TRACKING_KEY_PREFIX = 'email:tracking:';
 

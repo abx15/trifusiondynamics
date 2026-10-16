@@ -110,7 +110,7 @@ describe('EmailService Integration', () => {
         TemplateEngine,
         ConsoleProvider,
         {
-          provide: 'BullQueue_email',
+          provide: 'BullQueue_emails',
           useValue: mockQueue,
         },
       ],
