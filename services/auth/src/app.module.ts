@@ -36,8 +36,6 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 import {
   ThrottlerModule,
-  InjectThrottlerOptions,
-  InjectThrottlerStorage,
 } from '@nestjs/throttler';
 import { APP_GUARD, APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
 import { ApiLoggingInterceptor } from './gateway/interceptors/api-logging.interceptor';
@@ -106,9 +104,7 @@ import { Reflector } from '@nestjs/core';
     Reflector,
     {
       provide: APP_GUARD,
-      useFactory: (options: any, storage: any, reflector: Reflector) =>
-        new UserThrottlerGuard(options, storage, reflector),
-      inject: [InjectThrottlerOptions, InjectThrottlerStorage, Reflector],
+      useClass: UserThrottlerGuard,
     },
     {
       provide: APP_INTERCEPTOR,

@@ -1,5 +1,13 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
-import { ThrottlerGuard } from '@nestjs/throttler';
+import {
+  InjectThrottlerOptions,
+  InjectThrottlerStorage,
+  ThrottlerGuard,
+} from '@nestjs/throttler';
+import type {
+  ThrottlerModuleOptions,
+  ThrottlerStorage,
+} from '@nestjs/throttler';
 import { Reflector } from '@nestjs/core';
 import * as jwt from 'jsonwebtoken';
 import { JwtPayload } from '@agency-os/types';
@@ -41,7 +49,11 @@ import {
  */
 @Injectable()
 export class UserThrottlerGuard extends ThrottlerGuard implements CanActivate {
-  constructor(options: any, storageService: any, reflector: Reflector) {
+  constructor(
+    @InjectThrottlerOptions() options: ThrottlerModuleOptions,
+    @InjectThrottlerStorage() storageService: ThrottlerStorage,
+    reflector: Reflector,
+  ) {
     super(options, storageService, reflector);
   }
 
