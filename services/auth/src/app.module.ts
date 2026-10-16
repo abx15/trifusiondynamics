@@ -34,9 +34,7 @@ import { HealthModule } from './common/health/health.module';
 import { FailoverModule } from './common/failover/failover.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
-import {
-  ThrottlerModule,
-} from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD, APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
 import { ApiLoggingInterceptor } from './gateway/interceptors/api-logging.interceptor';
 import { BigIntSafeInterceptor } from './gateway/interceptors/bigint-safe.interceptor';
@@ -56,6 +54,7 @@ import { Reflector } from '@nestjs/core';
   imports: [
     EventEmitterModule.forRoot(),
     ScheduleModule.forRoot(),
+    LoggerModule.forRoot(),
     ThrottlerModule.forRoot({
       throttlers: [
         {
