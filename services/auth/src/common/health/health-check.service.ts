@@ -1,6 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { redisService } from '../../modules/database/redis.service';
+import { QUEUE_NAMES } from '../../modules/queue/queue.constants';
+import {
+  getQueueRedisConnection,
+  isRedisConfigured,
+} from '../../modules/queue/queue.redis.config';
 
 export interface HealthCheckResult {
   status: 'healthy' | 'degraded' | 'unhealthy';
@@ -61,8 +66,10 @@ export class HealthCheckService {
       this.checkExternalServices(),
     ]);
 
-    const unhealthyCount = checks.filter(c => c.status === 'unhealthy').length;
-    const degradedCount = checks.filter(c => c.status === 'degraded').length;
+    const unhealthyCount = checks.filter(
+      (c) => c.status === 'unhealthy',
+    ).length;
+    const degradedCount = checks.filter((c) => c.status === 'degraded').length;
 
     let overallStatus: HealthCheckResult['status'] = 'healthy';
     if (unhealthyCount > 0) {
@@ -121,7 +128,9 @@ export class HealthCheckService {
   private async checkDatabaseReplication(): Promise<HealthCheck> {
     try {
       if (!this.isPrimary) {
-        const result = await this.prisma.$queryRaw<Array<{ lag_seconds: number; is_replica: boolean }>>`
+        const result = await this.prisma.$queryRaw<
+          Array<{ lag_seconds: number; is_replica: boolean }>
+        >`
           SELECT 
             EXTRACT(EPOCH FROM (now() - pg_last_xact_replay_timestamp())) AS lag_seconds,
             pg_is_in_recovery() AS is_replica
@@ -134,19 +143,23 @@ export class HealthCheckService {
           name: 'database_replication',
           status: lag > 60 ? 'degraded' : lag > 300 ? 'unhealthy' : 'healthy',
           latencyMs: 0,
-          message: isReplica ? `Replication lag: ${lag.toFixed(1)}s` : 'Primary database',
+          message: isReplica
+            ? `Replication lag: ${lag.toFixed(1)}s`
+            : 'Primary database',
           details: { lagSeconds: lag, isReplica },
         };
       }
 
-      const result = await this.prisma.$queryRaw<Array<{ 
-        client_addr: string; 
-        state: string; 
-        sync_state: string;
-        write_lag: string;
-        flush_lag: string;
-        replay_lag: string;
-      }>>`
+      const result = await this.prisma.$queryRaw<
+        Array<{
+          client_addr: string;
+          state: string;
+          sync_state: string;
+          write_lag: string;
+          flush_lag: string;
+          replay_lag: string;
+        }>
+      >`
         SELECT 
           client_addr,
           state,
@@ -164,15 +177,20 @@ export class HealthCheckService {
 
       return {
         name: 'database_replication',
-        status: maxLag > 60 ? 'degraded' : maxLag > 300 ? 'unhealthy' : 'healthy',
-        message: result.length > 0 ? `Max replication lag: ${maxLag}ms` : 'No replicas connected',
+        status:
+          maxLag > 60 ? 'degraded' : maxLag > 300 ? 'unhealthy' : 'healthy',
+        message:
+          result.length > 0
+            ? `Max replication lag: ${maxLag}ms`
+            : 'No replicas connected',
         details: { replicas: result.length, maxLagMs: maxLag },
       };
     } catch (error) {
       return {
         name: 'database_replication',
         status: 'unhealthy',
-        message: error instanceof Error ? error.message : 'Replication check failed',
+        message:
+          error instanceof Error ? error.message : 'Replication check failed',
       };
     }
   }
@@ -195,7 +213,11 @@ export class HealthCheckService {
 
       return {
         name: 'redis',
-        status: pingResult ? (latency > 500 ? 'degraded' : 'healthy') : 'unhealthy',
+        status: pingResult
+          ? latency > 500
+            ? 'degraded'
+            : 'healthy'
+          : 'unhealthy',
         latencyMs: latency,
         message: pingResult ? 'OK' : 'Ping failed',
       };
@@ -221,15 +243,25 @@ export class HealthCheckService {
       }
 
       const lines = info.split('\r\n');
-      const role = lines.find(l => l.startsWith('role:'))?.split(':')[1]?.trim();
-      const masterLinkStatus = lines.find(l => l.startsWith('master_link_status:'))?.split(':')[1]?.trim();
-      const slaveLag = lines.find(l => l.startsWith('slave_lag:'))?.split(':')[1]?.trim();
+      const role = lines
+        .find((l) => l.startsWith('role:'))
+        ?.split(':')[1]
+        ?.trim();
+      const masterLinkStatus = lines
+        .find((l) => l.startsWith('master_link_status:'))
+        ?.split(':')[1]
+        ?.trim();
+      const slaveLag = lines
+        .find((l) => l.startsWith('slave_lag:'))
+        ?.split(':')[1]
+        ?.trim();
 
       if (role === 'slave') {
         const lag = parseInt(slaveLag || '0', 10);
         return {
           name: 'redis_replication',
-          status: lag > 1000 ? 'degraded' : lag > 5000 ? 'unhealthy' : 'healthy',
+          status:
+            lag > 1000 ? 'degraded' : lag > 5000 ? 'unhealthy' : 'healthy',
           message: `Replica lag: ${lag}ms, link: ${masterLinkStatus}`,
           details: { role, masterLinkStatus, lagMs: lag },
         };
@@ -239,13 +271,17 @@ export class HealthCheckService {
         name: 'redis_replication',
         status: 'healthy',
         message: 'Primary Redis',
-        details: { role, connectedSlaves: lines.filter(l => l.startsWith('slave')).length },
+        details: {
+          role,
+          connectedSlaves: lines.filter((l) => l.startsWith('slave')).length,
+        },
       };
     } catch (error) {
       return {
         name: 'redis_replication',
         status: 'degraded',
-        message: error instanceof Error ? error.message : 'Replication check failed',
+        message:
+          error instanceof Error ? error.message : 'Replication check failed',
       };
     }
   }
@@ -260,7 +296,12 @@ export class HealthCheckService {
 
       return {
         name: 'disk_space',
-        status: usagePercent > 90 ? 'unhealthy' : usagePercent > 80 ? 'degraded' : 'healthy',
+        status:
+          usagePercent > 90
+            ? 'unhealthy'
+            : usagePercent > 80
+              ? 'degraded'
+              : 'healthy',
         message: `Disk usage: ${usagePercent}%`,
         details: { usagePercent, available: parts[3] },
       };
@@ -285,7 +326,12 @@ export class HealthCheckService {
 
       return {
         name: 'memory',
-        status: usagePercent > 95 ? 'unhealthy' : usagePercent > 85 ? 'degraded' : 'healthy',
+        status:
+          usagePercent > 95
+            ? 'unhealthy'
+            : usagePercent > 85
+              ? 'degraded'
+              : 'healthy',
         message: `Memory usage: ${usagePercent}% (${used}MB / ${total}MB)`,
         details: { usagePercent, usedMB: used, totalMB: total },
       };
@@ -302,48 +348,65 @@ export class HealthCheckService {
     const services = [
       { name: 'Vault', url: process.env.VAULT_ADDR },
       { name: 'AI Service', url: process.env.AI_SERVICE_URL },
-    ].filter(s => s.url);
+    ].filter((s) => s.url);
 
     const results = await Promise.all(
       services.map(async ({ name, url }) => {
         try {
           const controller = new AbortController();
           const timeout = setTimeout(() => controller.abort(), 5000);
-          const response = await fetch(`${url}/health`, { signal: controller.signal });
+          const response = await fetch(`${url}/health`, {
+            signal: controller.signal,
+          });
           clearTimeout(timeout);
           return { name, healthy: response.ok };
         } catch {
           return { name, healthy: false };
         }
-      })
+      }),
     );
 
-    const failed = results.filter(r => !r.healthy);
+    const failed = results.filter((r) => !r.healthy);
 
     return {
       name: 'external_services',
       status: failed.length > 0 ? 'degraded' : 'healthy',
-      message: failed.length > 0 ? `Failed: ${failed.map(f => f.name).join(', ')}` : 'All OK',
+      message:
+        failed.length > 0
+          ? `Failed: ${failed.map((f) => f.name).join(', ')}`
+          : 'All OK',
       details: { services: results },
     };
   }
 
   private async checkQueueHealth(): Promise<HealthCheck> {
+    if (!isRedisConfigured()) {
+      return {
+        name: 'queue_health',
+        status: 'degraded',
+        message: 'Redis not configured — queue disabled',
+      };
+    }
+
+    let queue: import('bullmq').Queue | undefined;
     try {
       const { Queue } = await import('bullmq');
-      const queue = new Queue('email', {
-        connection: { host: process.env.REDIS_HOST || 'localhost', port: 6379 },
+      queue = new Queue(QUEUE_NAMES.EMAILS, {
+        connection: getQueueRedisConnection(),
+      });
+      queue.on('error', (error) => {
+        this.logger.warn(`Queue health connection failed: ${error.message}`);
       });
 
       const counts = await queue.getJobCounts();
-      await queue.close();
 
       const failed = counts.failed || 0;
       const waiting = counts.waiting || 0;
 
       return {
         name: 'queue_health',
-        status: failed > 100 ? 'unhealthy' : failed > 10 ? 'degraded' : 'healthy',
+        status:
+          failed > 100 ? 'unhealthy' : failed > 10 ? 'degraded' : 'healthy',
         message: `Waiting: ${waiting}, Failed: ${failed}`,
         details: counts,
       };
@@ -353,12 +416,23 @@ export class HealthCheckService {
         status: 'degraded',
         message: 'Could not check queue',
       };
+    } finally {
+      if (queue) {
+        await queue.close().catch((error: unknown) => {
+          this.logger.warn(
+            `Could not close queue health connection: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          );
+        });
+      }
     }
   }
 
   private async checkStorage(): Promise<HealthCheck> {
     try {
-      const { S3Client, ListBucketsCommand } = await import('@aws-sdk/client-s3');
+      const { S3Client, ListBucketsCommand } =
+        await import('@aws-sdk/client-s3');
       const client = new S3Client({ region: this.region });
       await client.send(new ListBucketsCommand({}));
 

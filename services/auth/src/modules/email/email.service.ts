@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, Optional } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { QUEUE_NAMES } from '../queue/queue.constants';
@@ -29,14 +29,15 @@ const SUPPRESSION_KEY_PREFIX = 'email:suppression:';
 const TRACKING_KEY_PREFIX = 'email:tracking:';
 
 @Injectable()
-export class EmailService implements OnModuleInit, SuppressionListInterface, EmailTrackingInterface {
+export class EmailService
+  implements OnModuleInit, SuppressionListInterface, EmailTrackingInterface
+{
   private readonly logger = new Logger(EmailService.name);
   private providers = new Map<EmailProvider, any>();
   private activeProvider: EmailProvider = 'console';
   private templateEngine: TemplateEngine;
 
   constructor(
-    @InjectQueue(EMAIL_QUEUE) private readonly emailQueue: Queue,
     private readonly secrets: SecretsService,
     private readonly sendGridProvider: SendGridProvider,
     private readonly mailgunProvider: MailgunProvider,
@@ -44,6 +45,7 @@ export class EmailService implements OnModuleInit, SuppressionListInterface, Ema
     private readonly resendProvider: ResendProvider,
     private readonly nodemailerProvider: NodemailerProvider,
     private readonly consoleProvider: ConsoleProvider,
+    @Optional() @InjectQueue(EMAIL_QUEUE) private readonly emailQueue?: Queue,
   ) {
     this.templateEngine = new TemplateEngine();
     this.templateEngine.registerTemplates(defaultTemplates);
@@ -60,11 +62,16 @@ export class EmailService implements OnModuleInit, SuppressionListInterface, Ema
     await this.detectActiveProvider();
     await this.templateEngine.registerTemplates(defaultTemplates);
 
-    this.logger.log(`Email service initialized with provider: ${this.activeProvider}`);
+    this.logger.log(
+      `Email service initialized with provider: ${this.activeProvider}`,
+    );
   }
 
   private async detectActiveProvider(): Promise<void> {
-    const configuredProvider = (await this.secrets.getSecretOrDefault('EMAIL_PROVIDER', 'console')) as EmailProvider;
+    const configuredProvider = (await this.secrets.getSecretOrDefault(
+      'EMAIL_PROVIDER',
+      'console',
+    )) as EmailProvider;
 
     for (const [name, provider] of this.providers.entries()) {
       if (name === configuredProvider) {
@@ -77,7 +84,9 @@ export class EmailService implements OnModuleInit, SuppressionListInterface, Ema
     }
 
     this.activeProvider = 'console';
-    this.logger.warn(`Configured provider ${configuredProvider} not available, falling back to console`);
+    this.logger.warn(
+      `Configured provider ${configuredProvider} not available, falling back to console`,
+    );
   }
 
   getActiveProvider(): EmailProvider {
@@ -111,7 +120,10 @@ export class EmailService implements OnModuleInit, SuppressionListInterface, Ema
     templateName: string,
     to: string | string[],
     data: Record<string, any>,
-    options: Omit<SendEmailOptions, 'to' | 'subject' | 'html' | 'text' | 'template' | 'templateData'> = {}
+    options: Omit<
+      SendEmailOptions,
+      'to' | 'subject' | 'html' | 'text' | 'template' | 'templateData'
+    > = {},
   ): Promise<SendEmailResult> {
     const rendered = this.templateEngine.renderTemplate(templateName, data);
 
@@ -125,6 +137,13 @@ export class EmailService implements OnModuleInit, SuppressionListInterface, Ema
   }
 
   async queueEmail(options: SendEmailOptions, delay?: number): Promise<void> {
+    if (!this.emailQueue) {
+      this.logger.warn(
+        'Email queue disabled (Redis not configured), sending directly',
+      );
+      await this.send(options);
+      return;
+    }
     await this.emailQueue.add('send-email', options, {
       delay,
       attempts: 3,
@@ -138,18 +157,30 @@ export class EmailService implements OnModuleInit, SuppressionListInterface, Ema
     templateName: string,
     to: string | string[],
     data: Record<string, any>,
-    options: Omit<SendEmailOptions, 'to' | 'subject' | 'html' | 'text' | 'template' | 'templateData'> = {},
-    delay?: number
+    options: Omit<
+      SendEmailOptions,
+      'to' | 'subject' | 'html' | 'text' | 'template' | 'templateData'
+    > = {},
+    delay?: number,
   ): Promise<void> {
     const rendered = this.templateEngine.renderTemplate(templateName, data);
 
-    await this.emailQueue.add('send-email', {
+    const emailOptions: SendEmailOptions = {
       ...options,
       to,
       subject: rendered.subject,
       html: rendered.html,
       text: rendered.text,
-    }, {
+    };
+
+    if (!this.emailQueue) {
+      this.logger.warn(
+        'Email queue disabled (Redis not configured), sending directly',
+      );
+      await this.send(emailOptions);
+      return;
+    }
+    await this.emailQueue.add('send-email', emailOptions, {
       delay,
       attempts: 3,
       backoff: { type: 'exponential', delay: 5000 },
@@ -170,9 +201,16 @@ export class EmailService implements OnModuleInit, SuppressionListInterface, Ema
     return this.templateEngine.getTemplate(name);
   }
 
-  async addSuppression(email: string, reason: 'bounce' | 'complaint' | 'unsubscribe'): Promise<void> {
+  async addSuppression(
+    email: string,
+    reason: 'bounce' | 'complaint' | 'unsubscribe',
+  ): Promise<void> {
     const key = `${SUPPRESSION_KEY_PREFIX}${reason}:${email.toLowerCase()}`;
-    await redisService.set(key, JSON.stringify({ email, reason, timestamp: Date.now() }), 86400 * 365);
+    await redisService.set(
+      key,
+      JSON.stringify({ email, reason, timestamp: Date.now() }),
+      86400 * 365,
+    );
   }
 
   async removeSuppression(email: string): Promise<void> {
@@ -191,9 +229,13 @@ export class EmailService implements OnModuleInit, SuppressionListInterface, Ema
     return false;
   }
 
-  async listSuppressions(type?: 'bounce' | 'complaint' | 'unsubscribe'): Promise<string[]> {
+  async listSuppressions(
+    type?: 'bounce' | 'complaint' | 'unsubscribe',
+  ): Promise<string[]> {
     const results: string[] = [];
-    const types = type ? [type] : ['bounce', 'complaint', 'unsubscribe'] as const;
+    const types = type
+      ? [type]
+      : (['bounce', 'complaint', 'unsubscribe'] as const);
 
     for (const t of types) {
       const pattern = `${SUPPRESSION_KEY_PREFIX}${t}:*`;
@@ -215,7 +257,13 @@ export class EmailService implements OnModuleInit, SuppressionListInterface, Ema
     let cursor = '0';
 
     do {
-      const [newCursor, keys] = await (redisService as any).client?.scan(cursor, 'MATCH', pattern, 'COUNT', 100) || ['0', []];
+      const [newCursor, keys] = (await (redisService as any).client?.scan(
+        cursor,
+        'MATCH',
+        pattern,
+        'COUNT',
+        100,
+      )) || ['0', []];
       cursor = newCursor;
       results.push(...keys);
     } while (cursor !== '0');
@@ -223,7 +271,11 @@ export class EmailService implements OnModuleInit, SuppressionListInterface, Ema
     return results;
   }
 
-  async trackOpen(messageId: string, recipient: string, metadata?: Record<string, any>): Promise<void> {
+  async trackOpen(
+    messageId: string,
+    recipient: string,
+    metadata?: Record<string, any>,
+  ): Promise<void> {
     const key = `${TRACKING_KEY_PREFIX}${messageId}`;
     const data = JSON.stringify({
       messageId,
@@ -236,7 +288,12 @@ export class EmailService implements OnModuleInit, SuppressionListInterface, Ema
     await redisService.set(key, data, 86400 * 30);
   }
 
-  async trackClick(messageId: string, recipient: string, url: string, metadata?: Record<string, any>): Promise<void> {
+  async trackClick(
+    messageId: string,
+    recipient: string,
+    url: string,
+    metadata?: Record<string, any>,
+  ): Promise<void> {
     const key = `${TRACKING_KEY_PREFIX}${messageId}`;
     const existing = await redisService.get(key);
     let data: any = { messageId, recipient, opens: 0, clicks: 0, metadata };
@@ -265,7 +322,14 @@ export class EmailService implements OnModuleInit, SuppressionListInterface, Ema
     const data = await redisService.get(key);
 
     if (!data) {
-      return { sent: 1, delivered: 1, opened: 0, clicked: 0, bounced: 0, complained: 0 };
+      return {
+        sent: 1,
+        delivered: 1,
+        opened: 0,
+        clicked: 0,
+        bounced: 0,
+        complained: 0,
+      };
     }
 
     const parsed = JSON.parse(data);
@@ -280,7 +344,9 @@ export class EmailService implements OnModuleInit, SuppressionListInterface, Ema
   }
 
   async handleWebhook(event: EmailEvent): Promise<void> {
-    this.logger.log(`Email webhook: ${event.type} for ${event.recipient} (${event.messageId})`);
+    this.logger.log(
+      `Email webhook: ${event.type} for ${event.recipient} (${event.messageId})`,
+    );
 
     switch (event.type) {
       case 'bounced':
@@ -296,15 +362,25 @@ export class EmailService implements OnModuleInit, SuppressionListInterface, Ema
         await this.trackOpen(event.messageId, event.recipient, event.data);
         break;
       case 'clicked':
-        await this.trackClick(event.messageId, event.recipient, event.data?.url || '', event.data);
+        await this.trackClick(
+          event.messageId,
+          event.recipient,
+          event.data?.url || '',
+          event.data,
+        );
         break;
     }
   }
 
   async sendBulk(
-    emails: Array<SendEmailOptions & { template?: string; templateData?: Record<string, any> }>,
+    emails: Array<
+      SendEmailOptions & {
+        template?: string;
+        templateData?: Record<string, any>;
+      }
+    >,
     batchSize = 50,
-    delayBetweenBatches = 1000
+    delayBetweenBatches = 1000,
   ): Promise<SendEmailResult[]> {
     const results: SendEmailResult[] = [];
 
@@ -314,7 +390,12 @@ export class EmailService implements OnModuleInit, SuppressionListInterface, Ema
       for (const email of batch) {
         let result: SendEmailResult;
         if (email.template && email.templateData) {
-          result = await this.sendTemplate(email.template, email.to, email.templateData, email);
+          result = await this.sendTemplate(
+            email.template,
+            email.to,
+            email.templateData,
+            email,
+          );
         } else {
           result = await this.send(email);
         }
@@ -322,7 +403,9 @@ export class EmailService implements OnModuleInit, SuppressionListInterface, Ema
       }
 
       if (i + batchSize < emails.length) {
-        await new Promise(resolve => setTimeout(resolve, delayBetweenBatches));
+        await new Promise((resolve) =>
+          setTimeout(resolve, delayBetweenBatches),
+        );
       }
     }
 
@@ -331,7 +414,6 @@ export class EmailService implements OnModuleInit, SuppressionListInterface, Ema
 }
 
 export const emailService = new EmailService(
-  {} as Queue,
   {} as SecretsService,
   {} as SendGridProvider,
   {} as MailgunProvider,
@@ -339,4 +421,5 @@ export const emailService = new EmailService(
   {} as ResendProvider,
   {} as NodemailerProvider,
   {} as ConsoleProvider,
+  {} as Queue,
 );

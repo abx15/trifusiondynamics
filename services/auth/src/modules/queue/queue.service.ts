@@ -1,4 +1,5 @@
-import { Injectable, Logger, OnModuleInit, Inject } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, Optional } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
 import { Queue, Worker, Job } from 'bullmq';
 import { QUEUE_NAMES, QUEUE_EVENTS } from './queue.constants';
 
@@ -8,26 +9,56 @@ export class QueueService implements OnModuleInit {
   private readonly queues = new Map<string, Queue>();
 
   constructor(
-    @Inject('BullQueue_emails') private readonly emailsQueue: Queue,
-    @Inject('BullQueue_webhooks') private readonly webhooksQueue: Queue,
-    @Inject('BullQueue_analytics') private readonly analyticsQueue: Queue,
-    @Inject('BullQueue_notifications')
-    private readonly notificationsQueue: Queue,
-    @Inject('BullQueue_cleanup') private readonly cleanupQueue: Queue,
+    @Optional()
+    @InjectQueue(QUEUE_NAMES.EMAILS)
+    private readonly emailsQueue?: Queue,
+    @Optional()
+    @InjectQueue(QUEUE_NAMES.WEBHOOKS)
+    private readonly webhooksQueue?: Queue,
+    @Optional()
+    @InjectQueue(QUEUE_NAMES.ANALYTICS)
+    private readonly analyticsQueue?: Queue,
+    @Optional()
+    @InjectQueue(QUEUE_NAMES.NOTIFICATIONS)
+    private readonly notificationsQueue?: Queue,
+    @Optional()
+    @InjectQueue(QUEUE_NAMES.CLEANUP)
+    private readonly cleanupQueue?: Queue,
   ) {
-    this.queues.set(QUEUE_NAMES.EMAILS, this.emailsQueue);
-    this.queues.set(QUEUE_NAMES.WEBHOOKS, this.webhooksQueue);
-    this.queues.set(QUEUE_NAMES.ANALYTICS, this.analyticsQueue);
-    this.queues.set(QUEUE_NAMES.NOTIFICATIONS, this.notificationsQueue);
-    this.queues.set(QUEUE_NAMES.CLEANUP, this.cleanupQueue);
+    if (this.emailsQueue) this.queues.set(QUEUE_NAMES.EMAILS, this.emailsQueue);
+    if (this.webhooksQueue)
+      this.queues.set(QUEUE_NAMES.WEBHOOKS, this.webhooksQueue);
+    if (this.analyticsQueue)
+      this.queues.set(QUEUE_NAMES.ANALYTICS, this.analyticsQueue);
+    if (this.notificationsQueue)
+      this.queues.set(QUEUE_NAMES.NOTIFICATIONS, this.notificationsQueue);
+    if (this.cleanupQueue)
+      this.queues.set(QUEUE_NAMES.CLEANUP, this.cleanupQueue);
   }
 
-  async onModuleInit() {
-    // Wait for all queues to be ready
-    await Promise.all(
-      Array.from(this.queues.values()).map((queue) => queue.waitUntilReady()),
-    );
-    this.logger.log('All BullMQ queues are ready');
+  onModuleInit() {
+    if (this.queues.size === 0) {
+      this.logger.warn(
+        'Redis not configured — BullMQ queues disabled; queue operations are no-ops',
+      );
+      return;
+    }
+    for (const queue of this.queues.values()) {
+      queue.on('error', (error) => {
+        this.logger.error(`Queue connection failed for ${queue.name}`, error);
+      });
+    }
+    this.logger.log('BullMQ queues registered');
+  }
+
+  private requireQueue(queueName: string): Queue | undefined {
+    const queue = this.queues.get(queueName);
+    if (!queue) {
+      this.logger.warn(
+        `Queue ${queueName} is disabled (Redis not configured); operation skipped`,
+      );
+    }
+    return queue;
   }
 
   /**
@@ -41,7 +72,11 @@ export class QueueService implements OnModuleInit {
     organizationId: string;
     priority?: 'high' | 'normal' | 'low';
   }) {
-    return this.emailsQueue.add('send-email', data, {
+    const queue = this.requireQueue(QUEUE_NAMES.EMAILS);
+    if (!queue) {
+      return;
+    }
+    return queue.add('send-email', data, {
       priority: this.getPriorityValue(data.priority || 'normal'),
       jobId: `email:${Date.now()}:${Math.random().toString(36).slice(2, 9)}`,
     });
@@ -58,7 +93,11 @@ export class QueueService implements OnModuleInit {
     maxRetries?: number;
     organizationId: string;
   }) {
-    return this.webhooksQueue.add('deliver-webhook', data, {
+    const queue = this.requireQueue(QUEUE_NAMES.WEBHOOKS);
+    if (!queue) {
+      return;
+    }
+    return queue.add('deliver-webhook', data, {
       attempts: data.maxRetries || 5,
       backoff: {
         type: 'exponential',
@@ -77,7 +116,11 @@ export class QueueService implements OnModuleInit {
     date?: string; // ISO date string, defaults to now
     metrics?: string[];
   }) {
-    return this.analyticsQueue.add('rollup', data, {
+    const queue = this.requireQueue(QUEUE_NAMES.ANALYTICS);
+    if (!queue) {
+      return;
+    }
+    return queue.add('rollup', data, {
       priority: 5, // Lower priority than user-facing jobs
       jobId: `analytics:${data.rollupType}:${data.organizationId}:${data.date || Date.now()}`,
     });
@@ -95,7 +138,11 @@ export class QueueService implements OnModuleInit {
     organizationId: string;
     priority?: 'high' | 'normal' | 'low';
   }) {
-    return this.notificationsQueue.add('send-notification', data, {
+    const queue = this.requireQueue(QUEUE_NAMES.NOTIFICATIONS);
+    if (!queue) {
+      return;
+    }
+    return queue.add('send-notification', data, {
       priority: this.getPriorityValue(data.priority || 'normal'),
       jobId: `notification:${data.userId}:${Date.now()}`,
     });
@@ -109,7 +156,11 @@ export class QueueService implements OnModuleInit {
     olderThanDays: number;
     organizationId?: string;
   }) {
-    return this.cleanupQueue.add('cleanup', data, {
+    const queue = this.requireQueue(QUEUE_NAMES.CLEANUP);
+    if (!queue) {
+      return;
+    }
+    return queue.add('cleanup', data, {
       priority: 1, // Lowest priority
       delay: 60000, // Start after 1 minute
       jobId: `cleanup:${data.type}:${Date.now()}`,
@@ -130,9 +181,9 @@ export class QueueService implements OnModuleInit {
       jobId?: string;
     },
   ) {
-    const queue = this.queues.get(queueName);
+    const queue = this.requireQueue(queueName);
     if (!queue) {
-      throw new Error(`Queue ${queueName} not found`);
+      return;
     }
 
     return queue.add(jobName, data, {
@@ -151,9 +202,9 @@ export class QueueService implements OnModuleInit {
    * Get queue statistics
    */
   async getQueueStats(queueName: string) {
-    const queue = this.queues.get(queueName);
+    const queue = this.requireQueue(queueName);
     if (!queue) {
-      throw new Error(`Queue ${queueName} not found`);
+      return { waiting: 0, active: 0, completed: 0, failed: 0, delayed: 0 };
     }
 
     const [waiting, active, completed, failed, delayed] = await Promise.all([
@@ -182,9 +233,9 @@ export class QueueService implements OnModuleInit {
    * Pause a queue
    */
   async pauseQueue(queueName: string) {
-    const queue = this.queues.get(queueName);
+    const queue = this.requireQueue(queueName);
     if (!queue) {
-      throw new Error(`Queue ${queueName} not found`);
+      return;
     }
     await queue.pause();
     this.logger.log(`Queue ${queueName} paused`);
@@ -194,9 +245,9 @@ export class QueueService implements OnModuleInit {
    * Resume a queue
    */
   async resumeQueue(queueName: string) {
-    const queue = this.queues.get(queueName);
+    const queue = this.requireQueue(queueName);
     if (!queue) {
-      throw new Error(`Queue ${queueName} not found`);
+      return;
     }
     await queue.resume();
     this.logger.log(`Queue ${queueName} resumed`);
@@ -210,9 +261,9 @@ export class QueueService implements OnModuleInit {
     gracePeriodMs = 24 * 60 * 60 * 1000,
     limit = 1000,
   ) {
-    const queue = this.queues.get(queueName);
+    const queue = this.requireQueue(queueName);
     if (!queue) {
-      throw new Error(`Queue ${queueName} not found`);
+      return { completed: 0, failed: 0 };
     }
 
     const [completed, failed] = await Promise.all([
