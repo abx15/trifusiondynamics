@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import { SITE_URL } from "@/lib/site-url";
 
 interface MetadataProps {
   title?: string;
@@ -20,16 +21,12 @@ export function constructMetadata({
   const defaultDescription =
     "We build modern, resilient full-stack applications and integrate bespoke AI automation pipelines to transform business operations for Indian SMBs and startups.";
 
-  const siteUrl = (
-    process.env.NEXT_PUBLIC_SITE_URL || "https://trifusiondynamics.vercel.app/"
-  ).replace(/\/$/, "");
-
   // Build absolute canonical URL: siteUrl/slug (slug may be "" for root)
   const canonicalPath = slug ? `/${slug}` : "/";
-  const canonicalUrl = `${siteUrl}${canonicalPath}`;
+  const canonicalUrl = `${SITE_URL}${canonicalPath}`;
 
   // Resolve image to absolute URL
-  const ogImage = image.startsWith("http") ? image : `${siteUrl}${image}`;
+  const ogImage = image.startsWith("http") ? image : `${SITE_URL}${image}`;
 
   return {
     title: title || defaultTitle,

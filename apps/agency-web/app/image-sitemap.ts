@@ -1,15 +1,15 @@
 import { MetadataRoute } from "next";
 import { getPortfolioItems, getBlogPosts } from "@/lib/api";
+import { SITE_URL } from "@/lib/site-url";
 
 export default async function imageSitemap(): Promise<MetadataRoute.Sitemap> {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://trifusiondynamics.vercel.app/";
   const currentDate = new Date();
 
   const images: MetadataRoute.Sitemap = [];
 
   // Add main logo and static images
   images.push({
-    url: `${siteUrl}/logo.png`,
+    url: `${SITE_URL}/logo.png`,
     lastModified: currentDate,
     changeFrequency: "monthly" as const,
     priority: 0.5,

@@ -4,6 +4,7 @@ import { ArrowRight, Calendar, Clock } from "lucide-react";
 import { getBlogPosts } from "@/lib/api";
 import { constructMetadata } from "@/lib/metadata";
 import { Metadata } from "next";
+import { SITE_URL } from "@/lib/site-url";
 
 export const revalidate = 60;
 
@@ -15,8 +16,6 @@ export const metadata: Metadata = constructMetadata({
 
 export default async function BlogPage() {
   const posts = await getBlogPosts();
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://trifusiondynamics.vercel.app/";
-
   // Breadcrumb JSON-LD
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
@@ -26,13 +25,13 @@ export default async function BlogPage() {
         "@type": "ListItem",
         "position": 1,
         "name": "Home",
-        "item": siteUrl,
+        "item": SITE_URL,
       },
       {
         "@type": "ListItem",
         "position": 2,
         "name": "Blog",
-        "item": `${siteUrl}/blog`,
+        "item": `${SITE_URL}/blog`,
       },
     ],
   };

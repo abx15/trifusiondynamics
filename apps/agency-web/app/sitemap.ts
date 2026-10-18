@@ -1,11 +1,8 @@
 import { MetadataRoute } from "next";
 import { getCmsServices, getPortfolioItems, getBlogPosts } from "@/lib/api";
+import { SITE_URL } from "@/lib/site-url";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  // Strip trailing slash to keep URLs clean
-  const siteUrl = (
-    process.env.NEXT_PUBLIC_SITE_URL || "https://trifusiondynamics.vercel.app/"
-  ).replace(/\/$/, "");
   const currentDate = new Date();
 
   // Base static paths with appropriate priorities and change frequencies
@@ -73,7 +70,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   const staticEntries: MetadataRoute.Sitemap = staticPaths.map((item) => ({
-    url: `${siteUrl}${item.path}`,
+    url: `${SITE_URL}${item.path}`,
     lastModified: item.lastModified,
     changeFrequency: item.changeFrequency,
     priority: item.priority,
@@ -88,37 +85,37 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ]);
 
     const serviceEntries: MetadataRoute.Sitemap = services.map((s) => ({
-      url: `${siteUrl}/services/${s.slug}`,
+      url: `${SITE_URL}/services/${s.slug}`,
       lastModified: currentDate,
       changeFrequency: "monthly" as const,
       priority: 0.7,
       alternates: {
         languages: {
-          en: `${siteUrl}/services/${s.slug}`,
+          en: `${SITE_URL}/services/${s.slug}`,
         },
       },
     }));
 
     const portfolioEntries: MetadataRoute.Sitemap = portfolio.map((p) => ({
-      url: `${siteUrl}/portfolio/${p.slug}`,
+      url: `${SITE_URL}/portfolio/${p.slug}`,
       lastModified: currentDate,
       changeFrequency: "monthly" as const,
       priority: 0.7,
       alternates: {
         languages: {
-          en: `${siteUrl}/portfolio/${p.slug}`,
+          en: `${SITE_URL}/portfolio/${p.slug}`,
         },
       },
     }));
 
     const blogEntries: MetadataRoute.Sitemap = blogs.map((b) => ({
-      url: `${siteUrl}/blog/${b.slug}`,
+      url: `${SITE_URL}/blog/${b.slug}`,
       lastModified: currentDate,
       changeFrequency: "weekly" as const,
       priority: 0.6,
       alternates: {
         languages: {
-          en: `${siteUrl}/blog/${b.slug}`,
+          en: `${SITE_URL}/blog/${b.slug}`,
         },
       },
     }));

@@ -3,6 +3,7 @@ import { constructMetadata } from "@/lib/metadata";
 import { Metadata } from "next";
 import { Sparkles, Code2, Database, Bot, Globe, Mail, ArrowRight, CheckCircle2, Briefcase, Cpu, Layers, Zap, Shield, Target } from "lucide-react";
 import Link from "next/link";
+import { SITE_URL } from "@/lib/site-url";
 
 export const revalidate = 60;
 
@@ -14,10 +15,6 @@ export const metadata: Metadata = constructMetadata({
 
 export default async function AboutPage() {
   const pageData = await getCmsPage("about-us");
-  const siteUrl = (
-    process.env.NEXT_PUBLIC_SITE_URL || "https://trifusiondynamics.vercel.app"
-  ).replace(/\/$/, "");
-
   // Breadcrumb JSON-LD
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
@@ -27,13 +24,13 @@ export default async function AboutPage() {
         "@type": "ListItem",
         "position": 1,
         "name": "Home",
-        "item": siteUrl,
+        "item": SITE_URL,
       },
       {
         "@type": "ListItem",
         "position": 2,
         "name": "About",
-        "item": `${siteUrl}/about`,
+        "item": `${SITE_URL}/about`,
       },
     ],
   };

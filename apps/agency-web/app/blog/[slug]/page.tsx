@@ -6,6 +6,7 @@ import { ArrowLeft, Calendar, Clock, User, ArrowRight } from "lucide-react";
 import { getBlogPosts, getBlogPostBySlug } from "@/lib/api";
 import { constructMetadata } from "@/lib/metadata";
 import { Metadata } from "next";
+import { SITE_URL } from "@/lib/site-url";
 
 export const revalidate = 60;
 
@@ -46,10 +47,6 @@ export default async function BlogPostDetailPage({ params }: Props) {
 
   const allPosts = await getBlogPosts();
   const nextPost = allPosts.find((p) => p.slug !== slug);
-  const siteUrl = (
-    process.env.NEXT_PUBLIC_SITE_URL || "https://trifusiondynamics.vercel.app/"
-  ).replace(/\/$/, "");
-
   // Article JSON-LD Structured Data
   const articleJsonLd = {
     "@context": "https://schema.org",
@@ -67,13 +64,13 @@ export default async function BlogPostDetailPage({ params }: Props) {
     "publisher": {
       "@type": "Organization",
       "name": "Trifusion Dynamics",
-      "logo": `${siteUrl}/logo.png`,
-      "url": siteUrl,
+      "logo": `${SITE_URL}/logo.png`,
+      "url": SITE_URL,
     },
     "description": post.seoDescription || post.summary,
     "mainEntityOfPage": {
       "@type": "WebPage",
-      "@id": `${siteUrl}/blog/${slug}`,
+      "@id": `${SITE_URL}/blog/${slug}`,
     },
   };
 
@@ -86,19 +83,19 @@ export default async function BlogPostDetailPage({ params }: Props) {
         "@type": "ListItem",
         "position": 1,
         "name": "Home",
-        "item": siteUrl,
+        "item": SITE_URL,
       },
       {
         "@type": "ListItem",
         "position": 2,
         "name": "Blog",
-        "item": `${siteUrl}/blog`,
+        "item": `${SITE_URL}/blog`,
       },
       {
         "@type": "ListItem",
         "position": 3,
         "name": post.title,
-        "item": `${siteUrl}/blog/${slug}`,
+        "item": `${SITE_URL}/blog/${slug}`,
       },
     ],
   };

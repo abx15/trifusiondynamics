@@ -4,6 +4,7 @@ import { getCmsServices } from "@/lib/api";
 import { constructMetadata } from "@/lib/metadata";
 import { Metadata } from "next";
 import type { ServiceItem } from "@/lib/cms-static-data";
+import { SITE_URL } from "@/lib/site-url";
 
 export const revalidate = 60;
 
@@ -30,7 +31,6 @@ function ServiceIcon({ name, className }: { name: string; className?: string }) 
 
 export default async function ServicesPage() {
   const services = await getCmsServices();
-  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://trifusiondynamics.com").replace(/\/$/, "");
   const groupedServices = services.reduce<Map<string, ServiceItem[]>>((groups, service) => {
     const category = service.category || "Other Services";
     groups.set(category, [...(groups.get(category) || []), service]);
@@ -46,13 +46,13 @@ export default async function ServicesPage() {
         "@type": "ListItem",
         "position": 1,
         "name": "Home",
-        "item": siteUrl,
+        "item": SITE_URL,
       },
       {
         "@type": "ListItem",
         "position": 2,
         "name": "Services",
-        "item": `${siteUrl}/services`,
+        "item": `${SITE_URL}/services`,
       },
     ],
   };

@@ -17,6 +17,7 @@ import {
 import { getCmsServices, getServiceBySlug } from "@/lib/api";
 import { constructMetadata } from "@/lib/metadata";
 import { Metadata } from "next";
+import { SITE_URL } from "@/lib/site-url";
 
 export const revalidate = 60;
 
@@ -78,10 +79,6 @@ export default async function ServiceDetailPage({ params }: Props) {
   }
 
   const otherServices = (await getCmsServices()).filter((s) => s.slug !== slug);
-  const siteUrl = (
-    process.env.NEXT_PUBLIC_SITE_URL || "https://trifusiondynamics.vercel.app/"
-  ).replace(/\/$/, "");
-
   // JSON-LD Structured Data for Service
   const serviceJsonLd = {
     "@context": "https://schema.org",
@@ -91,8 +88,8 @@ export default async function ServiceDetailPage({ params }: Props) {
     "provider": {
       "@type": "Organization",
       "name": "Trifusion Dynamics",
-      "url": siteUrl,
-      "logo": `${siteUrl}/logo.png`,
+      "url": SITE_URL,
+      "logo": `${SITE_URL}/logo.png`,
     },
     "areaServed": {
       "@type": "Country",
@@ -114,19 +111,19 @@ export default async function ServiceDetailPage({ params }: Props) {
         "@type": "ListItem",
         "position": 1,
         "name": "Home",
-        "item": siteUrl,
+        "item": SITE_URL,
       },
       {
         "@type": "ListItem",
         "position": 2,
         "name": "Services",
-        "item": `${siteUrl}/services`,
+        "item": `${SITE_URL}/services`,
       },
       {
         "@type": "ListItem",
         "position": 3,
         "name": service.name,
-        "item": `${siteUrl}/services/${slug}`,
+        "item": `${SITE_URL}/services/${slug}`,
       },
     ],
   };

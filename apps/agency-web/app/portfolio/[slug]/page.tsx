@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, Calendar, User, Tag, CheckCircle2, Quote } from 
 import { getPortfolioItems, getPortfolioItemBySlug } from "@/lib/api";
 import { constructMetadata } from "@/lib/metadata";
 import { Metadata } from "next";
+import { SITE_URL } from "@/lib/site-url";
 
 export const revalidate = 60;
 
@@ -45,8 +46,6 @@ export default async function PortfolioDetailPage({ params }: Props) {
 
   const allItems = await getPortfolioItems();
   const nextItem = allItems.find((p) => p.slug !== slug);
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://trifusiondynamics.vercel.app/";
-
   // JSON-LD Structured Data for Case Study (CreativeWork)
   const caseStudyJsonLd: any = {
     "@context": "https://schema.org",
@@ -57,12 +56,12 @@ export default async function PortfolioDetailPage({ params }: Props) {
     "author": {
       "@type": "Organization",
       "name": "Trifusion Dynamics",
-      "url": siteUrl,
+      "url": SITE_URL,
     },
     "publisher": {
       "@type": "Organization",
       "name": "Trifusion Dynamics",
-      "logo": `${siteUrl}/logo.png`,
+      "logo": `${SITE_URL}/logo.png`,
     },
     "datePublished": item.year,
     "about": {
@@ -93,19 +92,19 @@ export default async function PortfolioDetailPage({ params }: Props) {
         "@type": "ListItem",
         "position": 1,
         "name": "Home",
-        "item": siteUrl,
+        "item": SITE_URL,
       },
       {
         "@type": "ListItem",
         "position": 2,
         "name": "Portfolio",
-        "item": `${siteUrl}/portfolio`,
+        "item": `${SITE_URL}/portfolio`,
       },
       {
         "@type": "ListItem",
         "position": 3,
         "name": item.title,
-        "item": `${siteUrl}/portfolio/${slug}`,
+        "item": `${SITE_URL}/portfolio/${slug}`,
       },
     ],
   };

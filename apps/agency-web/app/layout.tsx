@@ -4,6 +4,7 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import StickyMobileCTA from "@/components/sections/StickyMobileCTA";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
+import { SITE_URL } from "@/lib/site-url";
 import "./globals.css";
 
 const inter = Inter({
@@ -24,9 +25,6 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
 };
-
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://trifusiondynamics.com";
 
 export const metadata: Metadata = {
   title: {
