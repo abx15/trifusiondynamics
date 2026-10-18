@@ -10,6 +10,10 @@ import { RedisService } from '../database/redis.service';
 import { RateLimitService } from '../database/rate-limit.service';
 import { SecretsService } from '../secrets/secrets.service';
 
+jest.mock('../secrets/secrets.service', () => ({
+  SecretsService: class SecretsService {},
+}));
+
 jest.mock('@agency-os/database', () => ({
   authActivityLogRepository: {
     getFailedLoginsSince: jest.fn().mockResolvedValue(0),
@@ -21,19 +25,24 @@ describe('AuthService', () => {
   let service: AuthService;
   let prismaMock: DeepMockProxy<PrismaService>;
   let rateLimitMock: DeepMockProxy<RateLimitService>;
+  let secretsMock: DeepMockProxy<SecretsService>;
 
   beforeEach(async () => {
     prismaMock = mockDeep<PrismaService>();
     rateLimitMock = mockDeep<RateLimitService>();
+    secretsMock = mockDeep<SecretsService>();
     rateLimitMock.isLoginLocked.mockResolvedValue(false);
     rateLimitMock.recordFailedLogin.mockResolvedValue(1);
     rateLimitMock.resetLoginAttempts.mockResolvedValue(undefined);
+    secretsMock.getJwtAccessSecret.mockResolvedValue('test-access-secret');
+    secretsMock.getJwtRefreshSecret.mockResolvedValue('test-refresh-secret');
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
         { provide: PrismaService, useValue: prismaMock },
         { provide: RateLimitService, useValue: rateLimitMock },
+        { provide: SecretsService, useValue: secretsMock },
         {
           provide: CACHE_MANAGER,
           useValue: {
@@ -90,6 +99,53 @@ describe('AuthService', () => {
       expect(result).toHaveProperty('accessToken');
       expect(result).toHaveProperty('refreshToken');
       expect(result.user.email).toBe('test@test.com');
+    });
+
+    it('should use configured JWT environment secrets without secret-provider lookup', async () => {
+      const previousAccessSecret = process.env.JWT_ACCESS_SECRET;
+      const previousRefreshSecret = process.env.JWT_REFRESH_SECRET;
+      process.env.JWT_ACCESS_SECRET = 'environment-access-secret';
+      process.env.JWT_REFRESH_SECRET = 'environment-refresh-secret';
+      secretsMock.getJwtAccessSecret.mockRejectedValue(
+        new Error('Secret provider unavailable'),
+      );
+      secretsMock.getJwtRefreshSecret.mockRejectedValue(
+        new Error('Secret provider unavailable'),
+      );
+
+      const hashedPassword = await bcrypt.hash('password123', 10);
+      prismaMock.user.findFirst.mockResolvedValue({
+        id: 'user-1',
+        email: 'test@test.com',
+        name: 'Test User',
+        password: hashedPassword,
+        organizationId: 'org-1',
+        isActive: true,
+        mustChangePassword: false,
+        organization: { isActive: true },
+        roles: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as any);
+
+      try {
+        await expect(
+          service.login({ email: 'test@test.com', password: 'password123' }),
+        ).resolves.toHaveProperty('accessToken');
+        expect(secretsMock.getJwtAccessSecret).not.toHaveBeenCalled();
+        expect(secretsMock.getJwtRefreshSecret).not.toHaveBeenCalled();
+      } finally {
+        if (previousAccessSecret === undefined) {
+          delete process.env.JWT_ACCESS_SECRET;
+        } else {
+          process.env.JWT_ACCESS_SECRET = previousAccessSecret;
+        }
+        if (previousRefreshSecret === undefined) {
+          delete process.env.JWT_REFRESH_SECRET;
+        } else {
+          process.env.JWT_REFRESH_SECRET = previousRefreshSecret;
+        }
+      }
     });
 
     it('should throw UnauthorizedException if password is wrong', async () => {

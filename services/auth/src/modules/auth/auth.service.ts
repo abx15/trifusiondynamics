@@ -30,7 +30,9 @@ export class AuthService {
   ) {}
 
   private async getJwtSecret(): Promise<string> {
-    const secret = await this.secrets.getJwtAccessSecret();
+    const secret =
+      process.env.JWT_ACCESS_SECRET ||
+      (await this.secrets.getJwtAccessSecret());
     if (!secret) {
       throw new Error('JWT_ACCESS_SECRET not found in secret provider');
     }
@@ -38,7 +40,9 @@ export class AuthService {
   }
 
   private async getJwtRefreshSecret(): Promise<string> {
-    const secret = await this.secrets.getJwtRefreshSecret();
+    const secret =
+      process.env.JWT_REFRESH_SECRET ||
+      (await this.secrets.getJwtRefreshSecret());
     if (!secret) {
       throw new Error('JWT_REFRESH_SECRET not found in secret provider');
     }
