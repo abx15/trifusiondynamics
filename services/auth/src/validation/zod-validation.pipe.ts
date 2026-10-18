@@ -1,38 +1,23 @@
 import {
-  ArgumentMetadata,
   Injectable,
   PipeTransform,
   BadRequestException,
+  Body,
+  Query,
+  Param,
+  Optional,
 } from '@nestjs/common';
 import { ZodSchema, ZodError } from 'zod';
 
 /**
- * Registry that maps (controller prototype, method name, parameter index) -> Zod schema.
- * Populated by the `@ZodBody`, `@ZodQuery`, `@ZodParam` decorators; read by the ZodValidationPipe.
- */
-const schemaRegistry = new WeakMap<object, Map<number, ZodSchema>>();
-
-function getOrCreateMap(target: object): Map<number, ZodSchema> {
-  let map = schemaRegistry.get(target);
-  if (!map) {
-    map = new Map();
-    schemaRegistry.set(target, map);
-  }
-  return map;
-}
-
-/**
- * Parameter decorator that attaches a Zod schema to a controller method parameter.
+ * Parameter decorator that binds and validates a request body.
  *
  * Usage:
  *   @Post()
  *   create(@ZodBody(CreateLeadSchema) body: CreateLeadInput) { ... }
  */
 export function ZodBody(schema: ZodSchema) {
-  return function (_target: object, _key: string | symbol, idx: number) {
-    const map = getOrCreateMap(_target);
-    map.set(idx, schema);
-  };
+  return Body(new ZodValidationPipe(schema));
 }
 
 /**
@@ -43,10 +28,7 @@ export function ZodBody(schema: ZodSchema) {
  *   findAll(@ZodQuery(PaginationSchema) query: PaginationInput) { ... }
  */
 export function ZodQuery(schema: ZodSchema) {
-  return function (_target: object, _key: string | symbol, idx: number) {
-    const map = getOrCreateMap(_target);
-    map.set(idx, schema);
-  };
+  return Query(new ZodValidationPipe(schema));
 }
 
 /**
@@ -57,34 +39,23 @@ export function ZodQuery(schema: ZodSchema) {
  *   findOne(@ZodParam(UuidSchema) id: string) { ... }
  */
 export function ZodParam(schema: ZodSchema) {
-  return function (_target: object, _key: string | symbol, idx: number) {
-    const map = getOrCreateMap(_target);
-    map.set(idx, schema);
-  };
+  return Param(new ZodValidationPipe(schema));
 }
 
 /**
- * NestJS pipe that validates request payloads against a Zod schema registered
- * via `@ZodBody`, `@ZodQuery`, or `@ZodParam` decorators.
+ * NestJS pipe that validates request values against a Zod schema.
  *
- * Registered globally via `app.useGlobalPipes(new ZodValidationPipe())`.
+ * Schema-bound instances are attached by the Zod parameter decorators; an
+ * unconfigured global instance leaves values unchanged.
  */
 @Injectable()
 export class ZodValidationPipe implements PipeTransform {
-  transform(value: unknown, metadata: ArgumentMetadata): unknown {
-    // metadata.data is the parameter index for @Body/@Query/@Param.
-    const paramIndex = metadata.data;
-    if (paramIndex === undefined) return value;
+  constructor(@Optional() private readonly schema?: ZodSchema) {}
 
-    // The controller prototype is the metatype's prototype.
-    const metatype = metadata.metatype;
-    if (!metatype) return value;
+  transform(value: unknown): unknown {
+    if (!this.schema) return value;
 
-    const map = schemaRegistry.get(metatype.prototype);
-    const schema = map?.get(Number(paramIndex));
-    if (!schema) return value;
-
-    const result = schema.safeParse(value);
+    const result = this.schema.safeParse(value);
     if (!result.success) {
       throw new BadRequestException(this.formatError(result.error));
     }
