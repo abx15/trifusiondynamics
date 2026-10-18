@@ -3,6 +3,7 @@ import { ArrowRight, BrainCircuit, Layers, Smartphone, Cloud, CheckCircle2 } fro
 import { getCmsServices } from "@/lib/api";
 import { constructMetadata } from "@/lib/metadata";
 import { Metadata } from "next";
+import type { ServiceItem } from "@/lib/cms-static-data";
 
 export const revalidate = 60;
 
@@ -29,7 +30,12 @@ function ServiceIcon({ name, className }: { name: string; className?: string }) 
 
 export default async function ServicesPage() {
   const services = await getCmsServices();
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://trifusiondynamics.vercel.app/";
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://trifusiondynamics.com").replace(/\/$/, "");
+  const groupedServices = services.reduce<Map<string, ServiceItem[]>>((groups, service) => {
+    const category = service.category || "Other Services";
+    groups.set(category, [...(groups.get(category) || []), service]);
+    return groups;
+  }, new Map());
 
   // Breadcrumb JSON-LD
   const breadcrumbJsonLd = {
@@ -76,54 +82,53 @@ export default async function ServicesPage() {
           </p>
         </div>
 
-        {/* Services List */}
-        <div className="flex flex-col gap-12">
-          {services.map((service, index) => (
-            <div
-              key={service.id}
-              className="glass-panel rounded-3xl p-8 sm:p-12 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start hover:border-primary/10 transition-colors"
-            >
-              {/* Left Column: Title & Icon */}
-              <div className="lg:col-span-4">
-                <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/10 to-secondary/10 border border-primary/20 text-primary mb-6">
-                  <ServiceIcon name={service.iconName} className="h-6 w-6" />
+        {/* Services grouped by capability */}
+        <div className="space-y-16">
+          {[...groupedServices].map(([category, categoryServices], categoryIndex) => (
+            <section key={category} aria-labelledby={`category-${categoryIndex}`}>
+              <div className="mb-6 flex items-end justify-between gap-4 border-b border-white/10 pb-4">
+                <div>
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-primary">Service category</p>
+                  <h2 id={`category-${categoryIndex}`} className="text-2xl font-display font-bold text-white sm:text-3xl">{category}</h2>
                 </div>
-                <h2 className="text-2xl font-display font-bold text-white mb-3">
-                  {service.name}
-                </h2>
-                <p className="text-slate-400 text-xs font-mono uppercase tracking-wider">
-                  0{index + 1} / Solution Scope
-                </p>
+                <span className="text-sm text-slate-500">{categoryServices.length} services</span>
               </div>
-
-              {/* Middle Column: Details & Description */}
-              <div className="lg:col-span-5">
-                <p className="text-slate-300 text-sm sm:text-base leading-relaxed mb-6">
-                  {service.longDescription}
-                </p>
-                <div className="flex flex-wrap gap-2.5">
-                  {service.features.map((feature, i) => (
-                    <span
-                      key={i}
-                      className="rounded-full bg-white/5 border border-white/10 px-3 py-1 text-xs text-slate-300"
-                    >
-                      {feature}
-                    </span>
-                  ))}
-                </div>
+              <div className="grid grid-cols-1 gap-5">
+                {categoryServices.map((service, index) => (
+                  <article
+                    key={service.id}
+                    className="glass-panel grid grid-cols-1 items-start gap-6 rounded-3xl p-6 transition-colors hover:border-primary/20 sm:p-8 lg:grid-cols-12"
+                  >
+                    <div className="lg:col-span-4">
+                      <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 to-secondary/10 text-primary">
+                        <ServiceIcon name={service.iconName} className="h-6 w-6" />
+                      </div>
+                      <h3 className="mb-2 text-xl font-display font-bold text-white sm:text-2xl">{service.name}</h3>
+                      <p className="text-xs font-mono uppercase tracking-wider text-slate-500">
+                        {String(index + 1).padStart(2, "0")} / {category}
+                      </p>
+                    </div>
+                    <div className="lg:col-span-5">
+                      <p className="mb-5 text-sm leading-relaxed text-slate-300 sm:text-base">{service.longDescription}</p>
+                      <div className="flex flex-wrap gap-2">
+                        {service.features.map((feature) => (
+                          <span key={feature} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300">{feature}</span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex items-center pt-1 lg:col-span-3 lg:justify-end">
+                      <Link
+                        href={`/services/${service.slug}`}
+                        className="group inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition-all hover:border-primary/20 hover:bg-white/10 hover:text-primary"
+                      >
+                        Explore service
+                        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                      </Link>
+                    </div>
+                  </article>
+                ))}
               </div>
-
-              {/* Right Column: CTA */}
-              <div className="lg:col-span-3 flex lg:justify-end items-center h-full pt-6 lg:pt-0">
-                <Link
-                  href={`/services/${service.slug}`}
-                  className="group inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-6 py-3.5 text-sm font-semibold text-white hover:bg-white/10 hover:text-primary hover:border-primary/20 transition-all"
-                >
-                  Explore Details
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </Link>
-              </div>
-            </div>
+            </section>
           ))}
         </div>
 

@@ -2,6 +2,7 @@ export interface ServiceItem {
   id: string;
   name: string;
   slug: string;
+  category?: string;
   description: string;
   iconName: string;
   features: string[];
@@ -66,6 +67,7 @@ export const SERVICES_DATA: ServiceItem[] = [
     id: "service-1",
     name: "AI Integration & RAG Pipelines",
     slug: "ai-integration-rag",
+    category: "AI & Automation",
     description: "Supercharge your business workflows with tailored LLM integrations, retrieval-augmented generation (RAG), and smart agentic flows.",
     iconName: "BrainCircuit",
     features: [
@@ -82,6 +84,7 @@ export const SERVICES_DATA: ServiceItem[] = [
     id: "service-2",
     name: "Full-Stack SaaS Development",
     slug: "full-stack-saas",
+    category: "Web & Product Development",
     description: "Launch your SaaS in record time with robust Next.js Frontends, reliable NestJS Gateways, and high-performance databases.",
     iconName: "Layers",
     features: [
@@ -98,6 +101,7 @@ export const SERVICES_DATA: ServiceItem[] = [
     id: "service-3",
     name: "Mobile App Engineering",
     slug: "mobile-engineering",
+    category: "Mobile & Platforms",
     description: "Deliver premium cross-platform iOS and Android experiences using React Native, fully optimized for performance and design.",
     iconName: "Smartphone",
     features: [
@@ -114,6 +118,7 @@ export const SERVICES_DATA: ServiceItem[] = [
     id: "service-4",
     name: "Cloud Infrastructure & Scale",
     slug: "cloud-infra",
+    category: "Cloud & Security",
     description: "Achieve 99.99% uptime with containerized services, automated Kubernetes ingress orchestration, and edge caching.",
     iconName: "Cloud",
     features: [
@@ -130,6 +135,7 @@ export const SERVICES_DATA: ServiceItem[] = [
     id: "service-5",
     name: "Enterprise ERP & Custom CRM",
     slug: "custom-erp-crm",
+    category: "Business Systems",
     description: "Streamline operations with custom ERP modules, automated sales funnels, and HR payroll management systems.",
     iconName: "Briefcase",
     features: [
@@ -146,6 +152,7 @@ export const SERVICES_DATA: ServiceItem[] = [
     id: "service-6",
     name: "Cybersecurity & Code Auditing",
     slug: "cybersecurity-compliance",
+    category: "Cloud & Security",
     description: "Protect enterprise data with rigorous penetration testing, OWASP compliance, and zero-trust authentication.",
     iconName: "ShieldCheck",
     features: [
@@ -162,6 +169,7 @@ export const SERVICES_DATA: ServiceItem[] = [
     id: "service-7",
     name: "UI/UX & Motion Design",
     slug: "uiux-product-design",
+    category: "Web & Product Development",
     description: "Transform complex web applications into stunning, intuitive user interfaces with rich animations and visual design.",
     iconName: "Palette",
     features: [
@@ -178,6 +186,7 @@ export const SERVICES_DATA: ServiceItem[] = [
     id: "service-8",
     name: "Workflow Automation & Webhooks",
     slug: "workflow-automation",
+    category: "AI & Automation",
     description: "Eliminate manual tasks with event-driven automation triggers, custom webhooks, and third-party API sync.",
     iconName: "Zap",
     features: [
@@ -189,6 +198,66 @@ export const SERVICES_DATA: ServiceItem[] = [
     longDescription: "Connect your entire tech stack effortlessly. We engineer event-driven workflow engines that listen to critical business triggers—such as lead creation, invoice payment, or ticket escalation—and execute automated actions like emailing notifications, updating CRMs, or running background sync scripts.",
     seoTitle: "Event-Driven Automation & Webhook Integration | Trifusion Dynamics",
     seoDescription: "Custom workflow automation engines, scheduled background jobs, and webhook dispatching systems."
+  },
+  {
+    id: "service-9",
+    name: "Website & Web Application Development",
+    slug: "website-development",
+    category: "Web & Product Development",
+    description: "Fast, responsive business websites and web applications designed to turn visitors into customers.",
+    iconName: "Layers",
+    features: ["Next.js & React Development", "Responsive, Accessible Interfaces", "Content Management Integration", "Core Web Vitals Optimization"],
+    longDescription: "We plan, design, and build modern websites and web applications for businesses that need a polished digital presence. From company websites and landing pages to interactive customer portals, each project is optimized for mobile devices, accessibility, search visibility, and reliable performance.",
+    seoTitle: "Website & Web Application Development in India | Trifusion Dynamics",
+    seoDescription: "Custom responsive business websites and web applications built with Next.js and React, with SEO-friendly foundations."
+  },
+  {
+    id: "service-10",
+    name: "E-commerce Development",
+    slug: "ecommerce-development",
+    category: "Web & Product Development",
+    description: "Launch a reliable online store with smooth shopping, secure payments, and straightforward order management.",
+    iconName: "Briefcase",
+    features: ["Product Catalogues & Search", "Razorpay Payment Integration", "Order & Inventory Workflows", "Mobile-first Checkout"],
+    longDescription: "We build e-commerce experiences around your products and customers, including product discovery, secure checkout, payment integrations, and order-management workflows. The result is a maintainable online store that is easy to use on mobile and ready to grow with your business.",
+    seoTitle: "E-commerce Website Development Services | Trifusion Dynamics",
+    seoDescription: "Custom e-commerce website development with product catalogues, Razorpay payments, and mobile-friendly checkout."
+  },
+  {
+    id: "service-11",
+    name: "SEO & Website Performance",
+    slug: "seo-performance",
+    category: "Growth & Support",
+    description: "Improve technical search readiness, page speed, and content structure so customers can find your website.",
+    iconName: "Zap",
+    features: ["Technical SEO Foundations", "Core Web Vitals Improvements", "Metadata & Structured Data", "Sitemap and Indexing Setup"],
+    longDescription: "We strengthen the technical foundations that help websites perform well for visitors and search engines. Work can include page-speed improvements, crawlable page structure, metadata, structured data, sitemaps, accessibility checks, and Core Web Vitals recommendations. Search rankings are not guaranteed and depend on many factors outside a development team's control.",
+    seoTitle: "Technical SEO & Website Performance Services | Trifusion Dynamics",
+    seoDescription: "Technical SEO, structured data, and Core Web Vitals improvements for fast, crawlable business websites."
+  },
+  {
+    id: "service-12",
+    name: "API & Third-party Integrations",
+    slug: "api-integrations",
+    category: "Web & Product Development",
+    description: "Connect your product to payment, messaging, analytics, and business systems through dependable APIs.",
+    iconName: "Layers",
+    features: ["REST API Design & Integration", "Payment and Messaging Providers", "Webhooks & Event Handling", "Authentication and Error Monitoring"],
+    longDescription: "We connect software systems through secure APIs and webhooks, helping teams remove duplicate data entry and keep business workflows in sync. Integrations are designed with authentication, clear error handling, retries where appropriate, and monitoring suited to the provider and project.",
+    seoTitle: "API Development & Third-party Integration Services | Trifusion Dynamics",
+    seoDescription: "Reliable API development and integrations for payments, messaging, analytics, and business software."
+  },
+  {
+    id: "service-13",
+    name: "Website Maintenance & Support",
+    slug: "website-maintenance",
+    category: "Growth & Support",
+    description: "Keep your website secure, current, and dependable with ongoing updates and engineering support.",
+    iconName: "Cloud",
+    features: ["Dependency and Security Updates", "Bug Fixes & Technical Support", "Backups and Deployment Checks", "Performance Monitoring"],
+    longDescription: "Our maintenance support helps keep websites and web applications healthy after launch. Depending on the agreed scope, this can include dependency updates, bug fixes, deployment checks, backup reviews, performance monitoring, and practical recommendations. Response times and included work are defined in the service agreement.",
+    seoTitle: "Website Maintenance & Support Services | Trifusion Dynamics",
+    seoDescription: "Ongoing website maintenance, security updates, bug fixes, deployment checks, and performance support."
   }
 ];
 

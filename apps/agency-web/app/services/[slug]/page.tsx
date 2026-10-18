@@ -1,6 +1,19 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowRight, BrainCircuit, Layers, Smartphone, Cloud, HelpCircle, CheckCircle } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  BrainCircuit,
+  Layers,
+  Smartphone,
+  Cloud,
+  Briefcase,
+  ShieldCheck,
+  Palette,
+  Zap,
+  HelpCircle,
+  CheckCircle,
+} from "lucide-react";
 import { getCmsServices, getServiceBySlug } from "@/lib/api";
 import { constructMetadata } from "@/lib/metadata";
 import { Metadata } from "next";
@@ -43,6 +56,14 @@ function ServiceIcon({ name, className }: { name: string; className?: string }) 
       return <Smartphone className={className} />;
     case "Cloud":
       return <Cloud className={className} />;
+    case "Briefcase":
+      return <Briefcase className={className} />;
+    case "ShieldCheck":
+      return <ShieldCheck className={className} />;
+    case "Palette":
+      return <Palette className={className} />;
+    case "Zap":
+      return <Zap className={className} />;
     default:
       return <HelpCircle className={className} />;
   }

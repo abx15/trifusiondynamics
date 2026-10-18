@@ -66,6 +66,14 @@ const PLANS: Plan[] = [
   },
 ];
 
+const USD_TO_INR_REFERENCE_RATE = 83;
+
+const inrFormatter = new Intl.NumberFormat("en-IN", {
+  style: "currency",
+  currency: "INR",
+  maximumFractionDigits: 0,
+});
+
 export default function PricingSection() {
   const [annual, setAnnual] = useState(true);
 
@@ -83,7 +91,7 @@ export default function PricingSection() {
             Flexible Plans Built for Growth
           </h2>
           <p className="mt-4 text-lg text-zinc-400">
-            Select the plan that fits your business stage. No hidden fees, full ownership of code and architecture.
+            Select the plan that fits your business stage. Pricing is shown in Indian rupees using a reference rate of INR 83 per USD; final scope, exchange rates, and taxes are confirmed in your proposal.
           </p>
 
           {/* Billing Toggle */}
@@ -113,7 +121,9 @@ export default function PricingSection() {
         {/* Pricing Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 items-stretch">
           {PLANS.map((plan) => {
-            const price = annual ? plan.annualPrice : plan.monthlyPrice;
+            const priceInInr = Math.round(
+              (annual ? plan.annualPrice : plan.monthlyPrice) * USD_TO_INR_REFERENCE_RATE,
+            );
             return (
               <div
                 key={plan.id}
@@ -134,7 +144,7 @@ export default function PricingSection() {
                   <p className="mt-2 text-sm text-zinc-400 min-h-[40px]">{plan.tagline}</p>
 
                   <div className="mt-6 mb-8 flex items-baseline gap-1">
-                    <span className="text-4xl md:text-5xl font-black text-white">${price}</span>
+                    <span className="text-4xl md:text-5xl font-black text-white">{inrFormatter.format(priceInInr)}</span>
                     <span className="text-zinc-400 text-sm">/month</span>
                   </div>
 

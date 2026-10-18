@@ -15,7 +15,8 @@ export function constructMetadata({
   noIndex = false,
   slug = "",
 }: MetadataProps = {}): Metadata {
-  const defaultTitle = "Trifusion Dynamics | Full-Stack & AI-Powered SaaS Development";
+  const defaultTitle = "Full-Stack & AI-Powered SaaS Development";
+  const brandedDefaultTitle = `Trifusion Dynamics | ${defaultTitle}`;
   const defaultDescription =
     "We build modern, resilient full-stack applications and integrate bespoke AI automation pipelines to transform business operations for Indian SMBs and startups.";
 
@@ -31,13 +32,13 @@ export function constructMetadata({
   const ogImage = image.startsWith("http") ? image : `${siteUrl}${image}`;
 
   return {
-    title: title ? `${title} | Trifusion Dynamics` : defaultTitle,
+    title: title || defaultTitle,
     description: description || defaultDescription,
     alternates: {
       canonical: canonicalUrl,
     },
     openGraph: {
-      title: title ? `${title} | Trifusion Dynamics` : defaultTitle,
+      title: title ? `${title} | Trifusion Dynamics` : brandedDefaultTitle,
       description: description || defaultDescription,
       url: canonicalUrl,
       siteName: "Trifusion Dynamics",
@@ -54,7 +55,7 @@ export function constructMetadata({
     },
     twitter: {
       card: "summary_large_image",
-      title: title ? `${title} | Trifusion Dynamics` : defaultTitle,
+      title: title ? `${title} | Trifusion Dynamics` : brandedDefaultTitle,
       description: description || defaultDescription,
       images: [ogImage],
       creator: "@trifusiondyn",

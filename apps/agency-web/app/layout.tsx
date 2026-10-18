@@ -153,7 +153,7 @@ export default function RootLayout({
       "Cybersecurity Consulting",
       "UI/UX Design"
     ],
-    "priceRange": "$$",
+    "priceRange": "₹₹",
     "knowsAbout": [
       "Next.js",
       "React Native",

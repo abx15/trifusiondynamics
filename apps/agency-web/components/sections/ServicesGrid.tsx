@@ -42,6 +42,8 @@ interface ServicesGridProps {
 }
 
 export default function ServicesGrid({ services }: ServicesGridProps) {
+  const featuredServices = services.slice(0, 4);
+
   return (
     <section className="py-16 sm:py-24 bg-[#090d19] relative">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -49,9 +51,9 @@ export default function ServicesGrid({ services }: ServicesGridProps) {
         {/* Section Header */}
         <div className="flex flex-col md:flex-row items-start md:items-end justify-between mb-12 sm:mb-16 gap-6">
           <div className="max-w-2xl">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-primary mb-3">Our Expertise</h2>
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-primary mb-3">Services built around your goals</h2>
             <p className="text-2xl sm:text-3xl lg:text-4xl font-display font-extrabold text-white tracking-tight">
-              Bespoke Systems, Tailored For High-Growth Agencies
+              From a first launch to your next stage of growth
             </p>
           </div>
           <Link
@@ -69,8 +71,8 @@ export default function ServicesGrid({ services }: ServicesGridProps) {
             No services are currently available.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6 md:gap-8">
-            {services.map((service) => (
+          <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 xl:grid-cols-4 md:gap-8">
+            {featuredServices.map((service) => (
               <div
                 key={service.id}
                 className="glass-panel glass-panel-hover rounded-3xl p-6 sm:p-8 flex flex-col justify-between"

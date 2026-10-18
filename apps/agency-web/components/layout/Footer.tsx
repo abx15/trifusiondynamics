@@ -54,10 +54,11 @@ export default function Footer() {
           <div className="flex flex-col gap-4">
             <h3 className="font-display font-semibold text-white text-sm uppercase tracking-wider">Solutions</h3>
             <ul className="flex flex-col gap-2.5 text-sm">
-              <li><Link href="/services" className="hover:text-white transition-colors py-2 block min-h-[44px] flex items-center">AI Integration &amp; RAG</Link></li>
-              <li><Link href="/services" className="hover:text-white transition-colors py-2 block min-h-[44px] flex items-center">Full-Stack SaaS Development</Link></li>
-              <li><Link href="/services" className="hover:text-white transition-colors py-2 block min-h-[44px] flex items-center">Mobile App Engineering</Link></li>
-              <li><Link href="/services" className="hover:text-white transition-colors py-2 block min-h-[44px] flex items-center">Cloud Infrastructure &amp; Scale</Link></li>
+              <li><Link href="/services/ai-integration-rag" className="hover:text-white transition-colors py-2 block min-h-[44px] flex items-center">AI Integration &amp; RAG</Link></li>
+              <li><Link href="/services/full-stack-saas" className="hover:text-white transition-colors py-2 block min-h-[44px] flex items-center">Full-Stack SaaS Development</Link></li>
+              <li><Link href="/services/website-development" className="hover:text-white transition-colors py-2 block min-h-[44px] flex items-center">Website Development</Link></li>
+              <li><Link href="/services/mobile-engineering" className="hover:text-white transition-colors py-2 block min-h-[44px] flex items-center">Mobile App Engineering</Link></li>
+              <li><Link href="/services" className="hover:text-white transition-colors py-2 block min-h-[44px] flex items-center">View all services</Link></li>
             </ul>
           </div>
 
@@ -69,6 +70,9 @@ export default function Footer() {
               <li><Link href="/portfolio" className="hover:text-white transition-colors py-2 block min-h-[44px] flex items-center">Case Studies</Link></li>
               <li><Link href="/blog" className="hover:text-white transition-colors py-2 block min-h-[44px] flex items-center">Insights Blog</Link></li>
               <li><Link href="/privacy-policy" className="hover:text-white transition-colors py-2 block min-h-[44px] flex items-center">Privacy Policy</Link></li>
+              <li><Link href="/terms-of-service" className="hover:text-white transition-colors py-2 block min-h-[44px] flex items-center">Terms of Service</Link></li>
+              <li><Link href="/cookie-policy" className="hover:text-white transition-colors py-2 block min-h-[44px] flex items-center">Cookie Policy</Link></li>
+              <li><Link href="/refund-policy" className="hover:text-white transition-colors py-2 block min-h-[44px] flex items-center">Refund &amp; Cancellation</Link></li>
             </ul>
           </div>
 
@@ -78,12 +82,14 @@ export default function Footer() {
             <ul className="flex flex-col gap-3.5 text-sm">
               <li className="flex items-center gap-3">
                 <Mail className="h-4 w-4 text-primary shrink-0" />
-                <a href="mailto:support.trifusion@gmail.com" className="hover:text-white transition-colors break-all">
-                  support.trifusion@gmail.com
-                </a>
-                <a href="mailto:trifusiondynamics@gmail.com" className="hover:text-white transition-colors break-all">
-                 trifusiondynamics@gmail.com
-                </a>
+                <div className="flex flex-col gap-1">
+                  <a href="mailto:support.trifusion@gmail.com" className="hover:text-white transition-colors break-all">
+                    support.trifusion@gmail.com
+                  </a>
+                  <a href="mailto:trifusiondynamics@gmail.com" className="hover:text-white transition-colors break-all">
+                    trifusiondynamics@gmail.com
+                  </a>
+                </div>
               </li>
               <li className="flex items-center gap-3">
                 <Phone className="h-4 w-4 text-primary shrink-0" />

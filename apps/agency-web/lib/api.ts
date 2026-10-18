@@ -1,4 +1,5 @@
 import {
+  SERVICES_DATA,
   ServiceItem,
   PortfolioItem,
   BlogPost,
@@ -40,10 +41,22 @@ function normalizeArray<T>(payload: T[] | { data?: T[]; items?: T[]; results?: T
 export async function getCmsServices(): Promise<ServiceItem[]> {
   try {
     const payload = await fetchJson<ServiceItem[] | { data?: ServiceItem[]; items?: ServiceItem[]; results?: ServiceItem[] }>('/cms/services');
-    return normalizeArray(payload).filter((service): service is ServiceItem => Boolean(service && typeof service === "object" && typeof (service as ServiceItem).slug === "string" && (service as ServiceItem).slug.length > 0));
+    const cmsServices = normalizeArray(payload).filter((service): service is ServiceItem => Boolean(service && typeof service === "object" && typeof (service as ServiceItem).slug === "string" && (service as ServiceItem).slug.length > 0));
+    const cmsBySlug = new Map(cmsServices.map((service) => [service.slug, service]));
+    const localServices = SERVICES_DATA.map((service) => ({
+      ...service,
+      ...cmsBySlug.get(service.slug),
+      category: cmsBySlug.get(service.slug)?.category ?? service.category,
+    }));
+    const localSlugs = new Set(SERVICES_DATA.map((service) => service.slug));
+
+    return [
+      ...localServices,
+      ...cmsServices.filter((service) => !localSlugs.has(service.slug)),
+    ];
   } catch (error) {
-    console.error("CMS services unavailable; no fallback data is returned.", error);
-    return [];
+    console.error("CMS services unavailable; using the local service catalogue.", error);
+    return SERVICES_DATA;
   }
 }
 
