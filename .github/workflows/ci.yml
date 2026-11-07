@@ -217,6 +217,21 @@ jobs:
         working-directory: packages/database
         run: npx prisma validate
 
+      - name: Validate Docker Compose files
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci-password
+          POSTGRES_DB: agencyos_ci
+          MONGO_ROOT_USERNAME: ci
+          MONGO_ROOT_PASSWORD: ci-mongo-password
+          JWT_ACCESS_SECRET: ci-access-secret-that-is-longer-than-32-characters
+          JWT_REFRESH_SECRET: ci-refresh-secret-that-is-longer-than-32-characters
+          CORS_ALLOWED_ORIGINS: http://localhost:3000,http://localhost:3001
+          NEXT_PUBLIC_API_URL: http://localhost/api
+        run: |
+          docker compose -f infra/docker/docker-compose.yml config --quiet
+          docker compose -f infra/docker/docker-compose.prod.yml config --quiet
+
       - name: Check schema format
         working-directory: packages/database
         run: npx prisma format --check
