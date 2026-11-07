@@ -124,6 +124,9 @@ jobs:
           key: turbo-${{ runner.os }}-${{ github.sha }}
           restore-keys: turbo-${{ runner.os }}-
 
+      - name: Generate Prisma Client
+        run: pnpm --filter @agency-os/database db:generate
+
       - name: Build all packages and apps
         run: pnpm run build
 
