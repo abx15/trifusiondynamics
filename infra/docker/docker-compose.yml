@@ -68,7 +68,7 @@ services:
       dockerfile: Dockerfile
     container_name: tfx-ai-service
     ports:
-      - "8000:8000"
+      - "8001:8000"
     environment:
       - ENVIRONMENT=production
       - DATABASE_URL=postgresql://user:password@postgres:5432/agency_db
