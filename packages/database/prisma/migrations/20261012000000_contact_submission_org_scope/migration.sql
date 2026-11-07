@@ -22,23 +22,9 @@ CREATE INDEX IF NOT EXISTS "ContactSubmission_organizationId_idx"
 CREATE INDEX IF NOT EXISTS "ContactSubmission_organizationId_status_idx"
   ON "cms"."ContactSubmission"("organizationId", "status");
 
--- Step 5: Row-Level Security (RLS)
--- Enable RLS on the table so that PostgreSQL enforces the policy at the engine level.
-ALTER TABLE "cms"."ContactSubmission" ENABLE ROW LEVEL SECURITY;
-
--- Policy: an authenticated session variable app.current_org_id must match the row.
--- Set via: SET LOCAL app.current_org_id = '<orgId>';  (done in PrismaService.$extends or middleware)
--- The USING clause is evaluated on SELECT/UPDATE/DELETE; WITH CHECK on INSERT/UPDATE.
-CREATE POLICY IF NOT EXISTS "contact_submission_org_isolation"
-  ON "cms"."ContactSubmission"
-  AS PERMISSIVE
-  FOR ALL
-  TO PUBLIC
-  USING (
-    "organizationId" = current_setting('app.current_org_id', TRUE)
-    OR current_setting('app.bypass_rls', TRUE) = 'on'
-  )
-  WITH CHECK (
-    "organizationId" = current_setting('app.current_org_id', TRUE)
-    OR current_setting('app.bypass_rls', TRUE) = 'on'
-  );
+-- RLS is intentionally not enabled here. Prisma's current request-context
+-- middleware issues SET LOCAL outside the business query transaction, so the
+-- setting is not guaranteed to apply on the same pooled connection. Enabling
+-- RLS before transaction-scoped context propagation would deny legitimate
+-- queries and create a false security boundary. All application queries must
+-- remain explicitly organization-scoped until transaction-scoped RLS is added.
