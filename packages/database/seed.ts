@@ -1,4 +1,4 @@
-import { Prisma, PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import dns from 'dns';
 import process from 'process';
@@ -19,7 +19,7 @@ const prisma = new PrismaClient({
 });
 
 // Resilient query runner with retry capability for Neon connection timeouts
-async function safeRun<T>(label: string, fn: () => Prisma.PrismaPromise<T>, retries = 3): Promise<T> {
+async function safeRun<T>(label: string, fn: () => Promise<T>, retries = 3): Promise<T> {
   for (let i = 0; i < retries; i++) {
     try {
       return await fn();
