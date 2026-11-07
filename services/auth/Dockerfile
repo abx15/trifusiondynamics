@@ -5,7 +5,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
 COPY packages/ ./packages/
 COPY apps/ ./apps/
 COPY services/ ./services/
-RUN npm install -g pnpm
+RUN npm install -g pnpm@10.26.1
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @agency-os/database db:generate
 RUN pnpm --filter @agency-os/types run build
