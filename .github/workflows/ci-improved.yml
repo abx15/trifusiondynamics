@@ -24,7 +24,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  PNPM_VERSION: '10'
+  PNPM_VERSION: '10.26.1'
   NODE_VERSION: '20'
   NEXT_TELEMETRY_DISABLED: '1'
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}

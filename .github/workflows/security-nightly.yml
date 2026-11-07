@@ -9,13 +9,19 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  security-events: write
+
 env:
-  PNPM_VERSION: '10'
+  PNPM_VERSION: '10.26.1'
   NODE_VERSION: '20'
 
 jobs:
   security-scan:
     runs-on: ubuntu-latest
+    env:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -46,17 +52,20 @@ jobs:
         run: pnpm audit --audit-level high
 
       - name: Run Snyk security scan
+        if: ${{ env.SNYK_TOKEN != '' }}
         uses: snyk/actions/node@master
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           args: --severity-threshold=high --sarif-file-output=snyk-results.sarif
 
       - name: Upload Snyk results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        if: ${{ always() && hashFiles('snyk-results.sarif') != '' }}
         with:
           sarif_file: snyk-results.sarif
+
+      - name: Skip Snyk when token is not configured
+        if: ${{ env.SNYK_TOKEN == '' }}
+        run: echo 'SNYK_TOKEN is not configured; Snyk scan skipped. pnpm audit remains enabled.'
 
       - name: Run npm audit signatures verification
         run: npm audit signatures

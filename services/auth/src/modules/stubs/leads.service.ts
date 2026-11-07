@@ -64,9 +64,12 @@ export class LeadsService {
       throw new BadRequestException('Name, email, and message are required');
     }
 
-    // organizationId is required for multi-tenant isolation.
-    // CMS public endpoint resolves it from the host header / query param.
-    const orgId = organizationId || data.organizationId || 'unscoped';
+    // Never accept an implicit or body-supplied tenant for public submissions.
+    // The caller must resolve the target organization from trusted routing config.
+    const orgId = organizationId?.trim();
+    if (!orgId) {
+      throw new BadRequestException('A valid organization is required');
+    }
 
     return this.prisma.contactSubmission.create({
       data: {
@@ -120,10 +123,10 @@ export class LeadsService {
 
   async getSubmissionById(
     id: string,
-    organizationId?: string,
+    organizationId: string,
   ): Promise<ContactSubmission | null> {
     return this.prisma.contactSubmission.findFirst({
-      where: organizationId ? { id, organizationId } : { id },
+      where: { id, organizationId },
     });
   }
 
@@ -131,7 +134,7 @@ export class LeadsService {
     submissionId: string,
     organizationId: string,
   ): Promise<Lead> {
-    const sub = await this.getSubmissionById(submissionId);
+    const sub = await this.getSubmissionById(submissionId, organizationId);
     if (!sub) {
       throw new NotFoundException('Contact submission not found');
     }
@@ -151,7 +154,7 @@ export class LeadsService {
       });
 
       await tx.contactSubmission.update({
-        where: { id: sub.id },
+        where: { id: sub.id, organizationId },
         data: { status: SubmissionStatus.CONTACTED },
       });
 
@@ -247,31 +250,34 @@ export class LeadsService {
   }
 
   async convertToClient(id: string, organizationId: string) {
-    const lead = await this.prisma.lead.update({
-      where: { id, organizationId },
-      data: { stage: PipelineStage.WON },
-    });
+    return this.prisma.$transaction(async (tx) => {
+      const lead = await tx.lead.findFirst({ where: { id, organizationId } });
+      if (!lead) {
+        throw new NotFoundException('Lead not found');
+      }
+      if (lead.convertedToClientId) {
+        throw new BadRequestException('Lead has already been converted');
+      }
 
-    // Create Client record from lead
-    const client = await this.prisma.client.create({
-      data: {
-        name: lead.name,
-        companyName: lead.companyName,
-        email: lead.email,
-        phone: lead.phone,
-        organizationId: lead.organizationId,
-        status: 'ACTIVE',
-        leadId: lead.id,
-      },
-    });
+      const client = await tx.client.create({
+        data: {
+          name: lead.name,
+          companyName: lead.companyName,
+          email: lead.email,
+          phone: lead.phone,
+          organizationId,
+          status: 'ACTIVE',
+          leadId: lead.id,
+        },
+      });
 
-    // Update lead with converted client ID
-    await this.prisma.lead.update({
-      where: { id },
-      data: { convertedToClientId: client.id },
-    });
+      await tx.lead.update({
+        where: { id: lead.id, organizationId },
+        data: { stage: PipelineStage.WON, convertedToClientId: client.id },
+      });
 
-    return { id: client.id, name: client.name, email: client.email };
+      return { id: client.id, name: client.name, email: client.email };
+    });
   }
 
   private serializeLead(lead: {
