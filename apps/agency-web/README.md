@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Agency Website
 
-## Getting Started
+The public TriFusion Dynamics website is the Next.js application under `apps/agency-web`. It presents the organization, engineering services, portfolio, blog and contact/lead-capture experience.
 
-First, run the development server:
+## Stack
+
+- Next.js 16 App Router
+- React 19 and TypeScript
+- Tailwind CSS 4
+- Static/CMS-shaped content helpers and API integration
+
+## Local development
+
+From the repository root:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+corepack prepare pnpm@10.26.1 --activate
+pnpm install --frozen-lockfile
+pnpm --filter agency-web dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The public website can render content using its configured content/API integration and local fallback data. Configure the API base URL expected by `apps/agency-web/lib/api.ts` when working on API-backed content. Do not add private credentials to browser-visible variables.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Build and lint
 
-## Learn More
+```bash
+pnpm --filter agency-web lint
+pnpm --filter agency-web build
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Main sections
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Home and organization information
+- Services catalogue and service detail pages
+- Portfolio listing and project detail pages
+- Blog listing and article pages
+- Contact form
+- Privacy, cookie, refund and terms pages
+- Sitemap, robots and metadata helpers
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Service and portfolio content is currently represented through the website's CMS/static-data integration. Before adding a new public service, update the relevant content source and verify slug, metadata, icon mapping and page rendering.
 
-## Deploy on Vercel
+## Contribution notes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Keep SEO metadata and structured data accurate.
+- Do not publish invented testimonials, client logos, metrics or delivery guarantees.
+- Validate contact form behavior and spam/error handling.
+- Maintain responsive layouts, accessible navigation and reduced-motion support.
+- Keep legal copy reviewed by the organization before treating it as legal advice.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See the root [README](../../README.md), [contribution guide](../../CONTRIBUTING.md) and [service catalogue](https://trifusiondynamics.vercel.app/services).
