@@ -1,593 +1,328 @@
-# AgencyOS (Trifusion Dynamics)
+# TriFusion Dynamics — AgencyOS
 
-AgencyOS is an all-in-one agency management platform that brings together CRM, project management, HR, billing, AI, and developer tools in a single unified system. It is designed for digital agencies that want one coherent backend and multiple frontend experiences — admin, client portal, and public web — without juggling disconnected tools.
-
-## 🚀 System Architecture Flow
-
-```mermaid
-graph TB
-    subgraph "Frontend Applications"
-        A[Agency Web<br/>Next.js<br/>Port 3000]
-        B[Admin Dashboard<br/>Next.js<br/>Port 3001]
-    end
-
-    subgraph "Backend Services"
-        D[Auth Service<br/>NestJS<br/>Port 8000]
-        E[AI Service<br/>FastAPI<br/>Port 8001]
-    end
-
-    subgraph "Data Layer"
-        F[(PostgreSQL<br/>Primary DB)]
-        H[(Redis<br/>Cache)]
-    end
-
-    subgraph "External Services"
-        I[OpenAI/Anthropic]
-        J[Sentry<br/>Error Tracking]
-    end
-
-    subgraph "Shared Packages"
-        K[Database Package<br/>Prisma]
-        L[UI Components]
-        M[TypeScript Types]
-    end
-
-    %% Connections
-    A -->|HTTP/HTTPS| D
-    B -->|HTTP/HTTPS| D
-
-    D -->|AI Requests| E
-    D -->|Prisma ORM| F
-    D -->|Cache Manager| H
-    D -->|Telemetry| J
-
-    E -->|API Calls| I
-    E -->|Telemetry| J
-
-    D -->|Shared| K
-    A -->|Shared| L
-    B -->|Shared| L
-    D -->|Shared| M
-    A -->|Shared| M
-    B -->|Shared| M
-
-    style A fill:#4CAF50,color:#fff
-    style B fill:#2196F3,color:#fff
-    style D fill:#9C27B0,color:#fff
-    style E fill:#E91E63,color:#fff
-    style F fill:#607D8B,color:#fff
-    style H fill:#F44336,color:#fff
-```
-
-## 🏢 Multi-Tenant Architecture
-
-AgencyOS is a **multi-tenant SaaS platform** where each organization operates in complete isolation:
-
-```mermaid
-graph TD
-    subgraph "Super Admin (Universal Access)"
-        SA[Super Admin<br/>trifusiondynamics@gmail.com]
-    end
-
-    subgraph "Organization A"
-        OrgA["Org: TFX AI Demo Org<br/>(tfx-ai-demo-org)"]
-        AdminA["Org Admin<br/>admin@trifusiondynamics.com"]
-        EmpA1["Sales Agent<br/>Sales, CRM, Leads"]
-        EmpA2["Support Agent<br/>Tickets, Helpdesk"]
-        EmpA3["HR Agent<br/>Employees, Payroll"]
-        EmpA4["Employee<br/>Attendance, Tasks"]
-    end
-
-    subgraph "Organization B"
-        OrgB["Org: Acme Corp<br/>(acme-corp)"]
-        AdminB["Org Admin<br/>admin@acme.com"]
-    end
-
-    subgraph "Organization C"
-        OrgC["Org: Beta Inc<br/>(beta-inc)"]
-        AdminC["Org Admin<br/>admin@beta.com"]
-    end
-
-    SA -->|views & manages| OrgA
-    SA -->|views & manages| OrgB
-    SA -->|views & manages| OrgC
-    SA -->|provisions admins| AdminA
-    SA -->|provisions admins| AdminB
-    SA -->|provisions admins| AdminC
-
-    AdminA -->|org-scoped CRUD| OrgA
-    AdminB -->|org-scoped CRUD| OrgB
-    AdminC -->|org-scoped CRUD| OrgC
-
-    EmpA1 -->|read/write| OrgA
-    EmpA2 -->|read/write| OrgA
-    EmpA3 -->|read/write| OrgA
-    EmpA4 -->|read/write| OrgA
-
-    OrgA -->|WHERE orgId = orgA| DB[(PostgreSQL)]
-    OrgB -->|WHERE orgId = orgB| DB
-    OrgC -->|WHERE orgId = orgC| DB
-    SA -->|NO orgId filter| DB
-
-    style SA fill:#f59e0b,color:#fff
-    style OrgA fill:#8b5cf6,color:#fff
-    style OrgB fill:#8b5cf6,color:#fff
-    style OrgC fill:#8b5cf6,color:#fff
-    style DB fill:#64748b,color:#fff
-```
-
-### Tenant Isolation Rules
-
-| Role | Can See | Can Modify | Scope |
-|------|---------|------------|-------|
-| **Super Admin** | All organizations + all data | Everything (cross-org) | Universal |
-| **Org Admin** | Own org only | Users, clients, projects, tickets, invoices, leads, settings | `WHERE orgId = user.orgId` |
-| **Sales Agent** | Own org CRM | Leads, clients, projects | `WHERE orgId = user.orgId` |
-| **Support Agent** | Own org helpdesk | Tickets, messages | `WHERE orgId = user.orgId` |
-| **HR Agent** | Own org HR | Employees, attendance, leaves, payroll | `WHERE orgId = user.orgId` |
-| **Employee** | Own org | Attendance, tasks | `WHERE orgId = user.orgId` |
-| **Client** | Own org portal | Projects, invoices, tickets | `WHERE orgId = user.orgId` |
-
-### Organization Provisioning Flow
-
-```mermaid
-sequenceDiagram
-    participant SA as Super Admin
-    participant F as Organizations Page
-    participant B as Auth Service (8000)
-    participant DB as PostgreSQL
-
-    SA->>F: Fill org form + admin email/password
-    F->>B: POST /super-admin/organizations
-    B->>B: $transaction:
-    B->>DB: CREATE Organization
-    B->>DB: CREATE User (admin role)
-    B->>DB: CREATE UserRole (admin)
-    B-->>F: { org, admin: {email} }
-    F->>F: Toast: "Org created! Admin: admin@acme.com"
-    
-    Note over SA,AdminB: Next: Org Admin logs in
-    
-    AdminB->>F: Login with admin email + password
-    F->>B: POST /auth/login
-    B-->>F: { user, accessToken, organization }
-    F->>F: setAuth(token, user) → localStorage
-    F->>B: GET /users/org-dashboard (scoped to orgId)
-    B-->>F: { counts, users, stats } for THIS org only
-```
-
-## 📁 Project Structure
-
-```
-agency-os/
-├── apps/                    # Frontend applications
-│   ├── agency-web/          # Main frontend (marketing site)
-│   ├── admin-dashboard/     # Admin control panel (all role portals)
-│   └── shared-assets/       # Shared static assets
-├── packages/
-│   ├── database/            # Prisma schema, migrations, seed scripts
-│   │   └── prisma/
-│   │       ├── schema.prisma
-│   │       └── migrations/
-│   └── types/               # Shared TypeScript types
-├── services/
-│   └── auth/                # NestJS auth service
-│       └── src/
-├── scripts/                 # Utility scripts
-├── docs/                    # Technical documentation
-│   ├── architecture/        # System architecture docs
-│   ├── deployment/         # Deployment guides
-│   └── *.md                # Various technical reports
-└── README.md
-```
-
-## 🔗 Documentation
-
-### System Architecture
-- **[Complete System Architecture](docs/architecture/SYSTEM_ARCHITECTURE.md)** - Detailed architecture with service diagrams, data flows, and module interconnections
-- **[Architecture Patterns & Layers](docs/architecture/ARCHITECTURE_PATTERNS_LAYERS.md)** - Design patterns, architectural layers, and implementation strategies
-- **[Authentication Flow](docs/architecture/auth-flow.md)** - Detailed authentication flow documentation
-- **[Ecosystem Overview](docs/architecture/ecosystem.md)** - Project ecosystem and dependencies
-
-### Database & Infrastructure
-- **[Database Schema Complete Guide](docs/DATABASE_SCHEMA_COMPLETE_GUIDE.md)** - Comprehensive database documentation with diagrams, patterns, and layers
-- **[Database Schema Audit](docs/DATABASE_SCHEMA_AUDIT.md)** - Model-by-model schema analysis
-- **[PostgreSQL Production Hardening](docs/POSTGRESQL_PRODUCTION_HARDENING_REPORT.md)** - PostgreSQL production readiness report
-- **[Redis Architecture](docs/REDIS_ARCHITECTURE.md)** - Redis architecture audit
-- **[Redis Production Hardening](docs/REDIS_PRODUCTION_HARDENING_REPORT.md)** - Redis production hardening report
-
-### Security & Operations
-- **[Database Backup & Recovery](docs/DATABASE_BACKUP_AND_RECOVERY.md)** - Backup strategy and procedures
-- **[Restore Procedure](docs/RESTORE_PROCEDURE.md)** - Step-by-step restore runbooks
-- **[Cloudflare Production Setup](docs/CLOUDFLARE_PRODUCTION_SETUP.md)** - Cloudflare edge security setup
-- **[Cloudflare Edge Security Report](docs/CLOUDFLARE_EDGE_SECURITY_REPORT.md)** - Cloudflare edge security report
-
-### CI/CD & Deployment
-- **[CI/CD Pipeline Guide](docs/deployment/CI_CD_PIPELINE_GUIDE.md)** - Complete CI/CD pipeline documentation with improved workflows
-- **[Production Setup](docs/deployment/production-setup.md)** - Production deployment guide
-
-### Multi-Tenant Architecture
-- **[Actual Routes](docs/architecture/actual-routes.md)** - Complete API endpoint inventory (82+ endpoints)
-- **[Authentication Flow](docs/architecture/auth-flow.md)** - Cross-domain auth with exchange code pattern
-- **[Ecosystem Overview](docs/architecture/ecosystem.md)** - Project ecosystem and dependencies
-
-### Development Guidelines
-- **[AGENTS.md](AGENTS.md)** - Engineering guidelines and verification commands
-- **[Seeded Users Credentials](docs/SEEDED_USERS_CREDENTIALS.md)** - Test user credentials and login information
-
-## 🛠️ What It Does
-
-AgencyOS handles the full agency lifecycle:
-
-- **Multi-Tenant Architecture** — Each organization operates in complete isolation. Org admins see only their org's data; super admins have universal cross-organization access.
-- **Organization Provisioning** — Superadmin creates organizations and auto-provisions an org admin user (email, name, password) in a single transaction.
-- **Authentication & Access** — Secure login with JWT HttpOnly cookies, role-based access control (8 roles), and user management.
-- **Client Management** — Track leads, manage contacts, map organizations, and move deals through a visual sales pipeline.
-- **Projects & Tasks** — Create projects, assign sprints and tasks, set milestones, and keep teams aligned with Kanban-ready workflows.
-- **HR & Payroll** — Manage employees, attendance punches, leave requests, recruitment pipelines, salary structures, and payslip generation.
-- **Billing & Finance** — Generate estimates and invoices, manage subscriptions, record expenses, and track payment status.
-- **Helpdesk & Drive** — Support tickets with real-time chat messaging, FAQ management, and a secure internal document drive with folders and files.
-- **AI Assistant** — Built-in AI tools for proposal generation, SEO audits, email writing, meeting summarization, and conversational chat assistance.
-- **Analytics** — Revenue dashboards, client metrics, team performance, and automated rollup aggregations.
-- **Automation** — Event-driven workflow engine with triggers, conditions, and actions that react to lifecycle events like `lead.created` or `invoice.paid`.
-- **Developer Portal** — API key management with bcrypt hashing, webhook dispatchers, detailed request logs, and client-scoped API routes.
-
-## 🏗️ Architecture
-
-### Monorepo Structure
-
-The project is organized as a **pnpm workspace + Turborepo** monorepo:
-
-- `apps/admin-dashboard` — Next.js control panel (admin, employee, client, and super-admin role portals)
-- `apps/agency-web` — Public marketing site with CMS
-- `services/auth` — NestJS API gateway (main business logic)
-- `services/ai-service` — FastAPI microservice for AI workloads
-- `packages/database` — Shared Prisma schema and database utilities
-- `packages/ui` — Shared React components
-- `packages/types` — Shared TypeScript types
-- `packages/config` — Shared configuration
-
-### 💻 Tech Stack & Infrastructure
-
-<p align="left">
-  <img src="https://img.shields.io/badge/Next.js%2016-000000?style=flat-square&logo=nextdotjs&logoColor=white" alt="Next.js" />
-  <img src="https://img.shields.io/badge/React%2019-20232A?style=flat-square&logo=react&logoColor=61DAFB" alt="React" />
-  <img src="https://img.shields.io/badge/TypeScript%205-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
-  <img src="https://img.shields.io/badge/NestJS%2011-E0234E?style=flat-square&logo=nestjs&logoColor=white" alt="NestJS" />
-  <img src="https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white" alt="FastAPI" />
-  <img src="https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql&logoColor=white" alt="PostgreSQL" />
-  <img src="https://img.shields.io/badge/Prisma%205-2D3748?style=flat-square&logo=prisma&logoColor=white" alt="Prisma" />
-  <img src="https://img.shields.io/badge/Redis-DC382D?style=flat-square&logo=redis&logoColor=white" alt="Redis" />
-  <img src="https://img.shields.io/badge/Turborepo-EF4444?style=flat-square&logo=turborepo&logoColor=white" alt="Turborepo" />
-  <img src="https://img.shields.io/badge/Tailwind_CSS%204-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white" alt="Tailwind CSS" />
-  <img src="https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker" />
+<p align="center">
+  <strong>A unified operating system for digital agencies and service teams.</strong><br/>
+  CRM · Projects · HR · Billing · Helpdesk · AI · Automation · Analytics
 </p>
 
-| Layer | Primary Technologies | Key Libraries & Ecosystem | Purpose & Architectural Scope |
-|:---|:---|:---|:---|
-| **🎨 Web Frontends** | **Next.js 16** • **React 19** • **TypeScript** | `Turbopack`, `Tailwind CSS 4`, `Zustand`, `TanStack Query v5`, `Lucide Icons` | Multi-role portal (`admin-dashboard`) supporting 8 RBAC views, client portal, and marketing hub (`agency-web`) with fast SSR/SSG. |
-| **⚙️ Backend API Gateway** | **NestJS 11** • **Node.js 20+** • **TypeScript** | `Express`, `Pino Logger`, `Passport`, `Helmet`, `Throttler`, `Sentry Node` | High-throughput REST API with distributed rate limiting, token blocklist, session-level GUC timeouts, and unified RBAC guards. |
-| **🤖 AI Microservice** | **FastAPI** • **Python 3.11+** • **Uvicorn** | `Pydantic v2`, `OpenAI API`, `Anthropic SDK`, `Google Gemini` | Automated agentic workflows, SEO audit analyzer, meeting transcript summarizer, email writer, and smart proposal generator. |
-| **🗄️ Primary Database** | **PostgreSQL (Neon Serverless)** | `Prisma ORM 5`, `Postgres Multi-Schema (12 Schemas)`, `pgvector` | Segregated multi-domain architecture (auth, crm, hr, billing, projects, ai, etc.) with atomic transactions and direct/pooled hosts. |
-| **⚡ Cache & Token Store** | **Redis Cloud** | `ioredis`, `redis 4.7`, `cache-manager` | Instant JWT revocation blocklist, distributed rate limiting storage, and response caching with fallback in-memory stores. |
-| **📦 Monorepo Architecture** | **Turborepo** • **pnpm v10 Workspaces** | `TypeScript 5`, `ESLint 9`, `Prettier` | Blazing-fast dependency graph caching, zero code duplication, and shared packages (`@agency-os/database`, `@agency-os/types`). |
-| **🚀 CI/CD & Deployment** | **GitHub Actions** • **Vercel** • **Render** | `Docker`, `Cloudflare Edge`, `Sentry APM` | Automated multi-stage test/lint/build pipelines, Edge-optimized frontend deployments, and containerized backend services. |
+<p align="center">
+  <a href="https://trifusiondynamics.vercel.app/">Website</a> ·
+  <a href="https://github.com/abx15/trifusiondynamics">Source</a> ·
+  <a href="https://github.com/abx15/trifusiondynamics/issues">Issues</a> ·
+  <a href="https://github.com/abx15/trifusiondynamics/discussions">Discussions</a> ·
+  <a href="https://trifusiondynamics.vercel.app/contact">Contact</a>
+</p>
 
-## ⚡ Key Features
+<p align="center">
+  <img alt="Next.js 16" src="https://img.shields.io/badge/Next.js-16-black?logo=next.js"/>
+  <img alt="React 19" src="https://img.shields.io/badge/React-19-149eca?logo=react"/>
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript"/>
+  <img alt="NestJS" src="https://img.shields.io/badge/NestJS-11-e0234e?logo=nestjs"/>
+  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-Python-009688?logo=fastapi"/>
+  <img alt="pnpm" src="https://img.shields.io/badge/pnpm-10.26.1-f69220?logo=pnpm"/>
+</p>
 
-### Authentication & Security
-- JWT-based authentication with HttpOnly cookies
-- Refresh token rotation
-- Role-based access control (Admin, Employee, Client)
-- Global rate limiting (100 requests/minute)
-- Helmet security headers and CORS configuration
+**TriFusion Dynamics** is the engineering organization. **AgencyOS** is the agency-operations platform in this repository. It brings customer and lead management, project delivery, workforce operations, finance, support, AI-assisted workflows, automation and developer integrations into one workspace.
 
-### CRM & Sales Pipeline
-- Lead capture from website forms and manual entry
-- Pipeline stages: New → Contacted → Qualified → Proposed → Won
-- Contact and organization management
-- Lead conversion tracking
+This is an actively evolving monorepo. Feature availability and production readiness can differ by module. Code presence is not a certification that a workflow is complete, secure or enabled in every deployment. Review the [roadmap](docs/ROADMAP.md) and relevant tests before relying on a capability.
 
-### Project Management
-- Project creation with client and team assignment
-- Sprint and task management with Kanban boards
-- Milestone tracking
-- Task assignments, priorities, and statuses
+## Contents
 
-### HR & Workforce
-- Employee profiles and directory
-- Attendance check-in/check-out with daily summaries
-- Leave request and review workflow
-- Recruitment pipeline with candidate stage tracking
+- [Platform capabilities](#platform-capabilities)
+- [Repository map](#repository-map)
+- [Architecture](#architecture)
+- [Technology stack](#technology-stack)
+- [Quick start](#quick-start)
+- [Environment configuration](#environment-configuration)
+- [Database workflow](#database-workflow)
+- [Useful commands](#useful-commands)
+- [API reference](#api-reference)
+- [Testing](#testing)
+- [Deployment](#deployment)
+- [Security](#security)
+- [Contributing](#contributing)
+- [Roadmap](#roadmap)
+- [Services and sponsorship](#services-and-sponsorship)
+- [License](#license)
 
-### Payroll & Finance
-- Salary structure management by employee
-- Automated payslip generation and bulk processing
-- Invoice creation and payment tracking
-- Expense and subscription management
+## Platform capabilities
 
-### Helpdesk & Documents
-- Support ticket creation and chat-style messaging
-- FAQ system for self-service
-- Internal document drive with folders and file management
+| Domain | Capabilities represented in the repository |
+|---|---|
+| CRM | Lead capture, lead stages, client records, quotes and conversion workflows |
+| Project delivery | Projects, tasks, sprints, milestones and assignments |
+| HR | Employee records, attendance, leave requests and recruitment |
+| Finance | Salary structures, payslips, invoices, estimates, expenses and subscriptions |
+| Helpdesk | Tickets, messages, routing, departments, SLAs and client support views |
+| Client experience | Project, invoice, document and ticket pages within the dashboard |
+| AI tools | Proposal generation, SEO audit, email writing, meeting summaries and chat |
+| Automation | Workflow definitions, triggers, conditions, scheduling and run history |
+| Analytics | Revenue, client growth, team performance and rollup jobs |
+| Developer platform | API keys, webhooks, delivery records and request logs |
+| Platform operations | Organization administration, role/permission management, notifications, storage, queues and health checks |
 
-### AI Platform
-- Proposal generation from project requirements
-- SEO audit with actionable recommendations
-- Professional email writer
-- Meeting transcript summarization
-- Conversational AI chat assistant
+These are codebase capability areas, not a promise that every flow is complete or production-ready. Verify the relevant controllers, services, guards, UI and tests.
 
-### Analytics & Reporting
-- Revenue and client analytics dashboards
-- Team performance metrics
-- Automated rollup jobs for aggregated data
+## Repository map
 
-### Automation Engine
-- Event-driven workflow triggers
-- Conditional logic and action chains
-- Scheduled workflow execution
-- Lifecycle event listeners (lead.created, invoice.paid, etc.)
+| Path | Component | Responsibility | Port |
+|---|---|---|---:|
+| `apps/agency-web` | Public website | Services, portfolio, blog, contact and public content | 3000 |
+| `apps/admin-dashboard` | Operations dashboard | Admin, super-admin, agent, employee, HR and client-facing pages | 3001 |
+| `services/auth` | NestJS API | Authentication, business modules, REST and WebSocket gateway | 8000 |
+| `services/ai-service` | FastAPI service | Internal AI endpoints and model-provider integrations | 8001 host |
+| `packages/database` | Prisma package | Schema, migrations, client generation and seed tooling | — |
+| `packages/types` | Shared types | Cross-application TypeScript contracts | — |
+| `packages/ui` | Shared UI | Reusable UI components | — |
+| `packages/config` | Shared config | Shared configuration | — |
 
-### Developer Tools
-- API key generation and management
-- Webhook dispatchers with delivery tracking
-- Detailed request logging with request IDs
-- Client-scoped API routes ensuring data isolation
+The public website currently lists AI/RAG, SaaS, mobile, cloud, ERP/CRM, cybersecurity, UI/UX, automation, web, e-commerce, SEO, API integration and maintenance services. See the [live services catalogue](https://trifusiondynamics.vercel.app/services). These are commercial service offerings, not all standalone modules in AgencyOS.
 
-## 🔌 API Overview
+## Architecture
 
-The NestJS API exposes a comprehensive REST interface:
+```mermaid
+flowchart TB
+  WEB["Agency Website<br/>Next.js · :3000"]
+  DASH["Operations Dashboard<br/>Next.js · :3001"]
+  API["Core API<br/>NestJS · :8000"]
+  AI["AI Service<br/>FastAPI · :8001"]
+  DB[("PostgreSQL<br/>Prisma")]
+  REDIS[("Redis")]
+  LLM["Configured LLM providers"]
+  WEB --> API
+  DASH --> API
+  API --> DB
+  API --> REDIS
+  API --> AI
+  AI --> LLM
+```
 
-### Authentication
-- `POST /api/auth/login` — User login (returns `user` + `organization`)
-- `POST /api/auth/register` — User registration
-- `GET /api/auth/me` — Current user profile (includes `organization`)
-- `GET /api/auth/me/activity` — Get user activity
-- `POST /api/auth/logout` — User logout
-- `POST /api/auth/refresh` — Refresh access token
+The backend is a modular NestJS application with modules for authentication, users, clients, projects, HR, payroll, billing, helpdesk, AI orchestration, analytics, automation, developer tooling, notifications, storage, queues and health/failover operations. PostgreSQL is the primary application datastore; Redis supports cache, rate-limit and ephemeral coordination. The AI service exposes internal FastAPI routes and integrates with configured model providers.
 
-### Super Admin (Cross-Organization)
-- `GET /api/super-admin/organizations` — List all organizations with employee counts
-- `POST /api/super-admin/organizations` — Create organization + auto-provision admin
-- `PATCH /api/super-admin/organizations/:id` — Update organization (activate/deactivate)
-- `GET /api/super-admin/organizations/:id/automation` — Per-org automation stats
-- `GET /api/super-admin/automation/workflows` — All workflows across orgs
-- `PATCH /api/super-admin/automation/workflows/:id/toggle` — Toggle workflow active state
-- `POST /api/super-admin/automation/workflows/:id/trigger` — Trigger MANUAL workflow
+See [architecture documentation](docs/architecture/README.md), [authentication flow](docs/architecture/auth-flow.md) and [tenant isolation guidance](docs/architecture/tenant-isolation.md).
 
-### Org-Scoped (Tenant Isolation)
-- `GET /api/users/org-dashboard` — Org-scoped dashboard (counts, users, stats)
-- `GET /api/users` — List users (scoped to `user.orgId`)
-- `POST /api/users` — Create user
-- `PATCH /api/users/:id` — Update user
-- `DELETE /api/users/:id` — Delete user
+## Technology stack
 
-### Other Modules
-- `POST /api/projects` — Create project
-- `GET /api/projects` — List projects
-- `POST /api/hr/employees` — Create employee
-- `POST /api/hr/attendance/check-in` — Attendance check-in
-- `POST /api/payroll/payslips` — Generate payslips
-- `POST /api/ai/proposal` — AI proposal generation
-- `GET /api/analytics/dashboard` — Analytics overview
-- `POST /api/automation/workflows` — Create workflow
-- `POST /api/developer/api-keys` — Generate API key
+- **Web:** Next.js 16, React 19, TypeScript, Tailwind CSS 4
+- **API:** Node.js, NestJS 11, Express, TypeScript
+- **AI:** Python, FastAPI, Pydantic, Uvicorn
+- **Data:** PostgreSQL, Prisma ORM, Redis
+- **Workspace:** pnpm 10.26.1, Turborepo
+- **Quality/operations:** ESLint, Jest, Playwright, Newman, Docker, GitHub Actions
+- **Deployment integrations:** Vercel, Render and managed database/cache providers
 
-Swagger documentation is available at `/api/docs` when running locally.
+The lockfile is the source of truth for resolved package versions.
 
-## 🚀 Getting Started
+## Quick start
 
 ### Prerequisites
 
-- Node.js v20+
-- pnpm package manager
-- PostgreSQL database
-- Redis instance
-- Docker (optional, for local infrastructure)
+- Git
+- Node.js 20+ (supported LTS compatible with the lockfile)
+- pnpm **10.26.1**
+- Python 3.11+ for AI service development
+- Docker Engine/Desktop and Compose, or managed PostgreSQL and Redis
 
-### Installation
+### 1. Clone and install
 
 ```bash
-# Install dependencies from monorepo root
-pnpm install
+git clone https://github.com/abx15/trifusiondynamics.git
+cd trifusiondynamics
+corepack enable
+corepack prepare pnpm@10.26.1 --activate
+pnpm install --frozen-lockfile
 ```
 
-### Environment Setup
-
-Configure environment variables in `services/auth/.env` and `packages/database/.env`:
+### 2. Configure environment
 
 ```bash
-DATABASE_URL=postgresql://user:password@localhost:5432/trifusion_db
-DIRECT_URL=postgresql://user:password@localhost:5432/trifusion_db
-MONGODB_URL=mongodb://localhost:27017/trifusion_db
-REDIS_URL=redis://localhost:6379
-JWT_ACCESS_SECRET=your-secret-here
-JWT_REFRESH_SECRET=your-refresh-secret-here
+cp .env.example .env
+cp services/ai-service/.env.example services/ai-service/.env
 ```
 
-### Database Setup
+Set valid local PostgreSQL and Redis URLs, separate strong JWT secrets, allowed CORS origins and provider credentials for the features you intend to run. Generate secrets with `openssl rand -hex 32`. Never commit environment files.
+
+See [configuration guide](docs/development/configuration.md).
+
+### 3. Start local infrastructure
 
 ```bash
-# Push schema and generate Prisma client
+docker compose -f infra/docker/docker-compose.yml up -d postgres redis
+```
+
+Skip this if using managed development databases.
+
+### 4. Generate Prisma Client and apply migrations
+
+```bash
 pnpm --filter @agency-os/database db:generate
-
-# Seed database with test data (safe - uses upsert, won't remove existing data)
-cd packages/database
-npx tsx seed.ts
+pnpm --filter @agency-os/database db:migrate:deploy
 ```
 
-### Development
+Use `db:migrate:dev` for schema development against a disposable local database. Never use the unsafe db-push script in production.
+
+### 5. Run applications
+
+In separate terminals:
 
 ```bash
-# Start all services and apps
-pnpm run dev
+pnpm --filter auth dev
+pnpm --filter agency-web dev
+pnpm --filter admin-dashboard dev
 ```
 
-Services will be available at:
-- Agency Website: `http://localhost:3000`
-- Admin Dashboard: `http://localhost:3001` (includes client, employee, agent, and super-admin role portals)
-- Auth API: `http://localhost:8000`
-- AI Service: `http://localhost:8001`
-
-## 🌐 Production Deployment
-
-### Infrastructure Overview
-
-| Component | Platform | Role & Architecture | Production URL / Host |
-| :--- | :--- | :--- | :--- |
-| **Admin Dashboard** | **Vercel** | Multi-role portal (Admin, Employee, Client, Agent, HR, Sales, Super-Admin) | `https://trifusiondynamicsadmin.vercel.app` |
-| **Agency Website** | **Vercel** | Public marketing website & CMS | `https://trifusiondynamics.vercel.app` |
-| **Auth API Gateway** | **Render** | NestJS REST API, WebSocket server, Business Logic | `https://trifusiondynamics-api.onrender.com` |
-| **AI Microservice** | **Render** | FastAPI Python engine for AI agent workflows & summaries | `https://trifusiondynamics-ai-api.onrender.com` |
-| **PostgreSQL** | **Neon** | Serverless PostgreSQL with connection pooling & direct migration access | Neon Cloud (`ep-*.neon.tech`) |
-| **Redis** | **Upstash** | Serverless Redis for distributed rate-limiting, cache, & JWT token blocklist | Upstash Cloud |
-
----
-
-### 1. Database & Cache Provisioning
-
-#### PostgreSQL (Neon)
-1. Create a database project in [Neon](https://neon.tech).
-2. Retrieve both the **pooled connection string** (for standard queries) and the **direct connection string** (for Prisma migrations):
-   - `DATABASE_URL`: `postgresql://<user>:<password>@ep-xyz-pooler.region.aws.neon.tech/neondb?sslmode=require`
-   - `DIRECT_URL`: `postgresql://<user>:<password>@ep-xyz.region.aws.neon.tech/neondb?sslmode=require`
-3. Run safe migration deploy from CI or deployment runner:
-   ```bash
-   pnpm --filter database exec -- prisma migrate deploy
-   ```
-   > ⚠️ **Rule:** Never use `prisma db push` in production. Always apply verified schema migrations.
-
-#### Redis (Upstash)
-1. Create a serverless Redis database in [Upstash](https://upstash.com).
-2. Configure eviction policy as `allkeys-lru`.
-3. Obtain the connection string:
-   - `REDIS_URL`: `rediss://default:<password>@<endpoint>.upstash.io:6379`
-
----
-
-### 2. Backend Services Deployment (Render)
-
-#### Auth Service (NestJS API Gateway)
-- **Deployment Type:** Docker or Web Service (Repo Root Context)
-- **Dockerfile:** `services/auth/Dockerfile`
-- **Health Check Path:** `/health`
-- **Port:** `8000`
-- **Essential Environment Variables:**
-  ```env
-  NODE_ENV=production
-  PORT=8000
-  DATABASE_URL=postgresql://<user>:<password>@<neon-pooler>/neondb?sslmode=require
-  DIRECT_URL=postgresql://<user>:<password>@<neon-direct>/neondb?sslmode=require
-  REDIS_URL=rediss://default:<password>@<upstash-endpoint>:6379
-  JWT_ACCESS_SECRET=<64-char-random-secret>
-  JWT_REFRESH_SECRET=<64-char-random-secret>
-  ADMIN_EMAIL=admin@trifusiondynamics.com
-  ADMIN_PASSWORD=<secure-admin-password>
-  CORS_ALLOWED_ORIGINS=https://trifusiondynamicsadmin.vercel.app,https://trifusiondynamics.vercel.app
-  COOKIE_DOMAIN=
-  AI_SERVICE_URL=https://trifusiondynamics-ai-api.onrender.com
-  AI_SERVICE_SECRET=<shared-internal-secret>
-  ```
-
-#### AI Microservice (FastAPI)
-- **Deployment Type:** Docker or Web Service
-- **Root Directory:** `services/ai-service`
-- **Health Check Path:** `/health`
-- **Port:** `8001`
-- **Essential Environment Variables:**
-  ```env
-  PORT=8001
-  INTERNAL_API_SECRET=<shared-internal-secret>
-  OPENAI_API_KEY=<sk-...>
-  ANTHROPIC_API_KEY=<sk-ant-...>
-  GEMINI_API_KEY=<gemini-key>
-  ```
-
----
-
-### 3. Frontend Applications Deployment (Vercel)
-
-Both frontend applications deploy independently from the monorepo root:
-
-#### Admin Dashboard (`apps/admin-dashboard`)
-1. Import repository on [Vercel](https://vercel.com).
-2. Set **Root Directory** to `apps/admin-dashboard`.
-3. Framework Preset: **Next.js**.
-4. Configure Environment Variables:
-   - `NEXT_PUBLIC_API_URL`: `https://trifusiondynamics-api.onrender.com`
-   - `NEXT_PUBLIC_WS_URL`: `wss://trifusiondynamics-api.onrender.com`
-
-#### Agency Website (`apps/agency-web`)
-1. Import repository on [Vercel](https://vercel.com).
-2. Set **Root Directory** to `apps/agency-web`.
-3. Framework Preset: **Next.js**.
-4. Configure Environment Variables:
-   - `NEXT_PUBLIC_API_URL`: `https://trifusiondynamics-api.onrender.com`
-
----
-
-### 4. Verification & Health Checks
-
-Once deployed, verify that the services and integrations are healthy:
-- **Auth API Health Check:** `https://trifusiondynamics-api.onrender.com/health` (returns `{"status":"ok"}`)
-- **AI Service Health Check:** `https://trifusiondynamics-ai-api.onrender.com/health`
-- **Admin Portal Access:** `https://trifusiondynamicsadmin.vercel.app/login`
-- **Public Site Access:** `https://trifusiondynamics.vercel.app`
-
-For in-depth deployment documentation, refer to:
-- [Production Setup Guide](docs/deployment/production-setup.md)
-- [Simplified Deployment Guide](docs/deployment/simplified-deployment-guide.md)
-- [PostgreSQL Hardening Report](docs/POSTGRESQL_PRODUCTION_HARDENING_REPORT.md)
-- [Redis Production Hardening Report](docs/REDIS_PRODUCTION_HARDENING_REPORT.md)
-
-## 🧪 Testing
+For FastAPI:
 
 ```bash
-# Run API integration tests
-pnpm run test:api
-
-# Run auth service unit tests
-cd services/auth && pnpm test
+cd services/ai-service
+python -m venv .venv
+# Windows PowerShell:
+.venv\Scripts\Activate.ps1
+# macOS/Linux:
+# source .venv/bin/activate
+python -m pip install -r requirements.txt
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
 ```
 
-## 📊 Monitoring
+### Local URLs
 
-- **Sentry** — Error tracking and performance monitoring
-- **Pino HTTP** — Structured request logging with request IDs
-- **Render Logs** — Backend service logs
-- **Vercel Analytics** — Frontend performance data
+- Website: http://localhost:3000
+- Dashboard: http://localhost:3001
+- NestJS API: http://localhost:8000/api
+- API health: http://localhost:8000/api/health
+- Swagger UI: http://localhost:8000/api/docs (when enabled)
+- AI health: http://localhost:8001/health
 
-## 📝 Verification Commands
+A working local setup requires valid configuration and reachable dependencies. This quick start does not provision production accounts or customer data.
 
-Before committing any database-related changes, run these verification commands:
+## Environment configuration
+
+Start with the [root template](.env.example) and [AI service template](services/ai-service/.env.example).
+
+| Variable | Purpose |
+|---|---|
+| `DATABASE_URL` | Runtime PostgreSQL connection |
+| `DIRECT_URL` | Direct PostgreSQL connection for migrations |
+| `REDIS_URL` | Redis connection |
+| `JWT_ACCESS_SECRET` | Access-token signing secret; API enforces 32-character minimum |
+| `JWT_REFRESH_SECRET` | Refresh-token signing secret; use a different value |
+| `CORS_ALLOWED_ORIGINS` | Comma-separated allowed browser origins |
+| `AI_SERVICE_URL` | NestJS-to-AI service URL |
+| `AI_SERVICE_SECRET` | Internal service-to-service secret |
+| `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY` | Optional model-provider credentials |
+| `SENTRY_DSN` | Optional error monitoring |
+
+Use encrypted deployment secret stores. Never expose private credentials through `NEXT_PUBLIC_*` variables.
+
+## Database workflow
+
+Prisma schema: `packages/database/prisma/schema.prisma`.
 
 ```bash
-# Lint
+pnpm --filter @agency-os/database db:generate
+pnpm --filter @agency-os/database db:migrate:deploy
+# For local schema development:
+pnpm --filter @agency-os/database db:migrate:dev
+```
+
+Production changes require reviewed migrations, backups and a controlled rollout. Read [migration safety](docs/operations/database-migrations.md) and [backup/recovery](docs/operations/backup-and-recovery.md).
+
+## Useful commands
+
+| Command | Description |
+|---|---|
+| `pnpm dev` | Run workspace development tasks |
+| `pnpm build` | Build workspace packages and apps |
+| `pnpm lint` | Run configured workspace lint tasks |
+| `pnpm clean` | Clean workspace outputs |
+| `pnpm --filter auth build` | Build NestJS API |
+| `pnpm --filter auth test` | Run API unit tests |
+| `pnpm --filter @agency-os/database db:generate` | Generate Prisma Client |
+| `pnpm --filter @agency-os/database db:migrate:deploy` | Apply committed migrations |
+| `pnpm run test:api` | Run Newman API collection |
+| `pnpm docker:up` | Start configured Compose stack |
+| `pnpm docker:down` | Stop configured Compose stack |
+
+Package scripts are authoritative; not every workspace package defines every command.
+
+## API reference
+
+The NestJS service configures API reference endpoints:
+
+- Swagger UI: `/api/docs`
+- Scalar: `/api/docs/scalar`
+- ReDoc: `/api/docs/redoc`
+- OpenAPI JSON: `/api/docs-json` (subject to current app configuration)
+
+See [API guide](docs/api/README.md), [route inventory](docs/architecture/actual-routes.md) and [OpenAPI snapshot](docs/swagger.json). Checked-in snapshots can become stale; the running API document and current source are authoritative. Verify DTOs, guards, role permissions and tenant scope before integrating.
+
+## Testing
+
+```bash
 pnpm lint
-
-# Type check
-pnpm --filter auth-service build
-
-# Tests
-pnpm --filter auth-service test
-
-# Migration safety
-pnpm --filter database exec -- prisma migrate diff \
-  --from-migrations ./prisma/migrations \
-  --to-schema-datamodel ./prisma/schema.prisma
+pnpm build
+pnpm --filter auth test
+pnpm run test:api
 ```
 
-## 🔐 Database Guidelines
+For browser tests inspect `playwright.config.ts` and `e2e/`. AI tests may require Python dependencies or mocked provider clients. Do not report skipped checks as passing. See [testing guide](docs/development/testing.md).
 
-1. **Never use `prisma db push` in production** — always use `prisma migrate deploy`
-2. **Always wrap multi-step writes in `$transaction`** — especially auth flows (token rotation)
-3. **Always bound `findMany` calls** — add `take:` or use `parsePagination()` from `common/utils/pagination.ts`
-4. **Never hardcode database URLs** — use `process.env.DIRECT_URL || process.env.DATABASE_URL`
-5. **Always add production guards** to destructive scripts (`NODE_ENV === 'production'` checks)
-6. **Use tagged template literals** for raw SQL: `` prisma.$queryRaw`SELECT ...` `` — never `$queryRawUnsafe` with user input
-7. **Apply session-level GUCs** in `onModuleInit()` — `statement_timeout`, `idle_in_transaction_session_timeout`
+## Deployment
 
-## 📄 License
+The repository includes Vercel/Render and Docker deployment configuration. Provider project names, domains, secrets and deployment status can change independently of source. Confirm live provider settings before deploying.
 
-Private — Built for Trifusion Dynamics.
+- [Deployment overview](docs/deployment/README.md)
+- [Production checklist](docs/deployment/production-checklist.md)
+- [Render blueprint](render.yaml)
+- [Development Compose](infra/docker/docker-compose.yml)
+- [Production Compose](infra/docker/docker-compose.prod.yml)
+- [CI workflows](.github/workflows/)
+
+## Security
+
+Report vulnerabilities privately; do not publish exploit details, secrets or customer data in public issues. See [SECURITY.md](SECURITY.md).
+
+Tenant scope must be derived from authenticated server-side identity, not arbitrary request-body fields. Test cross-organization access for every protected data path. See [tenant isolation guidance](docs/architecture/tenant-isolation.md).
+
+## Contributing
+
+Bug reports, reproducible tests, documentation improvements, accessibility fixes and focused feature proposals are welcome, subject to the repository's licensing status.
+
+1. Read [CONTRIBUTING.md](CONTRIBUTING.md).
+2. Search [issues](https://github.com/abx15/trifusiondynamics/issues) and [discussions](https://github.com/abx15/trifusiondynamics/discussions).
+3. Discuss large architectural changes before implementation.
+4. Submit focused PRs with tests and docs.
+
+**Licensing note:** this repository currently has no root license file and the API package is marked `UNLICENSED`. Public visibility does not grant rights to reuse, redistribute or commercially exploit the code. Maintainers should publish explicit licensing and contribution terms before positioning it as open source.
+
+## Roadmap
+
+See [ROADMAP.md](docs/ROADMAP.md) for security priorities, engineering improvements and proposed integrations. Roadmap entries are not delivery commitments until accepted and tracked.
+
+## Services and sponsorship
+
+TriFusion Dynamics offers services including SaaS/product engineering, AI/RAG integration, mobile engineering, cloud infrastructure, ERP/CRM, cybersecurity, UI/UX, automation, web/e-commerce development, SEO, API integration and maintenance.
+
+- [Explore services](https://trifusiondynamics.vercel.app/services)
+- [Discuss a project or partnership](https://trifusiondynamics.vercel.app/contact)
+- [Sponsorship information](SPONSORING.md)
+
+Sponsorship alone does not purchase roadmap control, guaranteed delivery, service-level commitments or IP ownership. Commercial work requires a separate written agreement defining scope, milestones, security responsibilities and support.
+
+## Documentation map
+
+- [All documentation](docs/README.md)
+- [Architecture](docs/architecture/README.md)
+- [Development](docs/development/README.md)
+- [API](docs/api/README.md)
+- [Deployment](docs/deployment/README.md)
+- [Operations](docs/operations/README.md)
+- [Changelog](CHANGELOG.md)
+- [Support](SUPPORT.md)
+- [Code of Conduct](CODE_OF_CONDUCT.md)
+
+---
+
+<p align="center">
+  Built and maintained by <a href="https://github.com/abx15">TriFusion Dynamics</a>.
+</p>
