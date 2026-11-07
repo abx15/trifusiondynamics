@@ -1,36 +1,48 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Admin Dashboard
 
-## Getting Started
+The AgencyOS operations dashboard is the Next.js application under `apps/admin-dashboard`. It provides role-oriented workspaces for organization administration, super-admin operations, agents, employees, HR and client-facing workflows.
 
-First, run the development server:
+## Stack
+
+- Next.js 16 App Router
+- React 19 and TypeScript
+- Tailwind CSS 4
+- TanStack Query, Zustand and Axios
+- Shared types and UI/database workspace packages where applicable
+
+## Local development
+
+From the repository root:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+corepack prepare pnpm@10.26.1 --activate
+pnpm install --frozen-lockfile
+cp .env.example .env
+pnpm --filter admin-dashboard dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3001.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The dashboard requires a running/configured API for authenticated and data-backed features. Set the API URL using the environment variable consumed by the current API client/build configuration. Never place server secrets in `NEXT_PUBLIC_*` variables.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Build and lint
 
-## Learn More
+```bash
+pnpm --filter admin-dashboard lint
+pnpm --filter admin-dashboard build
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Application areas
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The App Router contains role-specific route groups for admin, super-admin, agent, employee and client experiences, plus HR pages and shared authentication/layout components. Route presence does not imply that every workflow is complete or that a user is authorized; verify backend guards and permissions.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Engineering notes
 
-## Deploy on Vercel
+- Use the shared API client and query hooks rather than embedding fetch logic inconsistently in pages.
+- Handle loading, empty, error and success states.
+- Enforce authorization on the server/API; hiding a navigation item is not access control.
+- Preserve organization scoping and avoid trusting tenant identifiers supplied by the browser.
+- Add tests for new role behavior and cross-tenant denial.
+- Keep pages responsive and keyboard accessible.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See the root [README](../../README.md), [contribution guide](../../CONTRIBUTING.md), [architecture guide](../../docs/architecture/README.md) and [testing guide](../../docs/development/testing.md).
